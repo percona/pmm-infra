@@ -22,7 +22,7 @@ provider "aws" {
   region = "us-east-1"
   default_tags {
     tags = {
-      Terraform       = "Yes"
+      terraform       = "true"
       iit-billing-tag = "pmm"
     }
   }
