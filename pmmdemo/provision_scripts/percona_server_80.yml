@@ -1,0 +1,112 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${name}.demo.local
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - docker
+
+bootcmd:
+ - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+ - mkfs.xfs -L data /dev/nvme1n1
+ - mkdir -p /data
+
+mounts:
+ - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+
+runcmd:
+  - systemctl enable docker
+  - service docker start
+  - usermod -a -G docker ec2-user
+  - chown 1001:1001 /data
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm;
+  - percona-release setup -y ps-80;
+  - yum -y install percona-server-server pmm2-client
+  - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf;
+  - systemctl enable mysqld.service
+  - systemctl start mysqld.service
+  - systemctl status mysqld.service;
+  - /tmp/init-mysql.sh
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url=https://pmmdemo:${pmm_password}@$${PMM_HOST}:443 ${mysql_host_ip} generic ${mysql_host_name}
+  - pmm-admin add mysql --metrics-mode=push --username=pmmdemo --password=${mysql_root_password} --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+
+write_files:
+- path: /root/.my.cnf
+  content: |
+    [client]
+    user=pmmdemo
+    password=${mysql_root_password}
+
+- path: /etc/my.cnf.d/mysql_ps_80.cnf
+  content: |
+    [mysqld]
+
+    # Host specific replication configuration
+    #
+    report_host = ${mysql_host_name}
+    report_port = ${mysql_port}
+    server_id   = $(echo ${mysql_host_name} | cut -d'-' -f3)
+
+
+    # Generic
+    #
+    datadir=/var/lib/mysql
+    socket=/var/lib/mysql/mysql.sock
+    log-error=/var/log/mysqld.log
+    pid-file=/var/run/mysqld/mysqld.pid
+    log_error_verbosity=3
+
+
+    # Config binary and slow_query logs
+    #
+    log-bin
+    binlog_format=ROW
+    binlog_expire_logs_seconds=21600
+
+    slow_query_log=ON
+    slow_query_log_always_write_time=1
+    slow_query_log_use_global_control=all
+    log_slow_rate_limit=10
+    log_slow_rate_type='query'
+    log_slow_admin_statements=ON
+    log_slow_slave_statements=ON
+    log_slow_verbosity=full
+    long_query_time=0
+
+
+    # Configure statistics
+    #
+    userstat=ON
+    performance_schema=ON
+
+    # Async replication
+    #
+    gtid_mode=ON
+    enforce_gtid_consistency=ON
+
+- path: /tmp/init-mysql.sh
+  content: |
+    #!/bin/bash
+
+    for (( i=1 ; i<=30 ; i++ )); do
+      if [[ "$(grep "pmmdemo@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
+          mysql --connect-expired-password -uroot -p$(grep "pmmdemo@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER pmmdemo@'localhost' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+          break;
+      else
+          echo "retry $${i}/30";
+          sleep 2;
+      fi;
+    done;
+
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER pmmdemo@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO pmmdemo@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO pmmdemo@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_pass}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
+
+
