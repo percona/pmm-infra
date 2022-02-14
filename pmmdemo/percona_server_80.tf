@@ -45,7 +45,7 @@ data "template_file" "percona_server_80_user_data" {
   template = file("provision_scripts/percona_server_80.yml")
   vars = {
     name                    = "${local.percona_server_80_name}-${count.index}"
-    hostname                = "${lookup(var.hostnames, count.index)}"
+    fqdn                    = "${local.percona_server_80_name}-${count.index}.demo.local"
     index                   = "${count.index}"
     pmm_password            = random_password.pmm_admin_pass.result
     mysql_root_password     = random_password.mysql80_root_password.result
@@ -60,4 +60,10 @@ module "percona_server_80_disk" {
   disk_name   = "percona-server-80"
   disk_size   = "256"
   instance_id = module.percona_server_80[count.index].instance_id
+}
+
+// TODO encrypt state or don't store plain text
+output "pmm_password" {
+  sensitive = true
+  value     = random_password.pmm_admin_pass.result
 }

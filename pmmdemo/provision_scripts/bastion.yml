@@ -18,7 +18,7 @@ runcmd:
   - docker run -v /data:/ssl:ro -v /etc/nginx.conf:/etc/nginx/nginx.conf --restart always --net host --name nginx -d nginx:1.21.6
   - docker exec -it nginx apt update
   - docker exec -it nginx apt install -y certbot python3-certbot-nginx
-  - certbot --agree-tos -d -m ${email} ${domain}
+  - docker exec -it nginx certbot --agree-tos -m ${email} -d ${domain}
 
 write_files:
 - path: /etc/nginx.conf
@@ -70,7 +70,7 @@ write_files:
         }
 
         upstream pmm_server {
-            server pmm-server.demo.local:443;
+            server http://pmm-server.demo.local:80;
         }
     }
 - path: /tmp/cert.sh
