@@ -19,9 +19,27 @@ resource "aws_iam_policy_attachment" "administrator_access" {
   name       = "nikita.beletskii"
   users      = [aws_iam_user.nbeletskii.name, aws_iam_user.atymchuk.name]
   roles      = ["sso-aws-pmm-admin"]
-  policy_arn = data.aws_iam_policy.administrator_access.arn
+  policy_arn = aws_iam_policy.pmm_cli.arn
+
+  lifecycle {
+     prevent_destroy = true
+  }
 }
 
-data "aws_iam_policy" "administrator_access" {
-  name = "AdministratorAccess"
+resource "aws_iam_policy" "pmm_cli" {
+  name        = "pmm_cli"
+  path        = "/"
+  description = "Temporary policy for cli users"
+
+
+  policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "*",
+            "Resource": "*"
+        }
+    ]
+  })
 }
