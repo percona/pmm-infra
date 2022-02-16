@@ -14,9 +14,11 @@ module "bastion" {
     aws_security_group.bastion.id
   ]
   user_data = templatefile("provision_scripts/bastion.yml", {
-    name = local.bastion_name,
-    domain = var.pmm_domain,
-    email = var.owner_email
+    name           = local.bastion_name,
+    project_name   = local.environment_name,
+    domain         = var.pmm_domain,
+    email          = var.owner_email,
+    pmm_admin_pass = random_password.pmm_admin_pass.result
   })
 }
 
@@ -27,7 +29,7 @@ data "aws_route53_zone" "pmmdemo" {
 
 resource "aws_route53_record" "pmmdemo_hostname" {
   zone_id = data.aws_route53_zone.pmmdemo.id
-  name    = "pmmdemo.dev.percona.net"
+  name    = var.pmm_domain
   type    = "A"
   ttl     = "300"
   records = [module.bastion.public_ip]

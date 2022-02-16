@@ -9,3 +9,13 @@ variable "owner_email" {
 }
 
 # OPTIONAL
+
+variable "project_name" {
+  type        = string
+  description = "If you have default workspace and want to use different name then you can use the variable"
+  default     = "demo"
+}
+
+locals {
+  environment_name = "${terraform.workspace == "default" ? var.project_name : terraform.workspace}"
+}

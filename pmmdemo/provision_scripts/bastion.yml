@@ -19,6 +19,7 @@ runcmd:
   - docker exec -it nginx apt update
   - docker exec -it nginx apt install -y certbot python3-certbot-nginx
   - docker exec -it nginx certbot --agree-tos -m ${email} -d ${domain}
+  - echo "${pmm_admin_pass}" > /root/admin_password
 
 write_files:
 - path: /etc/nginx.conf
@@ -57,7 +58,7 @@ write_files:
 
         server {
             listen          443 ssl http2 default_server;
-            server_name     pmmdemo.dev.percona.net;
+            server_name     ${domain};
 
             ssl_certificate /ssl/cert/certificate.crt;
             ssl_certificate_key /ssl/cert/certificate.key;
@@ -70,7 +71,7 @@ write_files:
         }
 
         upstream pmm_server {
-            server http://pmm-server.demo.local:80;
+            server pmm-server.${project_name}.local:80;
         }
     }
 - path: /tmp/cert.sh

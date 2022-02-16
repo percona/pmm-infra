@@ -1,7 +1,7 @@
 resource "aws_vpc" "pmmdemo" {
   cidr_block = "10.0.0.0/16"
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
   enable_dns_hostnames = true
 }
@@ -15,7 +15,7 @@ resource "aws_route_table" "ig_pmmdemo" {
   }
 
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
 }
 
@@ -33,7 +33,7 @@ resource "aws_subnet" "pmmdemo_public" {
   map_public_ip_on_launch = true
 
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
 }
 
@@ -43,7 +43,7 @@ resource "aws_subnet" "pmmdemo_private" {
   cidr_block              = "10.0.2.0/24"
 
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
 }
 
@@ -52,7 +52,7 @@ resource "aws_internet_gateway" "pmmdemo" {
   vpc_id = aws_vpc.pmmdemo.id
 
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
 }
 
@@ -92,7 +92,7 @@ resource "aws_nat_gateway" "external_nat_gateway" {
   subnet_id     = aws_subnet.pmmdemo_public.id
 
   tags = {
-    "Name" = "pmmdemo",
+    "Name" = local.environment_name,
   }
 
   depends_on = [aws_internet_gateway.pmmdemo]
@@ -107,7 +107,7 @@ resource "aws_route_table" "nat_route_table" {
   }
 
   tags = {
-    "Name" = "pmmdemo-nat",
+    "Name" = local.environment_name,
   }
 }
 
@@ -118,7 +118,7 @@ resource "aws_route_table_association" "associate_routetable_to_private_subnet" 
 
 
 resource "aws_route53_zone" "demo_local" {
-  name = "demo.local"
+  name = "${local.environment_name}.local"
 
   vpc {
     vpc_id = aws_vpc.pmmdemo.id

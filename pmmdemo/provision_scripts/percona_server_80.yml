@@ -49,7 +49,7 @@ write_files:
     #
     report_host = ${fqdn}
     report_port = 3306
-    server_id   = $(echo ${fqdn} | cut -d'-' -f3)
+    server_id   = ${index}
 
 
     # Generic
@@ -97,7 +97,7 @@ write_files:
           mysql --connect-expired-password -uroot -p$(grep "pmmdemo@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER pmmdemo@'localhost' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
           break;
       else
-          echo "retry $${i}/30";
+          echo "retry";
           sleep 2;
       fi;
     done;
