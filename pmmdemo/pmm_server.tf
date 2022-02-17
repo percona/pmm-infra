@@ -15,7 +15,9 @@ module "pmm_server" {
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
       pmm_admin_pass = random_password.pmm_admin_pass.result,
-      name = local.pmm_server_name
+      name           = local.pmm_server_name,
+      fqdn           = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}",
+
     }
   )
 }

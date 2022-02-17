@@ -1,12 +1,13 @@
 #cloud-config
 preserve_hostname: false
 hostname: ${name}
-fqdn: ${name}.demo.local
+fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
 packages:
   - docker
+  - nmap-ncat
 
 runcmd:
   - systemctl enable docker
@@ -16,9 +17,10 @@ runcmd:
   - bash /tmp/cert.sh
   - rm /tmp/cert.sh
   - docker run -v /data:/ssl:ro -v /etc/nginx.conf:/etc/nginx/nginx.conf --restart always --net host --name nginx -d nginx:1.21.6
-  - docker exec -it nginx apt update
-  - docker exec -it nginx apt install -y certbot python3-certbot-nginx
-  - docker exec -it nginx certbot --agree-tos -m ${email} -d ${domain}
+  - until nc -z localhost 80; do sleep 1; done
+  - docker exec nginx apt update
+  - docker exec nginx apt install -y certbot python3-certbot-nginx
+  - docker exec nginx certbot --agree-tos -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/admin_password
 
 write_files:

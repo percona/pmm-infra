@@ -1,7 +1,7 @@
 #cloud-config
 preserve_hostname: false
 hostname: ${name}
-fqdn: ${name}.demo.local
+fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
@@ -29,7 +29,7 @@ runcmd:
   - usermod  -a -G docker ec2-user
   - curl -fsSL https://www.percona.com/get/pmm -o /tmp/pmm.sh
   - sed -i -e 's/:443/:443 -p 80:80/g' /tmp/pmm.sh
-  - /bin/bash /tmp/pmm.sh
-#  - docker exec pmm-server change-admin-password <password> TODO wait for 2.27.0
+  - /bin/bash /tmp/pmm.sh --repo "perconalab/pmm-server" --tag dev-latest
+  - docker exec pmm-server change-admin-password ${pmm_admin_pass}
 
 
