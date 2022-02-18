@@ -31,5 +31,5 @@ module "pmm_server_disk" {
 
 resource "random_password" "pmm_admin_pass" {
   length  = 20
-  special = true
+  special = false
 }

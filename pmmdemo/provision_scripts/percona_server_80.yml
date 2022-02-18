@@ -31,14 +31,14 @@ runcmd:
   - systemctl status mysqld.service;
   - chmod +x /tmp/init-mysql.sh
   - bash /tmp/init-mysql.sh
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url=https://pmmdemo:${pmm_password}@$${PMM_HOST}:443 ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=pmmdemo --password=${mysql_root_password} --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url=https://admin:${pmm_password}@pmm-server.nikita.local:443 ${fqdn} generic ${name}
+  - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}'' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
 
 write_files:
 - path: /root/.my.cnf
   content: |
     [client]
-    user=pmmdemo
+    user=root
     password=${mysql_root_password}
 
 - path: /etc/my.cnf.d/mysql_ps_80.cnf
@@ -93,8 +93,8 @@ write_files:
     #!/bin/bash
 
     for (( i=1 ; i<=30 ; i++ )); do
-      if [[ "$(grep "pmmdemo@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-          mysql --connect-expired-password -uroot -p$(grep "pmmdemo@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER pmmdemo@'localhost' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+      if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
+          mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
           break;
       else
           echo "retry";
@@ -102,9 +102,9 @@ write_files:
       fi;
     done;
 
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER pmmdemo@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO pmmdemo@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO pmmdemo@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";

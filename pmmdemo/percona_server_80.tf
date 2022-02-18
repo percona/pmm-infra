@@ -26,18 +26,24 @@ variable "hostnames" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length  = 30
-  special = true
+  length      = 30
+  special     = true
+  upper       = true
+  number      = true
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length  = 30
-  special = true
+  length      = 30
+  special     = true
+  upper       = true
+  number      = true
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length  = 30
-  special = true
+  length      = 30
+  special     = true
+  upper       = true
+  number      = true
 }
 
 data "template_file" "percona_server_80_user_data" {
