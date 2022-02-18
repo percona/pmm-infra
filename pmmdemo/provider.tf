@@ -8,6 +8,10 @@ terraform {
       source = "hashicorp/random"
       version = "3.1.0"
     }
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "2.97.0"
+    }
   }
   required_version = "~> 1.1.5"
 
@@ -26,4 +30,9 @@ provider "aws" {
       iit-billing-tag = "pmm-demo"
     }
   }
+}
+
+provider "azurerm" {
+    alias = "azure"
+    features {}
 }
