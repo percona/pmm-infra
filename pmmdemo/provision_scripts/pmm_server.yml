@@ -1,0 +1,35 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - curl
+  - lsof
+  - nmap
+  - htop
+  - mc
+  - jq
+  - docker
+  - git
+
+bootcmd:
+ - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+ - mkfs.xfs -L data /dev/nvme1n1
+ - mkdir -p /var/lib/docker/
+
+mounts:
+ - [ "/dev/nvme1n1", "/var/lib/docker/", "xfs", "defaults,nofail,noatime", "0", "2" ]
+
+runcmd:
+  - systemctl enable docker
+  - service docker start
+  - usermod  -a -G docker ec2-user
+  - curl -fsSL https://www.percona.com/get/pmm -o /tmp/pmm.sh
+  - sed -i -e 's/:443/:443 -p 80:80/g' /tmp/pmm.sh
+  - /bin/bash /tmp/pmm.sh --repo "perconalab/pmm-server" --tag dev-latest
+  - docker exec pmm-server change-admin-password ${pmm_admin_pass}
+
+
