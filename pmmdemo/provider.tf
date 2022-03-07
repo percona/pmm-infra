@@ -33,6 +33,6 @@ provider "aws" {
 }
 
 provider "azurerm" {
-    alias = "azure"
+    alias = "demo"
     features {}
 }
