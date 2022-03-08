@@ -1,0 +1,46 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - docker
+
+bootcmd:
+ - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+ - mkfs.xfs -L data /dev/nvme1n1
+ - mkdir -p /data
+
+mounts:
+ - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+
+runcmd:
+  - systemctl enable docker
+  - service docker start
+  - usermod -a -G docker ec2-user
+  - chown 1001:1001 /data
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y ppg-14
+  - yum -y install percona-postgresql14-server percona-pg-stat-monitor14 pmm2-client
+  - chown mysql:mysql /data/
+  - /usr/pgsql-14/bin/postgresql-14-setup initdb
+  - systemctl start postgresql-14
+  - chmod +x /tmp/init-postgres.sh
+  - bash /tmp/init-postgres.sh
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${fqdn}:443' ${fqdn} generic ${name}
+  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${fqdn}:443' --server-insecure-tls
+
+write_files:
+- path: /tmp/init-postgres.sh
+  content: |
+    #!/bin/bash
+    psql -c "CREATE USER pmm WITH SUPERUSER ENCRYPTED PASSWORD '${postgres_pmm_password}'""
+    psql -c "ALTER USER pmm CONNECTION LIMIT 10"
+    psql -c "select pg_reload_conf()"
+
+
+
+    psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor'"
+
