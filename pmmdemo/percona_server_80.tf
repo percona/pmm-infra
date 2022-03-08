@@ -18,13 +18,6 @@ module "percona_server_80" {
   user_data = element(data.template_file.percona_server_80_user_data.*.rendered, count.index)
 }
 
-variable "hostnames" {
-  default = {
-    "0" = "example1.org"
-    "1" = "example2.net"
-  }
-}
-
 resource "random_password" "mysql80_root_password" {
   length      = 30
   special     = true
@@ -51,7 +44,7 @@ data "template_file" "percona_server_80_user_data" {
   template = file("provision_scripts/percona_server_80.yml")
   vars = {
     name                    = "${local.percona_server_80_name}-${count.index}"
-    fqdn                    = "${local.percona_server_80_name}-${count.index}.demo.local"
+    fqdn                    = "${local.percona_server_80_name}-${count.index}.${aws_route53_zone.demo_local.name}"
     index                   = "${count.index}"
     pmm_password            = random_password.pmm_admin_pass.result
     mysql_root_password     = random_password.mysql80_root_password.result
