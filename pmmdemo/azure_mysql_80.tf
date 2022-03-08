@@ -29,7 +29,7 @@ resource "azurerm_mysql_server" "pmmdemo" {
   }
 }
 
-# Create empty DB inside MySQL for accepting sysbench queries
+# Create an empty MySQL database for sysbench queries
 #
 resource "azurerm_mysql_database" "pmmdemo_sysbench" {
   name                = "sbtest"
