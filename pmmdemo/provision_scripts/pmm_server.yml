@@ -30,6 +30,8 @@ runcmd:
   - curl -fsSL https://www.percona.com/get/pmm -o /tmp/pmm.sh
   - sed -i -e 's/:443/:443 -p 80:80/g' /tmp/pmm.sh
   - /bin/bash /tmp/pmm.sh --repo "perconalab/pmm-server" --tag dev-latest
+  - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
+  - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
 
 

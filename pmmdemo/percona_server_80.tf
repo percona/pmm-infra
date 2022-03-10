@@ -19,24 +19,24 @@ module "percona_server_80" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length      = 30
-  special     = true
-  upper       = true
-  number      = true
+  length  = 30
+  special = true
+  upper   = true
+  number  = true
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length      = 30
-  special     = true
-  upper       = true
-  number      = true
+  length  = 30
+  special = true
+  upper   = true
+  number  = true
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length      = 30
-  special     = true
-  upper       = true
-  number      = true
+  length  = 30
+  special = true
+  upper   = true
+  number  = true
 }
 
 data "template_file" "percona_server_80_user_data" {
@@ -50,6 +50,7 @@ data "template_file" "percona_server_80_user_data" {
     mysql_root_password     = random_password.mysql80_root_password.result
     mysql_replica_password  = random_password.mysql80_replica_password.result
     mysql_sysbench_password = random_password.mysql80_sysbench_password.result
+    pmm_server_endpoint     = "bastion.${aws_route53_zone.demo_local.name}:443"
   }
 }
 

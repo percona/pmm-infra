@@ -32,7 +32,7 @@ runcmd:
   - systemctl status mysqld.service;
   - chmod +x /tmp/init-mysql.sh
   - bash /tmp/init-mysql.sh
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@pmm-server.nikita.local:443' ${fqdn} generic ${name}
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
 
 write_files:

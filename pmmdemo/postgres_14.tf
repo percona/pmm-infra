@@ -14,10 +14,12 @@ module "postgres_14" {
     aws_security_group.default_access.id
   ]
   user_data = templatefile("provision_scripts/postgres_14.yml", {
-    name = "postgres_14",
-    fqdn = "${local.postgres_14}.${aws_route53_zone.demo_local.name}",
+    name                  = "postgres_14",
+    fqdn                  = "${local.postgres_14}.${aws_route53_zone.demo_local.name}",
     postgres_pmm_password = random_password.postgres_pmm_password.result,
-    pmm_password            = random_password.pmm_admin_pass.result,
+    pmm_password          = random_password.pmm_admin_pass.result,
+    pmm_server_endpoint   = "bastion.${aws_route53_zone.demo_local.name}:443"
+
   })
 }
 
