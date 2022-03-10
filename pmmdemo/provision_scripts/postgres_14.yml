@@ -20,16 +20,15 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y ppg-14
-  - yum -y install percona-postgresql14-server percona-pg-stat-monitor14 pmm2-client
-  - chown mysql:mysql /data/
-  - /usr/pgsql-14/bin/postgresql-14-setup initdb
-  - systemctl start postgresql-14
+  - percona-release setup -y ppg-13
+  - yum -y install percona-postgresql13-server percona-pg-stat-monitor14 pmm2-client
+  - chown postgres:postgres /data
+  - /usr/pgsql-14/bin/postgresql-13-setup initdb
+  - systemctl start postgresql-13
   - chmod +x /tmp/init-postgres.sh
   - bash /tmp/init-postgres.sh
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@{pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@bastion.nikita.local:443' --server-insecure-tls
 
 write_files:

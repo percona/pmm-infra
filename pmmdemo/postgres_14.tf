@@ -1,5 +1,5 @@
 locals {
-  postgres_14 = "postgres_14"
+  postgres_14 = "postgres-14"
 }
 
 
@@ -14,7 +14,7 @@ module "postgres_14" {
     aws_security_group.default_access.id
   ]
   user_data = templatefile("provision_scripts/postgres_14.yml", {
-    name                  = "postgres_14",
+    name                  = local.postgres_14,
     fqdn                  = "${local.postgres_14}.${aws_route53_zone.demo_local.name}",
     postgres_pmm_password = random_password.postgres_pmm_password.result,
     pmm_password          = random_password.pmm_admin_pass.result,
