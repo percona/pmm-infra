@@ -29,7 +29,7 @@ runcmd:
   - chmod +x /tmp/init-postgres.sh
   - bash /tmp/init-postgres.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@bastion.nikita.local:443' --server-insecure-tls
+  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@{pmm_server_endpoint}' --server-insecure-tls
 
 write_files:
 - path: /tmp/init-postgres.sh
