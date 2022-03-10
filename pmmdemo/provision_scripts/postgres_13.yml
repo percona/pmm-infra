@@ -24,7 +24,7 @@ runcmd:
   - percona-release setup -y ppg-13
   - yum -y install percona-postgresql13-server percona-pg-stat-monitor14 pmm2-client
   - chown postgres:postgres /data
-  - /usr/pgsql-14/bin/postgresql-13-setup initdb
+  - /usr/pgsql-13/bin/postgresql-13-setup initdb
   - systemctl start postgresql-13
   - chmod +x /tmp/init-postgres.sh
   - bash /tmp/init-postgres.sh
