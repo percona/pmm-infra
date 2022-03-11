@@ -13,7 +13,7 @@ module "postgres_14" {
   security_groups = [
     aws_security_group.default_access.id
   ]
-  user_data = templatefile("provision_scripts/postgres_14.yml", {
+  user_data = templatefile("provision_scripts/postgres_13.yml", {
     name                  = local.postgres_14,
     fqdn                  = "${local.postgres_14}.${aws_route53_zone.demo_local.name}",
     postgres_pmm_password = random_password.postgres_pmm_password.result,
