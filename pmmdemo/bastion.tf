@@ -36,6 +36,12 @@ resource "aws_route53_record" "pmmdemo_hostname" {
   records = [module.bastion.public_ip]
 }
 
+module "bastion_disk" {
+  source      = "./modules/ebs"
+  disk_name   = "bastion"
+  disk_size   = "8"
+  instance_id = module.bastion.instance_id
+}
 
 output "public_ip" {
   value = module.bastion.public_ip
