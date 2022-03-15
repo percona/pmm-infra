@@ -74,6 +74,7 @@ write_files:
             return 301 https://$host$request_uri;
         }
 
+        # external access
         server {
             listen          443 ssl http2 default_server;
             server_name     ${domain};

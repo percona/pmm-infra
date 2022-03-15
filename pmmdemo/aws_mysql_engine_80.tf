@@ -1,4 +1,5 @@
 resource "aws_db_instance" "pmmdemo_aws_mysql_engine_80" {
+  identifier          = "pmmdemo-mysql"
   allocated_storage   = 10
   engine              = "mysql"
   engine_version      = "8.0.28"

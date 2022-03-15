@@ -21,10 +21,10 @@ runcmd:
   - service docker start
   - usermod -a -G docker ec2-user
   - chown 1001:1001 /data
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm;
-  - percona-release setup -y ps-80;
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y ps-80
   - yum -y install percona-server-server pmm2-client
-  - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf;
+  - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
   - chown mysql:mysql /data/
   - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
   - systemctl enable mysqld.service
