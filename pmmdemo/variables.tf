@@ -17,5 +17,6 @@ variable "project_name" {
 }
 
 locals {
-  environment_name = "${terraform.workspace == "default" ? var.project_name : terraform.workspace}"
+  pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+  environment_name = terraform.workspace == "default" ? var.project_name : terraform.workspace
 }

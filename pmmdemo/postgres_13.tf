@@ -18,8 +18,7 @@ module "postgres_13" {
     fqdn                  = "${local.postgres_13}.${aws_route53_zone.demo_local.name}",
     postgres_pmm_password = random_password.postgres_pmm_password.result,
     pmm_password          = random_password.pmm_admin_pass.result,
-    pmm_server_endpoint   = "pmm-server.${aws_route53_zone.demo_local.name}:443"
-
+    pmm_server_endpoint   = local.pmm_server_endpoint,
   })
 }
 
