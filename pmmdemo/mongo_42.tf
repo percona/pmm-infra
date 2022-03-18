@@ -13,6 +13,7 @@ module "mongo_cluster_pmmdemo" {
   ]
   instance_type        = "t3.medium"
   config_instance_type = "t3.small"
+  mongos_instance_type = "t3.small"
 
   pmm_server_endpoint = local.pmm_server_endpoint
   pmm_password        = random_password.pmm_admin_pass.result

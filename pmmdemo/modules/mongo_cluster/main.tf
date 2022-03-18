@@ -55,7 +55,7 @@ module "mongo_42_cfg" {
   source        = "../ec2"
   count         = var.count_of_chards
   server_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
-  instance_type = "t3.small"
+  instance_type = var.config_instance_type
   subnet_id     = var.subnet_id
   route53_id    = var.route53_id
 
@@ -75,4 +75,22 @@ module "mongo_42_cfg_disk" {
   disk_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
   disk_size   = var.mongo_config_disk_size
   instance_id = module.mongo_42_cfg[count.index].instance_id
+}
+
+module "mongo_42_mongos" {
+  source        = "../ec2"
+  count         = var.count_of_mongos
+  server_name   = "${local.mongo_cluster_name}-mongos-${count.index}"
+  instance_type = var.mongos_instance_type
+  subnet_id     = var.subnet_id
+  route53_id    = var.route53_id
+
+  security_groups = var.security_groups
+
+  user_data = templatefile(local.provision_scripts_path, {
+    pmm_password        = var.pmm_password,
+    name                = "${local.mongo_cluster_name}-mongos-${count.index}",
+    fqdn                = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
+    pmm_server_endpoint = var.pmm_server_endpoint,
+  })
 }
