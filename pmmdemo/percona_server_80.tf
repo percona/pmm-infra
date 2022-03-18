@@ -50,7 +50,7 @@ data "template_file" "percona_server_80_user_data" {
     mysql_root_password     = random_password.mysql80_root_password.result
     mysql_replica_password  = random_password.mysql80_replica_password.result
     mysql_sysbench_password = random_password.mysql80_sysbench_password.result
-    pmm_server_endpoint     = local.pmm_server_endpoint
+    pmm_server_endpoint     = "pmm-server.${aws_route53_zone.demo_local.name}:443"
   }
 }
 
