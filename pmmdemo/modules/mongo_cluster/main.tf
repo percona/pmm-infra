@@ -8,11 +8,13 @@ module "mongo_42_rs_0" {
 
   security_groups = var.security_groups
 
-  user_data = templatefile(local.provision_scripts_path, {
+  user_data = templatefile(local.provision_script_shard, {
     pmm_password        = var.pmm_password,
     name                = "${local.mongo_cluster_name}-rs-0-${count.index}",
     fqdn                = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
     pmm_server_endpoint = var.pmm_server_endpoint,
+    replica_set_name    = "shard-0",
+    shard_number        = 0,
   })
 }
 
@@ -35,11 +37,13 @@ module "mongo_42_rs_1" {
 
   security_groups = var.security_groups
 
-  user_data = templatefile(local.provision_scripts_path, {
+  user_data = templatefile(local.provision_script_shard, {
     pmm_password        = var.pmm_password,
     name                = "${local.mongo_cluster_name}-rs-1-${count.index}",
     fqdn                = "${local.mongo_cluster_name}-rs-1-${count.index}.${var.route53_name}",
     pmm_server_endpoint = var.pmm_server_endpoint,
+    replica_set_name    = "shard-1",
+    shard_number        = 1,
   })
 }
 
@@ -61,11 +65,12 @@ module "mongo_42_cfg" {
 
   security_groups = var.security_groups
 
-  user_data = templatefile(local.provision_scripts_path, {
+  user_data = templatefile(local.provision_script_cfg, {
     pmm_password        = var.pmm_password,
     name                = "${local.mongo_cluster_name}-cfg-${count.index}",
     fqdn                = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
     pmm_server_endpoint = var.pmm_server_endpoint,
+    replica_set_name    = "cfg",
   })
 }
 
@@ -87,7 +92,7 @@ module "mongo_42_mongos" {
 
   security_groups = var.security_groups
 
-  user_data = templatefile(local.provision_scripts_path, {
+  user_data = templatefile(local.provision_script_mongos, {
     pmm_password        = var.pmm_password,
     name                = "${local.mongo_cluster_name}-mongos-${count.index}",
     fqdn                = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",

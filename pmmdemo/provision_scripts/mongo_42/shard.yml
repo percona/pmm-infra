@@ -1,0 +1,80 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - docker
+
+bootcmd:
+ - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+ - mkfs.xfs -L data /dev/nvme1n1
+ - mkdir -p /data
+
+mounts:
+ - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+
+runcmd:
+  - systemctl enable docker
+  - service docker start
+  - usermod -a -G docker ec2-user
+  - chown 1001:1001 /data
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup psmdb-42
+  - percona-release setup -y pmm2-client
+  - yum -y install percona-server-mongodb pmm2-client
+  - chown mongo:mongo /data/
+  - systemctl enable mongod
+  - systemctl start mongod
+  - systemctl status mongod
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+
+write_files:
+- path: /etc/mongod.conf
+  content: |
+    sharding:
+      clusterRole: shardsvr
+
+    replication:
+      replSetName: ${replica_set_name}
+
+    storage:
+      dbPath: /data
+      journal:
+        enabled: true
+
+    systemLog:
+      destination: file
+      logAppend: true
+      path: /var/log/mongo/mongod.log
+
+    processManagement:
+      fork: true
+      pidFilePath: /var/run/mongod.pid
+
+    net:
+      port: 27017
+      bindIp: localhost,0.0.0.0
+
+    operationProfiling:
+      mode: all
+      slowOpThresholdMs: 200
+      rateLimit: 100
+
+- path: /tmp/init.js
+  content: |
+    rs.initiate(
+      {
+        _id: "${replica_set_name}",
+        members: [
+          { _id : 0, host : "mongo-42-rs-0-0.${route53_name}:27019" },
+          { _id : 1, host : "mongo-42-rs-0-1.${route53_name}:27019" },
+          { _id : 2, host : "mongo-42-rs-0-2.${route53_name}:27019" }
+        ]
+      }
+    )
+
+
+mongo-42-rs-0-2.nikita.local

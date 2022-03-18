@@ -5,27 +5,15 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
-
-bootcmd:
- - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
- - mkfs.xfs -L data /dev/nvme1n1
- - mkdir -p /data
-
-mounts:
- - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
-
 runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
   - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release enable psmdb-42 release
+  - percona-release setup psmdb-42
   - percona-release setup -y pmm2-client
   - yum -y install percona-server-mongodb pmm2-client
-  - chown mongo:mongo /data/
   - systemctl enable mongod
   - systemctl start mongod
   - systemctl status mongod

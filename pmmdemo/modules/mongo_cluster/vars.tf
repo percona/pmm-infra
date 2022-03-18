@@ -1,6 +1,8 @@
 locals {
-  mongo_cluster_name     = "mongo-42"
-  provision_scripts_path = "provision_scripts/mongo_42.yml"
+  mongo_cluster_name      = "mongo-42"
+  provision_script_shard  = "provision_scripts/mongo_42/shard.yml"
+  provision_script_cfg    = "provision_scripts/mongo_42/cfg.yml"
+  provision_script_mongos = "provision_scripts/mongo_42/mongos.yml"
 }
 
 
@@ -30,8 +32,8 @@ variable "config_instance_type" {
 }
 
 variable "mongos_instance_type" {
-    type = string
-    description = "Instance type for mongos instances"
+  type        = string
+  description = "Instance type for mongos instances"
 }
 
 variable "pmm_server_endpoint" {
