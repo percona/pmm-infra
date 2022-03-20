@@ -9,12 +9,17 @@ module "mongo_42_rs_0" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_shard, {
-    pmm_password        = var.pmm_password,
-    name                = "${local.mongo_cluster_name}-rs-0-${count.index}",
-    fqdn                = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
-    pmm_server_endpoint = var.pmm_server_endpoint,
-    replica_set_name    = "shard-0",
-    shard_number        = 0,
+    pmm_password                  = var.pmm_password,
+    name                          = "${local.mongo_cluster_name}-rs-0-${count.index}",
+    fqdn                          = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
+    pmm_server_endpoint           = var.pmm_server_endpoint,
+    replica_set_name              = "shard-0",
+    shard_number                  = 0,
+    route53_name                  = var.route53_name,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
+
   })
 }
 
@@ -38,12 +43,16 @@ module "mongo_42_rs_1" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_shard, {
-    pmm_password        = var.pmm_password,
-    name                = "${local.mongo_cluster_name}-rs-1-${count.index}",
-    fqdn                = "${local.mongo_cluster_name}-rs-1-${count.index}.${var.route53_name}",
-    pmm_server_endpoint = var.pmm_server_endpoint,
-    replica_set_name    = "shard-1",
-    shard_number        = 1,
+    pmm_password                  = var.pmm_password,
+    name                          = "${local.mongo_cluster_name}-rs-1-${count.index}",
+    fqdn                          = "${local.mongo_cluster_name}-rs-1-${count.index}.${var.route53_name}",
+    pmm_server_endpoint           = var.pmm_server_endpoint,
+    replica_set_name              = "shard-1",
+    shard_number                  = 1,
+    route53_name                  = var.route53_name,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
   })
 }
 
@@ -66,11 +75,15 @@ module "mongo_42_cfg" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_cfg, {
-    pmm_password        = var.pmm_password,
-    name                = "${local.mongo_cluster_name}-cfg-${count.index}",
-    fqdn                = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
-    pmm_server_endpoint = var.pmm_server_endpoint,
-    replica_set_name    = "cfg",
+    pmm_password                  = var.pmm_password,
+    name                          = "${local.mongo_cluster_name}-cfg-${count.index}",
+    fqdn                          = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
+    pmm_server_endpoint           = var.pmm_server_endpoint,
+    replica_set_name              = "cfg",
+    route53_name                  = var.route53_name,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
   })
 }
 
@@ -97,5 +110,30 @@ module "mongo_42_mongos" {
     name                = "${local.mongo_cluster_name}-mongos-${count.index}",
     fqdn                = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
     pmm_server_endpoint = var.pmm_server_endpoint,
+    route53_name                  = var.route53_name,
+    replica_set_name    = "cfg",
+    mongodb_42_keyfile  = random_password.mongodb_42_keyfile.result,
   })
+}
+
+resource "random_password" "mongodb_42_pmm_user_password" {
+  length  = 30
+  special = false
+  upper   = true
+  number  = true
+}
+
+resource "random_password" "mongodb_42_pmm_admin_password" {
+  length  = 30
+  special = false
+  upper   = true
+  number  = true
+}
+
+// TODO it's better use x.509 cert auth
+resource "random_password" "mongodb_42_keyfile" {
+  length  = 1000
+  special = false
+  upper   = true
+  number  = true
 }

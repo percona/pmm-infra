@@ -20,12 +20,12 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup psmdb-42
+  - percona-release setup -y psmdb-42
   - percona-release setup -y pmm2-client
   - yum -y install percona-server-mongodb pmm2-client
-  - chown mongo:mongo /data/
+  - chown mongo:mongo /data/ /etc/mongo-key
+  - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
   - systemctl status mongod
@@ -63,6 +63,13 @@ write_files:
       slowOpThresholdMs: 200
       rateLimit: 100
 
+    security:
+      keyFile: /etc/mongo-key
+
+- path: /etc/mongo-key
+  content: |
+    ${mongodb_42_keyfile}
+
 - path: /tmp/init.js
   content: |
     rs.initiate(
@@ -75,6 +82,39 @@ write_files:
         ]
       }
     )
+    admin = db.getSiblingDB("admin")
+    admin.createUser(
+      {
+        user: "pmm-admin",
+        pwd: "${mongodb_42_pmm_admin_password}",
+        roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+      }
+    )
+    db.getSiblingDB("admin").createRole({
+        role: "explainRole",
+        privileges: [{
+            resource: {
+                db: "",
+                collection: "system.profile"
+                },
+            actions: [
+                "listIndexes",
+                "listCollections",
+                "dbStats",
+                "dbHash",
+                "collStats",
+                "find"
+                ]
+            }],
+        roles:[]
+    })
 
-
-mongo-42-rs-0-2.nikita.local
+    db.getSiblingDB("admin").createUser({
+      user: "pmm",
+      pwd: "${mongodb_42_pmm_user_password}",
+      roles: [
+          { role: "explainRole", db: "admin" },
+          { role: "clusterMonitor", db: "admin" },
+          { role: "read", db: "local" }
+      ]
+    })

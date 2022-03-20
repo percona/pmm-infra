@@ -18,3 +18,4 @@ module "mongo_cluster_pmmdemo" {
   pmm_server_endpoint = local.pmm_server_endpoint
   pmm_password        = random_password.pmm_admin_pass.result
 }
+
