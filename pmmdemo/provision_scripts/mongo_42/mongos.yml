@@ -11,14 +11,21 @@ runcmd:
   - usermod -a -G docker ec2-user
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-42
+  - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
-  - yum -y install percona-server-mongodb-mongos pmm2-client
-  - chown mongod:mongod /etc/mongo-key
+  - yum -y install pmm2-client
+  - chown mongod:mongod /etc/mongo-key /var/run/mongo/
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
   - systemctl start mongos
   - systemctl status mongos
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - sleep 10s
+  - mongo /tmp/init.js
+  - sleep 5s
+  - mongo -u pmm-admin -p ${mongodb_42_pmm_admin_password}
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+
 
 write_files:
 - path: /etc/mongos.conf
@@ -27,7 +34,7 @@ write_files:
       configDB: ${replica_set_name}/mongo-42-cfg-0.${route53_name}:27019,mongo-42-cfg-1.${route53_name}:27019,mongo-42-cfg-2.${route53_name}:27019
 
     net:
-      bindIp: localhost,0.0.0.0
+      bindIp: 0.0.0.0
 
     systemLog:
       destination: file
@@ -47,8 +54,47 @@ write_files:
 
 - path: /tmp/init.js
   content: |
-    sh.addShard("shard-0/mongo-42-rs-0-0.${route53_name}:27018,mongo-42-rs-0-1.${route53_name}:27018,mongo-42-rs-0-2.${route53_name}:27018")
-    sh.addShard("shard-1/mongo-42-rs-1-0.${route53_name}:27018,mongo-42-rs-1-1.${route53_name}:27018,mongo-42-rs-1-2.${route53_name}:27018")
+    sh.addShard("shard-0/mongo-42-rs-0-0.${route53_name}:27019,mongo-42-rs-0-1.${route53_name}:27019,mongo-42-rs-0-2.${route53_name}:27019")
+    sh.addShard("shard-1/mongo-42-rs-1-0.${route53_name}:27019,mongo-42-rs-1-1.${route53_name}:27019,mongo-42-rs-1-2.${route53_name}:27019")
+    admin = db.getSiblingDB("admin")
+    admin.createUser(
+      {
+        user: "pmm-admin",
+        pwd: "${mongodb_42_pmm_admin_password}",
+        roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+      }
+    )
+
+
+- path: /tmp/users.js
+  content: |
+    db.getSiblingDB("admin").createRole({
+        role: "explainRole",
+        privileges: [{
+            resource: {
+                db: "",
+                collection: "system.profile"
+                },
+            actions: [
+                "listIndexes",
+                "listCollections",
+                "dbStats",
+                "dbHash",
+                "collStats",
+                "find"
+                ]
+            }],
+        roles:[]
+    })
+    db.getSiblingDB("admin").createUser({
+      user: "pmm",
+      pwd: "${mongodb_42_pmm_user_password}",
+      roles: [
+          { role: "explainRole", db: "admin" },
+          { role: "clusterMonitor", db: "admin" },
+          { role: "read", db: "local" }
+      ]
+    })
 
 - path: /usr/lib/systemd/system/mongos.service
   content: |
