@@ -86,7 +86,3 @@ write_files:
 - path: /etc/mongo-key
   content: |
     ${mongodb_42_keyfile}
-
-- path: /usr/lib/systemd/system/mongos.service
-  content: |
-

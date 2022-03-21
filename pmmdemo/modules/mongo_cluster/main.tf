@@ -1,6 +1,6 @@
 module "mongo_42_rs_0" {
   source        = "../ec2"
-  count         = var.count_of_chards
+  count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-rs-0-${count.index}"
   instance_type = var.instance_type
   subnet_id     = var.subnet_id
@@ -23,7 +23,7 @@ module "mongo_42_rs_0" {
 
 module "mongo_42_rs_0_disk" {
   source      = "../ebs"
-  count       = var.count_of_chards
+  count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-rs-0-${count.index}"
   disk_size   = var.mongo_disk_size
   instance_id = module.mongo_42_rs_0[count.index].instance_id
@@ -32,7 +32,7 @@ module "mongo_42_rs_0_disk" {
 
 module "mongo_42_rs_1" {
   source        = "../ec2"
-  count         = var.count_of_chards
+  count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-rs-1-${count.index}"
   instance_type = var.instance_type
   subnet_id     = var.subnet_id
@@ -55,7 +55,7 @@ module "mongo_42_rs_1" {
 
 module "mongo_42_rs_1_disk" {
   source      = "../ebs"
-  count       = var.count_of_chards
+  count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-rs-1-${count.index}"
   disk_size   = var.mongo_disk_size
   instance_id = module.mongo_42_rs_1[count.index].instance_id
@@ -63,7 +63,7 @@ module "mongo_42_rs_1_disk" {
 
 module "mongo_42_cfg" {
   source        = "../ec2"
-  count         = var.count_of_chards
+  count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
   instance_type = var.config_instance_type
   subnet_id     = var.subnet_id
@@ -86,7 +86,7 @@ module "mongo_42_cfg" {
 
 module "mongo_42_cfg_disk" {
   source      = "../ebs"
-  count       = var.count_of_chards
+  count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
   disk_size   = var.mongo_config_disk_size
   instance_id = module.mongo_42_cfg[count.index].instance_id

@@ -52,7 +52,7 @@ variable "route53_name" {
 }
 
 # OPTIONAL
-variable "count_of_chards" {
+variable "count_of_shards" {
   type        = number
   description = "Number of Mongo shards"
   default     = 3
