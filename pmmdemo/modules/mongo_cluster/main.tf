@@ -9,17 +9,15 @@ module "mongo_42_rs_0" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_shard, {
-    pmm_password                  = var.pmm_password,
-    name                          = "${local.mongo_cluster_name}-rs-0-${count.index}",
-    fqdn                          = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
-    pmm_server_endpoint           = var.pmm_server_endpoint,
-    replica_set_name              = "shard-0",
-    shard_number                  = 0,
-    route53_name                  = var.route53_name,
+    pmm_password                 = var.pmm_password,
+    name                         = "${local.mongo_cluster_name}-rs-0-${count.index}",
+    fqdn                         = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
+    pmm_server_endpoint          = var.pmm_server_endpoint,
+    replica_set_name             = "shard-0",
+    shard_number                 = 0,
+    route53_name                 = var.route53_name,
+    mongodb_42_keyfile           = random_password.mongodb_42_keyfile.result,
     mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
-    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
-
   })
 }
 
@@ -50,9 +48,8 @@ module "mongo_42_rs_1" {
     replica_set_name              = "shard-1",
     shard_number                  = 1,
     route53_name                  = var.route53_name,
-    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
     mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
   })
 }
 
@@ -81,9 +78,9 @@ module "mongo_42_cfg" {
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "cfg",
     route53_name                  = var.route53_name,
-    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
     mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+
   })
 }
 
@@ -106,13 +103,15 @@ module "mongo_42_mongos" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_mongos, {
-    pmm_password        = var.pmm_password,
-    name                = "${local.mongo_cluster_name}-mongos-${count.index}",
-    fqdn                = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
-    pmm_server_endpoint = var.pmm_server_endpoint,
+    pmm_password                  = var.pmm_password,
+    name                          = "${local.mongo_cluster_name}-mongos-${count.index}",
+    fqdn                          = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
+    pmm_server_endpoint           = var.pmm_server_endpoint,
     route53_name                  = var.route53_name,
-    replica_set_name    = "cfg",
-    mongodb_42_keyfile  = random_password.mongodb_42_keyfile.result,
+    replica_set_name              = "cfg",
+    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
   })
 }
 
