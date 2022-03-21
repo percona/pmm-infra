@@ -1,0 +1,87 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - docker
+
+bootcmd:
+ - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+ - mkfs.xfs -L data /dev/nvme1n1
+ - mkdir -p /data
+
+mounts:
+ - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+
+runcmd:
+  - systemctl enable docker
+  - service docker start
+  - usermod -a -G docker ec2-user
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y psmdb-42
+  - yum -y install percona-server-mongodb
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
+  - chown mongod:mongod /data/ /etc/mongo-key
+  - chmod 600 /etc/mongo-key
+  - systemctl enable mongod
+  - systemctl start mongod
+  - systemctl status mongod
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+
+write_files:
+- path: /etc/mongod.conf
+  content: |
+    sharding:
+      clusterRole: shardsvr
+
+    replication:
+      replSetName: ${replica_set_name}
+
+    storage:
+      dbPath: /data
+      journal:
+        enabled: true
+
+    systemLog:
+      destination: file
+      logAppend: true
+      path: /var/log/mongo/mongod.log
+
+    processManagement:
+      fork: true
+      pidFilePath: /var/run/mongod.pid
+
+    net:
+      port: 27019
+      bindIp: 0.0.0.0
+
+    operationProfiling:
+      mode: all
+      slowOpThresholdMs: 200
+      rateLimit: 100
+
+    security:
+      keyFile: /etc/mongo-key
+
+- path: /etc/mongo-key
+  content: |
+    ${mongodb_42_keyfile}
+
+- path: /tmp/init.js
+  content: |
+    rs.secondaryOk()
+    rs.initiate(
+      {
+        _id: "${replica_set_name}",
+        members: [
+          { _id : 0, host : "mongo-42-rs-${shard_number}-0.${route53_name}:27019" },
+          { _id : 1, host : "mongo-42-rs-${shard_number}-1.${route53_name}:27019" },
+          { _id : 2, host : "mongo-42-rs-${shard_number}-2.${route53_name}:27019" }
+        ]
+      }
+    )
