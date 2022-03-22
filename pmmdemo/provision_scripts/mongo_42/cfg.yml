@@ -30,8 +30,10 @@ runcmd:
   - systemctl enable mongod
   - systemctl start mongod
   - systemctl status mongod
+  - timeout 50 bash -c 'until curl -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - mongo --port 27019 /tmp/init.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 write_files:
 - path: /etc/mongod.conf
@@ -54,7 +56,7 @@ write_files:
 
     processManagement:
       fork: true
-      pidFilePath: /var/run/mongo/mongod.pid
+      pidFilePath: /var/run/mongod.pid
 
     net:
       port: 27019
@@ -86,3 +88,12 @@ write_files:
 - path: /etc/mongo-key
   content: |
     ${mongodb_42_keyfile}
+
+- path: /root/.mongorc.js
+  content: |
+    db = connect("localhost:27019/")
+
+- path: /root/.bashrc
+  append: true
+  content: |
+      alias mng='mongo --nodb'

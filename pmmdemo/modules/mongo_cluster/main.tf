@@ -18,6 +18,7 @@ module "mongo_42_rs_0" {
     route53_name                 = var.route53_name,
     mongodb_42_keyfile           = random_password.mongodb_42_keyfile.result,
     mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
   })
 }
 
@@ -50,6 +51,7 @@ module "mongo_42_rs_1" {
     route53_name                  = var.route53_name,
     mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
     mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
   })
 }
 

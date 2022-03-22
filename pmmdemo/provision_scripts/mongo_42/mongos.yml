@@ -14,11 +14,13 @@ runcmd:
   - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - mkdir /var/run/mongo/
   - chown mongod:mongod /etc/mongo-key /var/run/mongo/
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
   - systemctl start mongos
   - systemctl status mongos
+  - timeout 50 bash -c 'until curl -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - sleep 10s
   - mongo /tmp/init.js
@@ -46,7 +48,7 @@ write_files:
 
     processManagement:
       fork: true
-      pidFilePath: /var/run/mongos.pid
+      pidFilePath: /var/run/mongo/mongos.pid
 
 - path: /etc/mongo-key
   content: |
@@ -107,7 +109,7 @@ write_files:
     Group=mongod
     Type=forking
     ExecStart=/bin/mongos --config /etc/mongos.conf --fork
-    PIDFile=/var/run/mongodb/mongos.pid
+    PIDFile=/var/run/mongo/mongos.pid
     LimitFSIZE=infinity
     LimitCPU=infinity
     LimitAS=infinity
@@ -120,6 +122,11 @@ write_files:
     [Install]
     WantedBy=multi-user.target
 
+- path: /root/.mongorc.js
+  content: |
+    db = connect("localhost:27019/")
 
-
-
+- path: /root/.bashrc
+  append: true
+  content: |
+      alias mng='mongo --nodb'
