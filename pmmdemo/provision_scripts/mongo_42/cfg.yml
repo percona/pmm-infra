@@ -55,7 +55,7 @@ write_files:
 
     processManagement:
       fork: true
-      pidFilePath: /var/run/mongo/mongod.pid
+      pidFilePath: /var/run/mongod.pid
 
     net:
       port: 27019

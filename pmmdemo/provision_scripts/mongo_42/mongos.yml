@@ -14,6 +14,7 @@ runcmd:
   - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - mkdir /var/run/mongo/
   - chown mongod:mongod /etc/mongo-key /var/run/mongo/
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
@@ -47,7 +48,7 @@ write_files:
 
     processManagement:
       fork: true
-      pidFilePath: /var/run/mongos.pid
+      pidFilePath: /var/run/mongos/mongos.pid
 
 - path: /etc/mongo-key
   content: |
