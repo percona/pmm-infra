@@ -87,3 +87,12 @@ write_files:
         ]
       }
     )
+
+- path: /root/.mongorc.js
+  content: |
+    db = connect("localhost:27019/")
+
+- path: /root/.bashrc
+  append: true
+  content: |
+      alias mng='mongo --nodb'

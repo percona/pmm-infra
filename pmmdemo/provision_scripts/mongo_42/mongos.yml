@@ -48,7 +48,7 @@ write_files:
 
     processManagement:
       fork: true
-      pidFilePath: /var/run/mongos/mongos.pid
+      pidFilePath: /var/run/mongo/mongos.pid
 
 - path: /etc/mongo-key
   content: |
@@ -109,7 +109,7 @@ write_files:
     Group=mongod
     Type=forking
     ExecStart=/bin/mongos --config /etc/mongos.conf --fork
-    PIDFile=/var/run/mongodb/mongos.pid
+    PIDFile=/var/run/mongo/mongos.pid
     LimitFSIZE=infinity
     LimitCPU=infinity
     LimitAS=infinity
@@ -122,6 +122,11 @@ write_files:
     [Install]
     WantedBy=multi-user.target
 
+- path: /root/.mongorc.js
+  content: |
+    db = connect("localhost:27019/")
 
-
-
+- path: /root/.bashrc
+  append: true
+  content: |
+      alias mng='mongo --nodb'
