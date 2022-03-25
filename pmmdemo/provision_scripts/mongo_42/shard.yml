@@ -36,7 +36,7 @@ runcmd:
   - mongo --port 27019 /tmp/admin.js
   - mongo --port 27019 -u pmm-admin -p '${mongodb_42_pmm_admin_password}' /tmp/user.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --port 27019
 
 write_files:
 - path: /etc/mongod.conf
