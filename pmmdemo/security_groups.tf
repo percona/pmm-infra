@@ -53,3 +53,23 @@ resource "aws_security_group" "default_access" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+resource "aws_security_group" "aurora_engine" {
+  name = "pmmdemo-aurora-engine-sg"
+
+  vpc_id      = aws_vpc.pmmdemo.id
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["${module.pmm_server.private_ip}/32"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}

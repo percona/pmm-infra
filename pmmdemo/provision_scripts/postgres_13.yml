@@ -14,7 +14,7 @@ bootcmd:
  - mkdir -p /data
 
 mounts:
- - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+ - [ "/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2" ]
 
 runcmd:
   - systemctl enable docker

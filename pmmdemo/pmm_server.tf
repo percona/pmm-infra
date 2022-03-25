@@ -33,3 +33,33 @@ resource "random_password" "pmm_admin_pass" {
   length  = 20
   special = false
 }
+
+resource "aws_iam_user" "rds_user" {
+  name = "pmm-demo-rds-user"
+}
+
+
+resource "aws_iam_policy" "pmmdemo-rds-policy" {
+  name        = "pmm-demo-rds-policy"
+  path        = "/"
+  description = "Policy for rds database discovery"
+  policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [{ "Sid": "Stmt1508404837000",
+                "Effect": "Allow",
+                "Action": [ "rds:DescribeDBInstances",
+                            "cloudwatch:GetMetricStatistics",
+                            "cloudwatch:ListMetrics"],
+                            "Resource": ["*"] },
+              { "Sid": "Stmt1508410723001",
+                "Effect": "Allow",
+                "Action": [ "logs:DescribeLogStreams",
+                            "logs:GetLogEvents",
+                            "logs:FilterLogEvents" ],
+                            "Resource": [ "arn:aws:logs:*:*:log-group:RDSOSMetrics:*" ]}
+    ]})
+}
+
+resource "aws_iam_access_key" "rds_user_access_key" {
+  user = aws_iam_user.rds_user.name
+}
