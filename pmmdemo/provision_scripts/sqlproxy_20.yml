@@ -7,6 +7,11 @@ repo_upgrade: all
 
 runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - yum install -y proxysql2
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+
+# TODO replace to admin-stats_credentials user
 
 write_files:
 - path: /etc/proxysql.cnf
