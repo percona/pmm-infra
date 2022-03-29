@@ -20,7 +20,7 @@ runcmd:
   - systemctl enable mongos
   - systemctl start mongos
   - systemctl status mongos
-  - timeout 50 bash -c 'until curl -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - sleep 10s
   - mongo /tmp/init.js

@@ -30,7 +30,7 @@ runcmd:
   - systemctl enable mongod
   - systemctl start mongod
   - systemctl status mongod
-  - timeout 50 bash -c 'until curl -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - mongo --port 27019 /tmp/init.js
   - sleep 5s
   - mongo --port 27019 /tmp/admin.js

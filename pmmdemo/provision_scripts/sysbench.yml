@@ -13,6 +13,7 @@ runcmd:
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.percona.server.80
   - systemctl start sysbench.percona.server.80
+  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
 
 write_files:
@@ -38,7 +39,7 @@ write_files:
         sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
     done;
 
-- path: /etc/sysbench/percona-server-80.conf
+- path: /etc/sysbench/percona-server-80.cnf
   content: |
     mysql-host=percona-server-80-0
     mysql-port=3306
@@ -47,6 +48,20 @@ write_files:
     rate=0
     report-interval=10
     verbosity=0
+
+- path: /etc/sysbench/proxysql.cnf
+  content: |
+    mysql-host=sqlproxy
+    mysql-port=3306
+    mysql-user=sysbench
+    mysql-password=Percona1!
+    events=0
+    rand-type=pareto
+    rate=0
+    report-interval=10
+    table_size=1000000
+    time=0
+    threads=5
 
 - path: /usr/lib/systemd/system/sysbench.percona.server.80.service
   content: |

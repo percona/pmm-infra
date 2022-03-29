@@ -50,7 +50,7 @@ data "template_file" "percona_server_80_user_data" {
     mysql_root_password     = random_password.mysql80_root_password.result
     mysql_replica_password  = random_password.mysql80_replica_password.result
     mysql_sysbench_password = random_password.mysql80_sysbench_password.result
-    pmm_server_endpoint     = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+    pmm_server_endpoint     = local.pmm_server_endpoint
   }
 }
 
@@ -58,12 +58,7 @@ module "percona_server_80_disk" {
   source      = "./modules/ebs"
   count       = local.count
   disk_name   = "percona-server-80"
-  disk_size   = "256"
+  disk_size   = "256" // TODO reduce disk size to 64 GB
   instance_id = module.percona_server_80[count.index].instance_id
 }
 
-// TODO encrypt state or don't store plain text
-output "pmm_password" {
-  sensitive = true
-  value     = random_password.pmm_admin_pass.result
-}
