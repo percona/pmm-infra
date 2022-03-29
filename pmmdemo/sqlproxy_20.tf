@@ -12,14 +12,15 @@ module "sqlproxy" {
     aws_security_group.default_access.id,
   ]
   user_data = templatefile("provision_scripts/sqlproxy_20.yml", {
-    name                      = local.sqlproxy_name
-    domain                    = var.pmm_domain
-    pmm_admin_password        = random_password.pmm_admin_pass.result
-    pmm_server_endpoint       = local.pmm_server_endpoint
-    fqdn                      = "${local.sqlproxy_name}.${aws_route53_zone.demo_local.name}"
-    mysql_sysbench_password   = random_password.percona_xtradb_cluster_80_sysbench_password.result
-    proxysql_monitor_password = random_password.proxysql_monitor.result
-    proxysql_admin_password   = random_password.proxysql_admin.result
+    name                               = local.sqlproxy_name
+    domain                             = var.pmm_domain
+    pmm_admin_password                 = random_password.pmm_admin_pass.result
+    pmm_server_endpoint                = local.pmm_server_endpoint
+    fqdn                               = "${local.sqlproxy_name}.${aws_route53_zone.demo_local.name}"
+    proxysql_monitor_password          = random_password.proxysql_monitor.result
+    proxysql_admin_password            = random_password.proxysql_admin.result
+    percona_server_80_password         = random_password.mysql80_sysbench_password.result
+    percona_xtradb_cluster_80_password = random_password.percona_xtradb_cluster_80_sysbench_password.result
   })
 }
 

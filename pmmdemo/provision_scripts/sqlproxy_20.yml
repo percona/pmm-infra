@@ -8,8 +8,11 @@ repo_upgrade: all
 runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - yum install -y proxysql2
+  - systemctl start proxysql
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 # TODO replace to admin-stats_credentials user
 
@@ -77,7 +80,9 @@ write_files:
 
     mysql_users:
     (
-      { username = "sysbench" , password = "" , default_hostgroup = 10 , active = 1 },
+      { username = "sysbench" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 10 , active = 1 },
+      { username = "sysbench" , password = "${percona_server_80_password}" , default_hostgroup = 1000 , active = 1 },
+
     )
 
     mysql_query_rules:

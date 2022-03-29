@@ -16,6 +16,54 @@ variable "project_name" {
   default     = "demo"
 }
 
+variable "google_analytics_id" {
+  type        = string
+  description = "Google Analytics tracking code"
+  default     = ""
+}
+
+variable "oauth_enable" {
+  type        = bool
+  description = "Use ouaht for auth in Grafana"
+  default     = false
+}
+
+variable "oauth_client_id" {
+  type        = string
+  description = "Oauth client ID"
+  default     = ""
+}
+
+variable "oauth_secret" {
+  type        = string
+  description = "Oauth client secret"
+  default     = ""
+}
+
+variable "oauth_scopes" {
+  type        = string
+  description = "scope for auth"
+  default     = ""
+}
+
+variable "oauth_url" {
+  type        = string
+  description = "Oauth domain url"
+  default     = ""
+}
+
+variable "oauth_token_url" {
+  type        = string
+  description = "Oauth token URL"
+  default     = ""
+}
+
+variable "oauth_api_url" {
+  type        = string
+  description = "Oauth API URL"
+  default     = ""
+}
+
 locals {
   pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
   environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
