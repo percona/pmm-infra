@@ -33,5 +33,88 @@ runcmd:
   - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
+  - chmod 400 /root/pmm-admin-password
+  - docker cp /tmp/ansible.yml pmm-server:/tmp/ansible.yml
+  - docker exec pmm-server ansible-playbook /tmp/ansible.yml
+  - docker exec pmm-server supervisorctl restart grafana
 
+write_files:
+- path: /tmp/ansible.yml
+  content: |
+    ---
+    # This playbook contains tasks executed for pmmdemo
+    - hosts: localhost
+      become: yes
+      gather_facts: yes
+      tasks:
+        - name: Set Google Analytics ID
+          ini_file:
+            dest: /etc/grafana/grafana.ini
+            section: analytics
+            option: google_analytics_ua_id
+            value: ${google_analytics_id}
+
+        - name: Enable anonymous access
+          ini_file:
+            dest: /etc/grafana/grafana.ini
+            section: auth.anonymous
+            option: enabled
+            value: "true"
+        - name: Install, configure, and start Apache
+          when: ${oauth_enable}
+          block:
+          # TODO use loop instead block here
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: enabled
+              value: "true"
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: name
+              value: "Percona Account"
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: client_id
+              value: ${oauth_client_id}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: client_secret
+              value: ${oauth_secret}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: scopes
+              value: ${oauth_scopes}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: auth_url
+              value: ${oauth_url}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: token_url
+              value: ${oauth_token_url}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: api_url
+              value: ${oauth_api_url}
+
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.generic_oauth
+              option: role_attribute_path
+              value: contains(email, '@percona.com') && 'Editor' || 'Viewer'
 

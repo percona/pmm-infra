@@ -12,7 +12,9 @@ runcmd:
   - mkdir /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.percona.server.80
+  - systemctl enable sysbench.proxysql
   - systemctl start sysbench.percona.server.80
+  - systemctl start sysbench.proxysql
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
 
@@ -54,7 +56,7 @@ write_files:
     mysql-host=sqlproxy
     mysql-port=3306
     mysql-user=sysbench
-    mysql-password=Percona1!
+    mysql-password=${percona_xtradb_cluster_80_password}
     events=0
     rand-type=pareto
     rate=0
@@ -74,6 +76,21 @@ write_files:
     Restart=on-failure
     RestartSec=10
     ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.conf
+
+    [Install]
+    WantedBy=multi-user.target
+
+- path: /usr/lib/systemd/system/sysbench.proxysql.service
+  content: |
+    [Unit]
+    Description=Sysbench for Proxy SQL
+    After=network.target
+
+    [Service]
+    Type=simple
+    Restart=on-failure
+    RestartSec=10
+    ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
 
     [Install]
     WantedBy=multi-user.target
