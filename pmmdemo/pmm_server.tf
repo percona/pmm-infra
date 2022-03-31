@@ -14,16 +14,17 @@ module "pmm_server" {
   ]
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
-      pmm_admin_pass      = random_password.pmm_admin_pass.result,
-      name                = local.pmm_server_name,
-      fqdn                = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}",
-      google_analytics_id = var.google_analytics_id,
-      oauth_enable        = var.oauth_enable,
-      oauth_client_id     = var.oauth_client_id,
-      oauth_secret        = var.oauth_secret,
+      pmm_admin_pass      = random_password.pmm_admin_pass.result
+      name                = local.pmm_server_name
+      fqdn                = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}"
+      full_domain         = aws_route53_zone.demo_local.name
+      google_analytics_id = var.google_analytics_id
+      oauth_enable        = var.oauth_enable
+      oauth_client_id     = var.oauth_client_id
+      oauth_secret        = var.oauth_secret
       oauth_url           = var.oauth_url
       oauth_token_url     = var.oauth_token_url
-      oauth_api_url       = var.oauth_api_url,
+      oauth_api_url       = var.oauth_api_url
       oauth_scopes        = var.oauth_scopes
     }
   )

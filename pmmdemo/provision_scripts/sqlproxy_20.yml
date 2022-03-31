@@ -94,6 +94,7 @@ write_files:
     )
 
 - path: /root/.my.cnf
+  permissions: '0400'
   content: |
     [client]
     user=admin

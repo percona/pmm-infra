@@ -32,8 +32,8 @@ runcmd:
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
   - systemctl status mysqld.service;
-  - chmod +x /tmp/init-mysql.sh
-  - bash /tmp/init-mysql.sh
+  - chmod +x /root/init-mysql.sh
+  - bash /root/init-mysql.sh
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
@@ -53,7 +53,7 @@ write_files:
     #
     report_host = ${fqdn}
     report_port = 3306
-    server_id   = ${index}
+    server_id   = 1${index}
 
 
     # Generic
@@ -109,7 +109,8 @@ write_files:
 
     skip-log-bin
 
-- path: /tmp/init-mysql.sh
+- path: /root/init-mysql.sh
+  permissions: '0400'
   content: |
     #!/bin/bash
 

@@ -34,12 +34,13 @@ runcmd:
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
-  - docker cp /tmp/ansible.yml pmm-server:/tmp/ansible.yml
-  - docker exec pmm-server ansible-playbook /tmp/ansible.yml
+  - docker cp /root/ansible.yml pmm-server:/root/ansible.yml
+  - docker exec pmm-server ansible-playbook /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
 
 write_files:
-- path: /tmp/ansible.yml
+- path: /root/ansible.yml
+  permissions: '0400'
   content: |
     ---
     # This playbook contains tasks executed for pmmdemo
@@ -60,6 +61,14 @@ write_files:
             section: auth.anonymous
             option: enabled
             value: "true"
+
+        - name: Set domain
+          ini_file:
+            dest: /etc/grafana/grafana.ini
+            section: server
+            option: domain
+            value: ${full_domain}
+
         - name: Install, configure, and start Apache
           when: ${oauth_enable}
           block:

@@ -25,7 +25,7 @@ runcmd:
   - sleep 10s
   - mongo /tmp/init.js
   - sleep 5s
-  - mongo -u pmm-admin -p ${mongodb_42_pmm_admin_password}
+  - mongo --port 27019 -u pmm-admin -p '${mongodb_42_pmm_admin_password}' /tmp/user.js
   - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 
@@ -122,11 +122,37 @@ write_files:
     [Install]
     WantedBy=multi-user.target
 
-- path: /root/.mongorc.js
-  content: |
-    db = connect("localhost:27019/")
-
 - path: /root/.bashrc
   append: true
   content: |
       alias mng='mongo --nodb'
+
+- path: /tmp/user.js
+  content: |
+    db.getSiblingDB("admin").createRole({
+        role: "explainRole",
+        privileges: [{
+            resource: {
+                db: "",
+                collection: "system.profile"
+                },
+            actions: [
+                "listIndexes",
+                "listCollections",
+                "dbStats",
+                "dbHash",
+                "collStats",
+                "find"
+                ]
+            }],
+        roles:[]
+    })
+    db.getSiblingDB("admin").createUser({
+      user: "pmm",
+      pwd: "${mongodb_42_pmm_user_password}",
+      roles: [
+          { role: "explainRole", db: "admin" },
+          { role: "clusterMonitor", db: "admin" },
+          { role: "read", db: "local" }
+      ]
+    })
