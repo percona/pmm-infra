@@ -147,5 +147,3 @@ write_files:
           fi;
       done;
     fi
-
-

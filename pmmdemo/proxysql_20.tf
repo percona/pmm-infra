@@ -1,22 +1,22 @@
 locals {
-  sqlproxy_name = "sqlproxy"
+  proxysql_name = "proxysql"
 }
 
-module "sqlproxy" {
+module "proxysql" {
   source        = "./modules/ec2"
-  server_name   = local.sqlproxy_name
+  server_name   = local.proxysql_name
   instance_type = "t3.small"
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
   security_groups = [
     aws_security_group.default_access.id,
   ]
-  user_data = templatefile("provision_scripts/sqlproxy_20.yml", {
-    name                               = local.sqlproxy_name
+  user_data = templatefile("provision_scripts/proxysql_20.yml", {
+    name                               = local.proxysql_name
     domain                             = var.pmm_domain
     pmm_admin_password                 = random_password.pmm_admin_pass.result
     pmm_server_endpoint                = local.pmm_server_endpoint
-    fqdn                               = "${local.sqlproxy_name}.${aws_route53_zone.demo_local.name}"
+    fqdn                               = "${local.proxysql_name}.${aws_route53_zone.demo_local.name}"
     proxysql_monitor_password          = random_password.proxysql_monitor.result
     proxysql_admin_password            = random_password.proxysql_admin.result
     percona_server_80_password         = random_password.mysql80_sysbench_password.result
