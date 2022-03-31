@@ -129,6 +129,8 @@ write_files:
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
 
