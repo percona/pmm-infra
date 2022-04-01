@@ -30,6 +30,7 @@ runcmd:
   - docker exec nginx apt install -y certbot python3-certbot-nginx
   - docker exec nginx certbot --agree-tos -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/admin_password
+  - chmod 400 /root/pmm-admin-password
 
 write_files:
 - path: /root/.ssh/config
@@ -99,6 +100,7 @@ write_files:
         }
     }
 - path: /tmp/cert.sh
+  permissions: '0400'
   content: |
     #!/bin/sh
 

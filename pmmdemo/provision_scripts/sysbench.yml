@@ -75,7 +75,7 @@ write_files:
     Type=simple
     Restart=on-failure
     RestartSec=10
-    ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.conf
+    ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
 
     [Install]
     WantedBy=multi-user.target

@@ -26,8 +26,8 @@ runcmd:
   - systemctl start mysql
   - cp -f /etc/my.cnf /etc/my.cnf_original
   - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
-  - chmod +x /tmp/init-mysql.sh
-  - bash /tmp/init-mysql.sh
+  - chmod +x /root/init-mysql.sh
+  - bash /root/init-mysql.sh
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mysql --metrics-mode=push --username=root --password=${mysql_root_password} --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
@@ -122,7 +122,8 @@ write_files:
     wsrep_debug=ON
 
 
-- path: /tmp/init-mysql.sh
+- path: /root/init-mysql.sh
+  permissions: '0400'
   content: |
     #!/bin/bash
 
@@ -141,6 +142,8 @@ write_files:
     mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'10.%'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'10.%'; FLUSH PRIVILEGES;";
     mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;"
 
     if [[ "${name}" == "percona-xtradb-cluster-0" ]]; then

@@ -22,6 +22,7 @@ resource "azurerm_mysql_server" "pmmdemo" {
   infrastructure_encryption_enabled = false
   public_network_access_enabled     = true
   ssl_enforcement_enabled           = false
+  ssl_minimal_tls_version_enforced  = "TLSEnforcementDisabled"
 
   tags = {
     Terraform       = "Yes"
