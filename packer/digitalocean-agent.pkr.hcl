@@ -13,7 +13,7 @@ source "digitalocean" "pmm-ovf" {
   region       = "ams3"
   size         = "s-2vcpu-4gb-intel"
   ssh_username = "root"
-  snapshot_name = "pmm-ovf-builder"
+  snapshot_name = "pmm-agent"
 }
 
 build {
