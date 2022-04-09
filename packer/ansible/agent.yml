@@ -64,9 +64,6 @@
               - https://rpm.nodesource.com/pub_14.x/el/7/x86_64/nodejs-14.18.3-1nodesource.x86_64.rpm
               - chromium
 
-        - name: install npm
-          command: npm install
-
       when: ansible_architecture == "x86_64"
 
     - name: Install specific ARM64 packages
