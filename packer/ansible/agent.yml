@@ -64,6 +64,11 @@
               - https://rpm.nodesource.com/pub_14.x/el/7/x86_64/nodejs-14.18.3-1nodesource.x86_64.rpm
               - chromium
 
+        - name: Install doctl client for digital ocean
+          get_url:
+            url: https://github.com/digitalocean/doctl/releases/download/v1.72.0/doctl-1.72.0-linux-amd64.tar.gz
+            dest: /usr/local/bin/doctl
+
       when: ansible_architecture == "x86_64"
 
     - name: Install specific ARM64 packages
