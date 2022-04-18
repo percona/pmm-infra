@@ -66,9 +66,8 @@
 
         - name: Install doctl client for digital ocean
           get_url:
-            url: https://github.com/digitalocean/doctl/releases/download/v1.72.0/doctl-1.72.0-linux-amd64.tar.gz
-            dest: /usr/local/bin/doctl
-
+            url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-amd64.tar.gz
+            dest: /tmp/doctl.tar.gz
       when: ansible_architecture == "x86_64"
 
     - name: Install specific ARM64 packages
@@ -88,7 +87,23 @@
         - name: Install NodeJS
           package:
             name: https://rpm.nodesource.com/pub_14.x/el/7/aarch64/nodejs-14.18.3-1nodesource.aarch64.rpm
-      when: ansible_architecture == "arm64"
+
+        - name: Install doctl client for digital ocean
+          get_url:
+            url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-arm64.tar.gz
+            dest: /tmp/doctl.tar.gz
+      when: ansible_architecture == "aarch64"
+
+    - name: Unarchive a file with doctl
+      unarchive:
+        src:  /tmp/doctl.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        mode: 'u+x,g+x,o+x'
+
+    - name: Install Python modules
+      pip:
+        name: python-digitalocean==1.17.0
 
     - name: Install virtual box (only for digital ocean)
       block:
