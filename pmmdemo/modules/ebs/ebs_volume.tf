@@ -3,7 +3,7 @@ resource "aws_ebs_volume" "data_disk" {
   size = var.disk_size
   type = var.disk_type
 
-  lifecycle {
+ lifecycle {
     prevent_destroy = true
   }
 
