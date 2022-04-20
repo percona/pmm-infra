@@ -125,5 +125,10 @@ write_files:
               dest: /etc/grafana/grafana.ini
               section: auth.generic_oauth
               option: role_attribute_path
-              value: contains(email, '@percona.com') && 'Editor' || 'Viewer'
+              value: ${oauth_role_attribute_path}
 
+          - ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth
+              option: signout_redirect_url
+              value: ${oauth_signout_redirect_url}
