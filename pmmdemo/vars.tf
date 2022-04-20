@@ -64,6 +64,18 @@ variable "oauth_api_url" {
   default     = ""
 }
 
+variable "oauth_role_attribute_path" {
+  type        = string
+  description = "Oauth Attribute path"
+  default     = ""
+}
+
+variable "oauth_signout_redirect_url" {
+  type        = string
+  description = "Oauth Signout Redirect URL"
+  default     = ""
+}
+
 locals {
   pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
   environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
