@@ -41,6 +41,7 @@
           - gcc
           - make
           - perl
+          - p7zip
         state: present
 
     - name: Install specific x86_64 packages
