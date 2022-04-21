@@ -67,6 +67,12 @@
           get_url:
             url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-amd64.tar.gz
             dest: /tmp/doctl.tar.gz
+
+        - name: Download and unarchive AWS installer
+          unarchive:
+            src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+            dest: /tmp
+            remote_src: yes
       when: ansible_architecture == "x86_64"
 
     - name: Install specific ARM64 packages
@@ -91,6 +97,12 @@
           get_url:
             url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-arm64.tar.gz
             dest: /tmp/doctl.tar.gz
+
+        - name: Download and unarchive AWS installer
+          unarchive:
+            src: https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip
+            dest: /tmp
+            remote_src: yes
       when: ansible_architecture == "aarch64"
 
     - name: Unarchive a file with doctl
@@ -131,14 +143,8 @@
         src: daemon.json
         dest: /etc/docker/daemon.json
 
-    - name: Download and unarchive installer
-      unarchive:
-        src: https://s3.amazonaws.com/aws-cli/awscli-bundle.zip
-        dest: /tmp
-        remote_src: yes
-
     - name: Install awscl
-      shell: python3 /tmp/awscli-bundle/install
+      shell: /tmp/aws/install
 
     - name: Enable Docker service
       systemd:
