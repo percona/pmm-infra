@@ -2,8 +2,19 @@
 - name: 'Provision Agent'
   hosts: default
   become: true
+  vars:
+    docker_compose_version: "2.2.3"
+    kubectl_version: "1.22.5"
+    doctl_version: "1.73.0"
+    node_version: "14.18.3"
+
 
   tasks:
+    - name: set vm name
+      set_fact:
+        # Alternative architecture name just because we never can have only one name in computers
+        ansible_architecture_alt: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}none{% endif %}"
+
     - name: Enable epel repo
       command: amazon-linux-extras install -y epel
       when: ansible_facts['distribution'] == "Amazon"
@@ -42,69 +53,31 @@
           - make
           - perl
           - p7zip
+          - https://rpm.nodesource.com/pub_14.x/el/7/{{ ansible_architecture }}/nodejs-{{ node_version }}-1nodesource.{{ ansible_architecture }}.rpm
         state: present
 
-    - name: Install specific x86_64 packages
-      block:
-        - name: Install docker-compose
-          get_url:
-            url: https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64
-            dest: /usr/local/bin/docker-compose
-            mode: 'u+x,g+x,o+x'
+    - name: Install docker-compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-{{ ansible_architecture }}"
+        dest: /usr/local/bin/docker-compose
+        mode: 'u+x,g+x,o+x'
 
-        - name: Install kubectl
-          get_url:
-            url: https://storage.googleapis.com/kubernetes-release/release/v1.22.5/bin/linux/amd64/kubectl
-            dest: /usr/local/bin/kubectl
-            mode: 'u+x,g+x,o+x'
+    - name: Install kubectl
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v{{ kubectl_version }}/bin/linux/{{ ansible_architecture_alt }}/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: 'u+x,g+x,o+x'
 
-        - name: Install NodeJS
-          package:
-            name:
-              - https://rpm.nodesource.com/pub_14.x/el/7/x86_64/nodejs-14.18.3-1nodesource.x86_64.rpm
-              - chromium
+    - name: Install NodeJS
+      package:
+        name:
+          - chromium
+      when: ansible_architecture == "x86_64" # TODO ARM doesn't have chromium package
 
-        - name: Install doctl client for digital ocean
-          get_url:
-            url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-amd64.tar.gz
-            dest: /tmp/doctl.tar.gz
-
-        - name: Download and unarchive AWS installer
-          unarchive:
-            src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
-            dest: /tmp
-            remote_src: yes
-      when: ansible_architecture == "x86_64"
-
-    - name: Install specific ARM64 packages
-      block:
-        - name: Install docker-compose
-          get_url:
-            url: https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-aarch64
-            dest: /usr/local/bin/docker-compose
-            mode: 'u+x,g+x,o+x'
-
-        - name: Install kubectl
-          get_url:
-            url: https://storage.googleapis.com/kubernetes-release/release/v1.22.5/bin/linux/arm64/kubectl
-            dest: /usr/local/bin/kubectl
-            mode: 'u+x,g+x,o+x'
-
-        - name: Install NodeJS
-          package:
-            name: https://rpm.nodesource.com/pub_14.x/el/7/aarch64/nodejs-14.18.3-1nodesource.aarch64.rpm
-
-        - name: Install doctl client for digital ocean
-          get_url:
-            url: https://github.com/digitalocean/doctl/releases/download/v1.73.0/doctl-1.73.0-linux-arm64.tar.gz
-            dest: /tmp/doctl.tar.gz
-
-        - name: Download and unarchive AWS installer
-          unarchive:
-            src: https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip
-            dest: /tmp
-            remote_src: yes
-      when: ansible_architecture == "aarch64"
+    - name: Install doctl client for digital ocean
+      get_url:
+        url: https://github.com/digitalocean/doctl/releases/download/v{{ doctl_version }}/doctl-{{ doctl_version }}-linux-{{ ansible_architecture_alt }}.tar.gz
+        dest: /tmp/doctl.tar.gz
 
     - name: Unarchive a file with doctl
       unarchive:
@@ -115,7 +88,13 @@
 
     - name: Install Python modules
       pip:
-        name: python-digitalocean==1.17.0
+        name: "{{ item }}"
+      loop:
+        - pyaml==21.10.1
+        - GitPython==3.1.27
+        - PyGithub==1.55
+        - python-digitalocean==1.17.0
+        - docker==5.0.3
 
     - name: Install virtual box (only for digital ocean)
       block:
@@ -128,10 +107,12 @@
           gpgkey: https://www.virtualbox.org/download/oracle_vbox.asc
           enabled: true
           state: present
+
       - name: Install Virtualbox
         yum:
           state: present
           name: VirtualBox-5.2
+
       - name: Reboot to the latest kernel
         reboot:
           reboot_timeout: 1200
@@ -143,6 +124,12 @@
       copy:
         src: daemon.json
         dest: /etc/docker/daemon.json
+
+    - name: Download and unarchive AWS installer
+      unarchive:
+        src: https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip
+        dest: /tmp
+        remote_src: yes
 
     - name: Install awscl
       shell: /tmp/aws/install
@@ -160,6 +147,13 @@
           - "docker"
         append: yes
       when: ansible_facts['distribution'] == "Amazon"
+
+    - name: pull and cache docker images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - centos:7
 
     - name: Turn off swap
       sysctl:
