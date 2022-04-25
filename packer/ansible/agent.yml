@@ -148,7 +148,7 @@
         append: yes
       when: ansible_facts['distribution'] == "Amazon"
 
-    - name: pull and cache docker images
+    - name: Pull and cache docker images
       docker_image:
         name: "{{ item }}"
         source: pull
