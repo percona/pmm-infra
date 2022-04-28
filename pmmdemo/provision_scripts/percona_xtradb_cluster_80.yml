@@ -162,7 +162,7 @@ write_files:
                     # Stop bootstrap mode
                     systemctl stop mysql@bootstrap
 
-                    # Start primary node and brake the loop
+                    # Start primary node and break the loop
                     systemctl start mysql
                     break;
                 else
