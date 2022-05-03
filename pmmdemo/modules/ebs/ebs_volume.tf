@@ -1,10 +1,10 @@
 resource "aws_ebs_volume" "data_disk" {
-  availability_zone = "us-east-1f"
+  availability_zone = "us-west-1b"
   size = var.disk_size
   type = var.disk_type
 
  lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags = {

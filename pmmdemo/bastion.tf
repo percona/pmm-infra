@@ -24,7 +24,7 @@ module "bastion" {
 }
 
 data "aws_route53_zone" "pmmdemo" {
-  name         = "percona.net."
+  name         = "perconatest.com."
   private_zone = false
 }
 
