@@ -74,7 +74,7 @@
         dest: /usr/local/bin/kubectl
         mode: 'u+x,g+x,o+x'
 
-    - name: Install NodeJS
+    - name: Install some software
       package:
         name:
           - chromium
