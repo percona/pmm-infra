@@ -14,7 +14,7 @@
         # Alternative architecture name just because we never can have only one name in computers
         ansible_architecture_alt: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}none{% endif %}"
 
-    - name: Install kubectl
+    - name: Add hashicorp repository to yum
       get_url:
         url: https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
         dest: /etc/yum.repos.d/hashicorp.repo
