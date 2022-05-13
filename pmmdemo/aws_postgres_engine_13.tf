@@ -9,7 +9,7 @@ resource "aws_db_instance" "pmmdemo_postgres_13" {
   password            = random_password.pmmdemo_postgres_13_password.result
   skip_final_snapshot = true
   apply_immediately   = true
-  db_subnet_group_name = aws_db_subnet_group.database_subnet
+  db_subnet_group_name = aws_db_subnet_group.database_subnet.name
 }
 
 resource "random_password" "pmmdemo_postgres_13_password" {
