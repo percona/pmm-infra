@@ -134,3 +134,9 @@ resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
   vpc_id = aws_vpc.pmmdemo.id
   dhcp_options_id = aws_vpc_dhcp_options.additional_domain.id
 }
+
+resource "aws_db_subnet_group" "database_subnet" {
+  name = "pmmdemo"
+  subnet_ids = [aws_subnet.pmmdemo]
+
+}

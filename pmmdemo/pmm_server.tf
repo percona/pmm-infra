@@ -73,3 +73,10 @@ resource "aws_iam_policy" "pmmdemo-rds-policy" {
 resource "aws_iam_access_key" "rds_user_access_key" {
   user = aws_iam_user.rds_user.name
 }
+
+resource "aws_iam_policy_attachment" "rds_policy" {
+  name       = "rds_policy"
+  users      = [aws_iam_user.rds_user]
+  policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
+
+}
