@@ -68,6 +68,12 @@
         dest: /usr/local/bin/kubectl
         mode: 'u+x,g+x,o+x'
 
+    - name: Install lacework
+      get_url:
+        url: "https://github.com/lacework/lacework-vulnerability-scanner/releases/latest/download/lw-scanner-linux-{{ ansible_architecture_alt }}"
+        dest: /usr/local/bin/lw-scanner
+        mode: 'u+x,g+x,o+x'
+
     - name: Install some software
       package:
         name:
