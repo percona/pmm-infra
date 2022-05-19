@@ -8,12 +8,16 @@
     doctl_version: "1.73.0"
     node_version: "16.14.2"
 
-
   tasks:
     - name: set vm name
       set_fact:
         # Alternative architecture name just because we never can have only one name in computers
         ansible_architecture_alt: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}none{% endif %}"
+
+    - name: Add hashicorp repository to yum
+      get_url:
+        url: https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+        dest: /etc/yum.repos.d/hashicorp.repo
 
     - name: Enable epel repo
       command: amazon-linux-extras install -y epel
@@ -54,6 +58,8 @@
           - perl
           - p7zip
           - https://rpm.nodesource.com/pub_16.x/el/7/{{ ansible_architecture }}/nodejs-{{ node_version }}-1nodesource.{{ ansible_architecture }}.rpm
+          - packer
+          - xmlstarlet
         state: present
 
     - name: Install docker-compose
@@ -101,6 +107,8 @@
         - PyGithub==1.55
         - python-digitalocean==1.17.0
         - docker==5.0.3
+      when: ansible_facts['distribution'] == "Amazon"
+
 
     - name: Install virtual box (only for digital ocean)
       block:
@@ -160,6 +168,8 @@
         source: pull
       loop:
         - centos:7
+      when: ansible_facts['distribution'] == "Amazon"
+
 
     - name: Turn off swap
       sysctl:
