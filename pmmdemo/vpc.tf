@@ -47,6 +47,16 @@ resource "aws_subnet" "pmmdemo_private" {
   }
 }
 
+resource "aws_subnet" "pmmdemo_private_a" {
+  vpc_id                  = aws_vpc.pmmdemo.id
+  availability_zone       = "us-east-1a"
+  cidr_block              = "10.0.3.0/24"
+
+  tags = {
+    "Name" = local.environment_name,
+  }
+}
+
 
 resource "aws_internet_gateway" "pmmdemo" {
   vpc_id = aws_vpc.pmmdemo.id
@@ -116,6 +126,11 @@ resource "aws_route_table_association" "associate_routetable_to_private_subnet" 
   route_table_id = aws_route_table.nat_route_table.id
 }
 
+resource "aws_route_table_association" "associate_routetable_to_private_subnet_a" {
+  subnet_id      = aws_subnet.pmmdemo_private_a.id
+  route_table_id = aws_route_table.nat_route_table.id
+}
+
 
 resource "aws_route53_zone" "demo_local" {
   name = "${local.environment_name}.local"
@@ -133,4 +148,9 @@ resource "aws_vpc_dhcp_options" "additional_domain" {
 resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
   vpc_id = aws_vpc.pmmdemo.id
   dhcp_options_id = aws_vpc_dhcp_options.additional_domain.id
+}
+
+resource "aws_db_subnet_group" "database_subnet" {
+  name = "pmmdemo"
+  subnet_ids = [aws_subnet.pmmdemo_private.id, aws_subnet.pmmdemo_private_a.id]
 }
