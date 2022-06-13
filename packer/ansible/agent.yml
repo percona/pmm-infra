@@ -3,10 +3,10 @@
   hosts: default
   become: true
   vars:
-    docker_compose_version: "2.5.1"
+    docker_compose_version: "2.6.0"
     kubectl_version: "1.22.9"
-    doctl_version: "1.73.0"
-    node_version: "16.14.2"
+    doctl_version: "1.76.2"
+    node_version: "16.15.1"
 
   tasks:
     - name: set vm name
@@ -169,6 +169,13 @@
         source: pull
       loop:
         - centos:7
+        - debian:buster
+        - debian:stretch
+        - debian:bullseye
+        - ubuntu:jammy
+        - ubuntu:bionic
+        - ubuntu:focal
+        - rockylinux:8
       when: ansible_facts['distribution'] == "Amazon"
 
 
