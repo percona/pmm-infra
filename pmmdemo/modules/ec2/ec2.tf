@@ -21,6 +21,11 @@ resource "aws_instance" "ec2" {
     "Name" = "pmmdemo-${var.server_name}",
   }
 
+    lifecycle {
+      // We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
+      ignore_changes = [ami]
+    }
+
 }
 
 resource "aws_route53_record" "hostname" {
