@@ -80,3 +80,89 @@ resource "aws_iam_policy_attachment" "rds_policy" {
   policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
 
 }
+
+resource "aws_iam_role" "pmmdemo_dlm_lifecycle" {
+  name = "pmmdemo-dlm-lifecycle"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "dlm.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "pmmdemo_dlm_lifecycle" {
+  name = "pmmdemo-dlm-lifecycle"
+  role = aws_iam_role.pmmdemo_dlm_lifecycle.id
+
+  policy = <<EOF
+{
+   "Version": "2012-10-17",
+   "Statement": [
+      {
+         "Effect": "Allow",
+         "Action": [
+            "ec2:CreateSnapshot",
+            "ec2:CreateSnapshots",
+            "ec2:DeleteSnapshot",
+            "ec2:DescribeInstances",
+            "ec2:DescribeVolumes",
+            "ec2:DescribeSnapshots"
+         ],
+         "Resource": "*"
+      },
+      {
+         "Effect": "Allow",
+         "Action": [
+            "ec2:CreateTags"
+         ],
+         "Resource": "arn:aws:ec2:*::snapshot/*"
+      }
+   ]
+}
+EOF
+}
+
+resource "aws_dlm_lifecycle_policy" "pmmdemo" {
+  description        = "PMM Demo DLM lifecycle policy"
+  execution_role_arn = aws_iam_role.pmmdemo_dlm_lifecycle.arn
+  state              = "ENABLED"
+
+  policy_details {
+    resource_types = ["VOLUME"]
+
+    schedule {
+      name = "PMM Demo everyday snapshot"
+
+      create_rule {
+        interval      = 24
+        interval_unit = "HOURS"
+        times         = ["23:45"]
+      }
+
+      retain_rule {
+        count = 7
+      }
+
+      tags_to_add = {
+        SnapshotCreator = "DLM"
+      }
+
+      copy_tags = false
+    }
+
+    target_tags = {
+      "Name" = "pmmdemo-${local.pmm_server_name}"
+    }
+  }
+}
