@@ -50,6 +50,34 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 1. Run `direnv allow` to inject the variables from `.envrc` file to your environment.
 2. Run `terraform init` to initialize your terraform state.GitHub Pull Requests and Issues
 
+## List of servers
+
+We use default hostname in table below: `demo.local` but if you use non-default terraform profile then your hostname will contain your profile name. For example, `test.local` for test profile.
+
+### Databases
+
+| Name                       | Hostnames                                                 |
+|----------------------------|-----------------------------------------------------------|
+| Azure MySQL 8.0            | pmmdemo-azure                                             |
+| AWS MySQL 8.0              | pmmdemo-mysql                                             |
+| AWS Postgres 13            | pmmdemo-postgres                                          |
+| AWS Aurora 2               | pmmdemo-aurora-cluster                                    |
+| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongos-0 |
+| Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                          |
+| Percona Server 8.0         | percona-server-80-? (0,1)                                 |
+
+### Other servers
+
+| Name        | Hostname   | Notes                                 |
+|-------------|------------|---------------------------------------|
+| ProxySQL    | proxysql   | Proxy for Percona XtraDB Cluster      |
+| HAProxy     | haproxy    | Proxy for Percona XtraDB Cluster      |
+| Sysbench    | sysbench   | Sysbbench instances for all databases |
+| PMM Server  | pmm-server | PMM Server instance                   |
+| Bastion     | bastion    | nginx + SSH access point              |
+
+
+
 ## FAQ
 
 ### Can I create multiple pmmdemo environments?
