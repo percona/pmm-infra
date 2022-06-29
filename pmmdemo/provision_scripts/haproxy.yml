@@ -16,7 +16,7 @@ runcmd:
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-
+  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
 
 write_files:
 - path: /etc/haproxy/haproxy.cfg
