@@ -3,7 +3,7 @@ locals {
 }
 
 resource "azurerm_mysql_server" "pmmdemo" {
-  name                = "pmm-server"
+  name                = "pmmdemo-azure"
   provider            = azurerm.demo
 
   location            = local.azure_region
