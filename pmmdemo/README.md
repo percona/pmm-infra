@@ -68,13 +68,13 @@ The table below provides a map of servers and their hostnames, to which the suff
 
 ### Other servers
 
-| Name         | Hostname   | Notes                                |
-| ------------ | ---------- | ------------------------------------ |
-| ProxySQL     | proxysql   | Proxy for Percona XtraDB Cluster     |
-| HAProxy      | haproxy    | Proxy for Percona XtraDB Cluster     |
-| Sysbench     | sysbench   | Sysbench instances for all databases |
-| PMM Server   | pmm-server | PMM Server instance                  |
-| Bastion host | bastion    | nginx + SSH access point             |
+| Name         | Hostname   | Notes                                                |
+| ------------ | ---------- | ---------------------------------------------------- |
+| ProxySQL     | proxysql   | Proxy for Percona XtraDB Cluster                     |
+| HAProxy      | haproxy    | Proxy for Percona XtraDB Cluster                     |
+| Sysbench     | sysbench   | Sysbench instances to provide workloads for some DBs |
+| PMM Server   | pmm-server | PMM Server instance                                  |
+| Bastion host | bastion    | nginx + SSH access point                             |
 
 ## FAQ
 
