@@ -24,7 +24,7 @@ variable "google_analytics_id" {
 
 variable "oauth_enable" {
   type        = bool
-  description = "Use ouaht for auth in Grafana"
+  description = "Use oauth to connect PMM to the Portal"
   default     = false
 }
 
