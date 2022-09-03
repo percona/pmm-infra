@@ -138,8 +138,8 @@ write_files:
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;"
@@ -189,7 +189,7 @@ write_files:
           done;
       fi;
 
-  # temporary solution until percona-release is broken for Amazon Linux 2
+  # temporary solution while percona-release is broken for Amazon Linux 2
   - path: /etc/yum.repos.d/percona-pxc-80-release.repo
     content: |
       [pxc-80-release-x86_64]
