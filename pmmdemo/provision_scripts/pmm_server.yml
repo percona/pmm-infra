@@ -55,21 +55,21 @@ write_files:
               option: google_analytics_ua_id
               value: ${google_analytics_id}
 
-          - name: Enable anonymous access
+          - name: Enable anonymous access (readonly)
             ini_file:
               dest: /etc/grafana/grafana.ini
               section: auth.anonymous
               option: enabled
               value: "true"
 
-          - name: Set domain
+          - name: Set domain name
             ini_file:
               dest: /etc/grafana/grafana.ini
               section: server
               option: domain
               value: ${full_domain}
 
-          - name: Install, configure, and start Apache
+          - name: Configure PMM's connection to the Portal
             when: ${oauth_enable}
             block:
             # TODO use loop instead block here
