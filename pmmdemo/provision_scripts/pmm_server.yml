@@ -16,7 +16,7 @@ packages:
   - git
 
 bootcmd:
-  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
   - mkdir -p /var/lib/docker/
 
@@ -68,6 +68,69 @@ write_files:
               section: server
               option: domain
               value: ${full_domain}
+
+          - name: Disable telemetry
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: analytics
+              option: reporting_enabled
+              value: "false"
+
+          - name: Disable updates
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: analytics
+              option: check_for_updates
+              value: "false"
+
+          - name: Enable alerting
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: alerting
+              option: enabled
+              value: "true"
+
+          - name: Enable secure cookies
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: security
+              option: cookie_secure
+              value: "true"
+
+          - name: Set auth cookie name
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth
+              option: login_cookie_name
+              value: pmm_session
+
+          - name: Set max login duration
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth
+              option: login_maximum_lifetime_duration
+              value: 7d
+
+          - name: Enable unified alerting
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: unified_alerting
+              option: enabled
+              value: "true"
+
+          - name: Set instance name
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: defaut
+              option: instance_name
+              value: "PMM Demo"
+
+          - name: Enable panel alpha feature
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: panels
+              option: enable_alpha
+              value: "true"
 
           - name: Configure PMM's connection to the Portal
             when: ${oauth_enable}

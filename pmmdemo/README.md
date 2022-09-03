@@ -43,7 +43,10 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 ## Execute
 
 1. Run `terraform init` to initialize your terraform state and provision terraform modules
-2. Run `terraform apply` to provision the infrastructure defined in
+2. Run `terraform apply` to provision the infrastructure defined in terraform files
+3. Run `terraform destroy` to tear down everything provisioned before.
+
+Note: You can partially update(apply) or destroy resources by using the `-target` parameter. Read [more](https://learn.hashicorp.com/tutorials/terraform/resource-targeting?in=terraform/state).
 
 ## List of servers that will be privisioned
 

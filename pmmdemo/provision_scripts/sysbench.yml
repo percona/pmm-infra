@@ -6,7 +6,7 @@ manage_etc_hosts: true
 repo_upgrade: all
 
 runcmd:
-  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 3; done'
+  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench

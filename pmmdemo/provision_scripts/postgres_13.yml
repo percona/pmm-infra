@@ -9,12 +9,12 @@ packages:
   - docker
 
 bootcmd:
- - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
- - mkfs.xfs -L data /dev/nvme1n1
- - mkdir -p /data
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
+  - mkfs.xfs -L data /dev/nvme1n1
+  - mkdir -p /data
 
 mounts:
- - [ "/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2" ]
+  - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
   - systemctl enable docker
@@ -37,15 +37,11 @@ runcmd:
   - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 write_files:
-- path: /tmp/init-postgres.sh
-  content: |
-    #!/bin/bash
-    psql -c "CREATE USER pmm WITH SUPERUSER ENCRYPTED PASSWORD '${postgres_pmm_password}'"
-    psql -c "CREATE DATABASE pmmdemo"
-    psql -c "ALTER USER pmm CONNECTION LIMIT 10"
-    psql -c "select pg_reload_conf()"
-    psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor'"
-
-
-
-
+  - path: /tmp/init-postgres.sh
+    content: |
+      #!/bin/bash
+      psql -c "CREATE USER pmm WITH SUPERUSER ENCRYPTED PASSWORD '${postgres_pmm_password}'"
+      psql -c "CREATE DATABASE pmmdemo"
+      psql -c "ALTER USER pmm CONNECTION LIMIT 10"
+      psql -c "select pg_reload_conf()"
+      psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor'"
