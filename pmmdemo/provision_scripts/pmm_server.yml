@@ -16,7 +16,7 @@ packages:
   - git
 
 bootcmd:
-  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
   - mkdir -p /var/lib/docker/
 

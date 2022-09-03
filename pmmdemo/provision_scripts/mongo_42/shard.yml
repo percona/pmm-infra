@@ -9,12 +9,12 @@ packages:
   - docker
 
 bootcmd:
- - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
- - mkfs.xfs -L data /dev/nvme1n1
- - mkdir -p /data
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
+  - mkfs.xfs -L data /dev/nvme1n1
+  - mkdir -p /data
 
 mounts:
- - [ "/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2" ]
+  - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
 runcmd:
   - systemctl enable docker
@@ -39,104 +39,104 @@ runcmd:
   - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --port 27019
 
 write_files:
-- path: /etc/mongod.conf
-  content: |
-    sharding:
-      clusterRole: shardsvr
+  - path: /etc/mongod.conf
+    content: |
+      sharding:
+        clusterRole: shardsvr
 
-    replication:
-      replSetName: ${replica_set_name}
+      replication:
+        replSetName: ${replica_set_name}
 
-    storage:
-      dbPath: /data
-      journal:
-        enabled: true
+      storage:
+        dbPath: /data
+        journal:
+          enabled: true
 
-    systemLog:
-      destination: file
-      logAppend: true
-      path: /var/log/mongo/mongod.log
+      systemLog:
+        destination: file
+        logAppend: true
+        path: /var/log/mongo/mongod.log
 
-    processManagement:
-      fork: true
-      pidFilePath: /var/run/mongod.pid
+      processManagement:
+        fork: true
+        pidFilePath: /var/run/mongod.pid
 
-    net:
-      port: 27019
-      bindIp: 0.0.0.0
+      net:
+        port: 27019
+        bindIp: 0.0.0.0
 
-    operationProfiling:
-      mode: all
-      slowOpThresholdMs: 200
-      rateLimit: 100
+      operationProfiling:
+        mode: all
+        slowOpThresholdMs: 200
+        rateLimit: 100
 
-    security:
-      keyFile: /etc/mongo-key
+      security:
+        keyFile: /etc/mongo-key
 
-- path: /etc/mongo-key
-  content: |
-    ${mongodb_42_keyfile}
+  - path: /etc/mongo-key
+    content: |
+      ${mongodb_42_keyfile}
 
-- path: /tmp/init.js
-  content: |
-    rs.secondaryOk()
-    rs.initiate(
-      {
-        _id: "${replica_set_name}",
-        members: [
-          { _id : 0, host : "mongo-42-rs-${shard_number}-0.${route53_name}:27019" },
-          { _id : 1, host : "mongo-42-rs-${shard_number}-1.${route53_name}:27019" },
-          { _id : 2, host : "mongo-42-rs-${shard_number}-2.${route53_name}:27019" }
+  - path: /tmp/init.js
+    content: |
+      rs.secondaryOk()
+      rs.initiate(
+        {
+          _id: "${replica_set_name}",
+          members: [
+            { _id : 0, host : "mongo-42-rs-${shard_number}-0.${route53_name}:27019" },
+            { _id : 1, host : "mongo-42-rs-${shard_number}-1.${route53_name}:27019" },
+            { _id : 2, host : "mongo-42-rs-${shard_number}-2.${route53_name}:27019" }
+          ]
+        }
+      )
+
+  - path: /tmp/admin.js
+    content: |
+      admin = db.getSiblingDB("admin")
+      admin.createUser(
+        {
+          user: "pmm-admin",
+          pwd: "${mongodb_42_pmm_admin_password}",
+          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+        }
+      )
+
+  - path: /tmp/user.js
+    content: |
+      db.getSiblingDB("admin").createRole({
+          role: "explainRole",
+          privileges: [{
+              resource: {
+                  db: "",
+                  collection: "system.profile"
+                  },
+              actions: [
+                  "listIndexes",
+                  "listCollections",
+                  "dbStats",
+                  "dbHash",
+                  "collStats",
+                  "find"
+                  ]
+              }],
+          roles:[]
+      })
+      db.getSiblingDB("admin").createUser({
+        user: "pmm",
+        pwd: "${mongodb_42_pmm_user_password}",
+        roles: [
+            { role: "explainRole", db: "admin" },
+            { role: "clusterMonitor", db: "admin" },
+            { role: "read", db: "local" }
         ]
-      }
-    )
+      })
 
-- path: /tmp/admin.js
-  content: |
-    admin = db.getSiblingDB("admin")
-    admin.createUser(
-      {
-        user: "pmm-admin",
-        pwd: "${mongodb_42_pmm_admin_password}",
-        roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-      }
-    )
+  - path: /root/.mongorc.js
+    content: |
+      db = connect("localhost:27019/")
 
-- path: /tmp/user.js
-  content: |
-    db.getSiblingDB("admin").createRole({
-        role: "explainRole",
-        privileges: [{
-            resource: {
-                db: "",
-                collection: "system.profile"
-                },
-            actions: [
-                "listIndexes",
-                "listCollections",
-                "dbStats",
-                "dbHash",
-                "collStats",
-                "find"
-                ]
-            }],
-        roles:[]
-    })
-    db.getSiblingDB("admin").createUser({
-      user: "pmm",
-      pwd: "${mongodb_42_pmm_user_password}",
-      roles: [
-          { role: "explainRole", db: "admin" },
-          { role: "clusterMonitor", db: "admin" },
-          { role: "read", db: "local" }
-      ]
-    })
-
-- path: /root/.mongorc.js
-  content: |
-    db = connect("localhost:27019/")
-
-- path: /root/.bashrc
-  append: true
-  content: |
+  - path: /root/.bashrc
+    append: true
+    content: |
       alias mng='mongo --nodb'
