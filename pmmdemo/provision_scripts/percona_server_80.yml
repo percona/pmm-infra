@@ -9,12 +9,12 @@ packages:
   - docker
 
 bootcmd:
- - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
- - mkfs.xfs -L data /dev/nvme1n1
- - mkdir -p /data
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 3; done
+  - mkfs.xfs -L data /dev/nvme1n1
+  - mkdir -p /data
 
 mounts:
- - [ "/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2" ]
+  - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
   - systemctl enable docker
@@ -39,111 +39,111 @@ runcmd:
   - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
 
 write_files:
-- path: /root/.my.cnf
-  content: |
-    [client]
-    user=root
-    password=${mysql_root_password}
+  - path: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      password="${mysql_root_password}"
 
-- path: /etc/my.cnf.d/mysql_ps_80.cnf
-  content: |
-    [mysqld]
+  - path: /etc/my.cnf.d/mysql_ps_80.cnf
+    content: |
+      [mysqld]
 
-    # Host specific replication configuration
-    #
-    report_host = ${fqdn}
-    report_port = 3306
-    server_id   = 1${index}
-
-
-    # Generic
-    #
-    datadir=/data
-    socket=/var/lib/mysql/mysql.sock
-    log-error=/var/log/mysqld.log
-    pid-file=/var/run/mysqld/mysqld.pid
-    log_error_verbosity=3
+      # Host specific replication configuration
+      #
+      report_host = ${fqdn}
+      report_port = 3306
+      server_id   = 1${index}
 
 
-    # Config binary and slow_query logs
-    #
-    log-bin
-    binlog_format=ROW
-    binlog_expire_logs_seconds=21600
-
-    slow_query_log=ON
-    slow_query_log_always_write_time=1
-    slow_query_log_use_global_control=all
-    log_slow_rate_limit=10
-    log_slow_rate_type='query'
-    log_slow_admin_statements=ON
-    log_slow_replica_statements=ON
-    log_slow_verbosity=full
-    long_query_time=0
+      # Generic
+      #
+      datadir=/data
+      socket=/var/lib/mysql/mysql.sock
+      log-error=/var/log/mysqld.log
+      pid-file=/var/run/mysqld/mysqld.pid
+      log_error_verbosity=3
 
 
-    # Configure statistics
-    #
-    userstat=ON
-    performance_schema=ON
+      # Config binary and slow_query logs
+      #
+      log-bin
+      binlog_format=ROW
+      binlog_expire_logs_seconds=21600
 
-    # Async replication
-    #
-    gtid_mode=ON
-    enforce_gtid_consistency=ON
+      slow_query_log=ON
+      slow_query_log_always_write_time=1
+      slow_query_log_use_global_control=all
+      log_slow_rate_limit=10
+      log_slow_rate_type='query'
+      log_slow_admin_statements=ON
+      log_slow_replica_statements=ON
+      log_slow_verbosity=full
+      long_query_time=0
 
-- path: /tmp/replica-config.cnf
-  content: |
-    [mysqld]
-    slave_parallel_type=LOGICAL_CLOCK
-    slave_parallel_workers=2
-    slave_preserve_commit_order=1
 
-    sync_binlog=0
-    log_slave_updates=0
+      # Configure statistics
+      #
+      userstat=ON
+      performance_schema=ON
 
-    innodb_flush_log_at_trx_commit=0
-    innodb_flush_neighbors=0
-    innodb_fast_shutdown=2
-    innodb_flush_method=O_DIRECT
+      # Async replication
+      #
+      gtid_mode=ON
+      enforce_gtid_consistency=ON
 
-    skip-log-bin
+  - path: /tmp/replica-config.cnf
+    content: |
+      [mysqld]
+      slave_parallel_type=LOGICAL_CLOCK
+      slave_parallel_workers=2
+      slave_preserve_commit_order=1
 
-- path: /root/init-mysql.sh
-  permissions: '0400'
-  content: |
-    #!/bin/bash
+      sync_binlog=0
+      log_slave_updates=0
 
-    for (( i=1 ; i<=30 ; i++ )); do
-      if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-          mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-          break;
-      else
-          echo "retry";
-          sleep 2;
-      fi;
-    done;
+      innodb_flush_log_at_trx_commit=0
+      innodb_flush_neighbors=0
+      innodb_fast_shutdown=2
+      innodb_flush_method=O_DIRECT
 
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'10.%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'10.%'; FLUSH PRIVILEGES;";
-    mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
+      skip-log-bin
 
-    if [ "${name}" == "percona-server-80-1" ]; then
-      for (( i=1 ; i<=300 ; i++ )); do
-          if $(mysql --defaults-file=/root/.my.cnf -Bse "show variables where variable_name = 'version';" >/dev/null); then
-              mysql --defaults-file=/root/.my.cnf -Bse "CHANGE MASTER TO MASTER_HOST='percona-server-80-0', MASTER_PORT=3306, MASTER_USER='replica', MASTER_PASSWORD='${mysql_replica_password}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;";
-              mysql --defaults-file=/root/.my.cnf -Bse "START SLAVE;";
-              break;
-          else
-              echo "retry";
-              sleep 3;
-          fi;
+  - path: /root/init-mysql.sh
+    permissions: "0400"
+    content: |
+      #!/bin/bash
+
+      for (( i=1 ; i<=30 ; i++ )); do
+        if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
+            mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+            break;
+        else
+            echo "retry";
+            sleep 2;
+        fi;
       done;
-    fi
+
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
+
+      if [ "${name}" == "percona-server-80-1" ]; then
+        for (( i=1 ; i<=300 ; i++ )); do
+            if $(mysql --defaults-file=/root/.my.cnf -Bse "show variables where variable_name = 'version';" >/dev/null); then
+                mysql --defaults-file=/root/.my.cnf -Bse "CHANGE MASTER TO MASTER_HOST='percona-server-80-0', MASTER_PORT=3306, MASTER_USER='replica', MASTER_PASSWORD='${mysql_replica_password}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;";
+                mysql --defaults-file=/root/.my.cnf -Bse "START SLAVE;";
+                break;
+            else
+                echo "retry";
+                sleep 3;
+            fi;
+        done;
+      fi

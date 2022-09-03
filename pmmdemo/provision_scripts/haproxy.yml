@@ -15,45 +15,45 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
 
 write_files:
-- path: /etc/haproxy/haproxy.cfg
-  content: |
-    global
-            log 127.0.0.1   local0
-            log 127.0.0.1   local1 notice
-            maxconn 4096
-            user        haproxy
-            group       haproxy
-            daemon
-            stats socket /var/lib/haproxy/stats
+  - path: /etc/haproxy/haproxy.cfg
+    content: |
+      global
+              log 127.0.0.1   local0
+              log 127.0.0.1   local1 notice
+              maxconn 4096
+              user        haproxy
+              group       haproxy
+              daemon
+              stats socket /var/lib/haproxy/stats
 
-    defaults
-            log     global
-            mode    http
-            option  tcplog
-            option  dontlognull
-            retries 3
-            maxconn 2000
-            timeout connect      5000
-            timeout client      50000
-            timeout server     50000
+      defaults
+              log     global
+              mode    http
+              option  tcplog
+              option  dontlognull
+              retries 3
+              maxconn 2000
+              timeout connect      5000
+              timeout client      50000
+              timeout server     50000
 
-    listen mysql-cluster
-        bind 0.0.0.0:3306
-        mode tcp
-        balance roundrobin
-        option mysql-check user haproxy_check
+      listen mysql-cluster
+          bind 0.0.0.0:3306
+          mode tcp
+          balance roundrobin
+          option mysql-check user haproxy_check
 
-        server db01 percona-xtradb-cluster-0:3306 rise 3 fall 3
-        server db02 percona-xtradb-cluster-1:3306 rise 3 fall 3
-        server db03 percona-xtradb-cluster-2:3306 rise 3 fall 3
+          server db01 percona-xtradb-cluster-0:3306 rise 3 fall 3
+          server db02 percona-xtradb-cluster-1:3306 rise 3 fall 3
+          server db03 percona-xtradb-cluster-2:3306 rise 3 fall 3
 
-    frontend stats
-        bind *:8404
-        http-request use-service prometheus-exporter if { path /metrics }
-        stats enable
-        stats uri /stats
-        stats refresh 10s
+      frontend stats
+          bind *:8404
+          http-request use-service prometheus-exporter if { path /metrics }
+          stats enable
+          stats uri /stats
+          stats refresh 10s
