@@ -17,88 +17,88 @@ runcmd:
 # TODO replace to admin-stats_credentials user
 
 write_files:
-- path: /etc/proxysql.cnf
-  content: |
-    datadir="/var/lib/proxysql"
-    errorlog="/var/lib/proxysql/proxysql.log"
+  - path: /etc/proxysql.cnf
+    content: |
+      datadir="/var/lib/proxysql"
+      errorlog="/var/lib/proxysql/proxysql.log"
 
-    mysql_galera_hostgroups=
-    (
+      mysql_galera_hostgroups=
+      (
+        {
+          # PXC 8 Hostgroups
+          writer_hostgroup=1000
+          backup_writer_hostgroup=2000
+          reader_hostgroup=3000
+          offline_hostgroup=4000
+          active=1
+          max_writers=1
+          writer_is_also_reader=0
+          max_transactions_behind=0
+        }
+      )
+
+      mysql_variables=
       {
-        # PXC 8 Hostgroups
-        writer_hostgroup=1000
-        backup_writer_hostgroup=2000
-        reader_hostgroup=3000
-        offline_hostgroup=4000
-        active=1
-        max_writers=1
-        writer_is_also_reader=0
-        max_transactions_behind=0
+        threads=1
+        max_connections=50000
+        default_query_delay=0
+        default_query_timeout=36000000
+        have_compress=true
+        poll_timeout=2000
+        interfaces="0.0.0.0:3306"
+        default_schema="information_schema"
+        stacksize=1048576
+        server_version="8.0.19"
+        connect_timeout_server=3000
+        monitor_username="proxysql"
+        monitor_password="${proxysql_monitor_password}"
+        monitor_history=600000
+        monitor_connect_interval=60000
+        monitor_ping_interval=10000
+        monitor_read_only_interval=1500
+        monitor_read_only_timeout=500
+        ping_interval_server_msec=120000
+        ping_timeout_server=500
+        commands_stats=true
+        sessions_sort=true
+        connect_retries_on_failure=10
       }
-    )
+      admin_variables=
+      {
+        admin_credentials="admin:${proxysql_admin_password}"
+        mysql_ifaces="127.0.0.1:6032;/tmp/proxysql_admin.sock"
+      }
 
-    mysql_variables=
-    {
-      threads=1
-      max_connections=50000
-      default_query_delay=0
-      default_query_timeout=36000000
-      have_compress=true
-      poll_timeout=2000
-      interfaces="0.0.0.0:3306"
-      default_schema="information_schema"
-      stacksize=1048576
-      server_version="8.0.19"
-      connect_timeout_server=3000
-      monitor_username="proxysql"
-      monitor_password="${proxysql_monitor_password}"
-      monitor_history=600000
-      monitor_connect_interval=60000
-      monitor_ping_interval=10000
-      monitor_read_only_interval=1500
-      monitor_read_only_timeout=500
-      ping_interval_server_msec=120000
-      ping_timeout_server=500
-      commands_stats=true
-      sessions_sort=true
-      connect_retries_on_failure=10
-    }
-    admin_variables=
-    {
-      admin_credentials="admin:${proxysql_admin_password}"
-      mysql_ifaces="127.0.0.1:6032;/tmp/proxysql_admin.sock"
-    }
+      mysql_servers =
+      (
+        { address="percona-server-80-0" , port=3306 , hostgroup=10, max_connections=200 },
+        { address="percona-server-80-1" , port=3306 , hostgroup=20, max_replication_lag = 30 },
+        { address="percona-xtradb-cluster-0" , 	port=3306 , hostgroup=1000 },
+        { address="percona-xtradb-cluster-1" , 	port=3306 , hostgroup=2000 },
+        { address="percona-xtradb-cluster-2" , 	port=3306 , hostgroup=2000 },
+      )
 
-    mysql_servers =
-    (
-      { address="percona-server-80-0" , port=3306 , hostgroup=10, max_connections=200 },
-      { address="percona-server-80-1" , port=3306 , hostgroup=20, max_replication_lag = 30 },
-      { address="percona-xtradb-cluster-0" , 	port=3306 , hostgroup=1000 },
-      { address="percona-xtradb-cluster-1" , 	port=3306 , hostgroup=2000 },
-      { address="percona-xtradb-cluster-2" , 	port=3306 , hostgroup=2000 },
-    )
+      mysql_users:
+      (
+        { username = "sysbench" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 10 , active = 1 },
+        { username = "sysbench" , password = "${percona_server_80_password}" , default_hostgroup = 1000 , active = 1 },
 
-    mysql_users:
-    (
-      { username = "sysbench" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 10 , active = 1 },
-      { username = "sysbench" , password = "${percona_server_80_password}" , default_hostgroup = 1000 , active = 1 },
+      )
 
-    )
+      mysql_query_rules:
+      (
+      )
 
-    mysql_query_rules:
-    (
-    )
+      scheduler=
+      (
+      )
 
-    scheduler=
-    (
-    )
-
-- path: /root/.my.cnf
-  permissions: '0400'
-  content: |
-    [client]
-    user=admin
-    password=${proxysql_admin_password}
-    port=6032
-    host=127.1
-    prompt='ProxySQL Admin>'
+  - path: /root/.my.cnf
+    permissions: "0400"
+    content: |
+      [client]
+      user=admin
+      password='${proxysql_admin_password}'
+      port=6032
+      host=127.1
+      prompt='ProxySQL Admin>'

@@ -6,10 +6,11 @@ manage_etc_hosts: true
 repo_upgrade: all
 
 runcmd:
+  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 3; done'
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench
-  - mkdir /etc/sysbench
+  - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.percona.server.80
   - systemctl enable sysbench.proxysql
@@ -19,78 +20,78 @@ runcmd:
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
 
 write_files:
-- path: /etc/sysbench/exec_sysbench.sh
-  content: |
-    #!/bin/bash
+  - path: /etc/sysbench/exec_sysbench.sh
+    content: |
+      #!/bin/bash
 
-    SYSBENCH_CFG="$${1}";
-    if [[ "$${SYSBENCH_CFG}" == "" ]]; then
-        exit 1;
-    fi;
+      SYSBENCH_CFG="$${1}";
+      if [[ "$${SYSBENCH_CFG}" == "" ]]; then
+          exit 1;
+      fi;
 
-    OLTP_AVAILABLE=(oltp_delete.lua oltp_insert.lua oltp_point_select.lua oltp_read_only.lua oltp_read_write.lua oltp_update_index.lua oltp_update_non_index.lua oltp_write_only.lua)
-    OLTP_PATH='/usr/share/sysbench'
-    for (( ; ; )); do
-        RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
-        RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
-        RND_EXEC_TIME="$(( $${RANDOM} % 90 + 30 ))";    # 30..120
-        echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
-        sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
-        sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
-        sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
-        sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
-    done;
+      OLTP_AVAILABLE=(oltp_delete.lua oltp_insert.lua oltp_point_select.lua oltp_read_only.lua oltp_read_write.lua oltp_update_index.lua oltp_update_non_index.lua oltp_write_only.lua)
+      OLTP_PATH='/usr/share/sysbench'
+      for (( ; ; )); do
+          RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
+          RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
+          RND_EXEC_TIME="$(( $${RANDOM} % 90 + 30 ))";    # 30..120
+          echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
+      done;
 
-- path: /etc/sysbench/percona-server-80.cnf
-  content: |
-    mysql-host=percona-server-80-0
-    mysql-port=3306
-    mysql-user=sysbench
-    mysql-password=${percona_server_80_password}
-    rate=0
-    report-interval=10
-    verbosity=0
+  - path: /etc/sysbench/percona-server-80.cnf
+    content: |
+      mysql-host=percona-server-80-0
+      mysql-port=3306
+      mysql-user=sysbench
+      mysql-password=${percona_server_80_password}
+      rate=0
+      report-interval=10
+      verbosity=0
 
-- path: /etc/sysbench/proxysql.cnf
-  content: |
-    mysql-host=sqlproxy
-    mysql-port=3306
-    mysql-user=sysbench
-    mysql-password=${percona_xtradb_cluster_80_password}
-    events=0
-    rand-type=pareto
-    rate=0
-    report-interval=10
-    table_size=1000000
-    time=0
-    threads=5
+  - path: /etc/sysbench/proxysql.cnf
+    content: |
+      mysql-host=sqlproxy
+      mysql-port=3306
+      mysql-user=sysbench
+      mysql-password=${percona_xtradb_cluster_80_password}
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
 
-- path: /usr/lib/systemd/system/sysbench.percona.server.80.service
-  content: |
-    [Unit]
-    Description=Sysbench for Percona Server 8
-    After=network.target
+  - path: /usr/lib/systemd/system/sysbench.percona.server.80.service
+    content: |
+      [Unit]
+      Description=Sysbench for Percona Server 8
+      After=network.target
 
-    [Service]
-    Type=simple
-    Restart=on-failure
-    RestartSec=10
-    ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
 
-    [Install]
-    WantedBy=multi-user.target
+      [Install]
+      WantedBy=multi-user.target
 
-- path: /usr/lib/systemd/system/sysbench.proxysql.service
-  content: |
-    [Unit]
-    Description=Sysbench for Proxy SQL
-    After=network.target
+  - path: /usr/lib/systemd/system/sysbench.proxysql.service
+    content: |
+      [Unit]
+      Description=Sysbench for Proxy SQL
+      After=network.target
 
-    [Service]
-    Type=simple
-    Restart=on-failure
-    RestartSec=10
-    ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
 
-    [Install]
-    WantedBy=multi-user.target
+      [Install]
+      WantedBy=multi-user.target

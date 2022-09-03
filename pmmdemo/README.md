@@ -1,24 +1,20 @@
-# Percona Monitoring and Management (PMM) Demo (pmmdemo)
+# Percona Monitoring and Management (PMM) Demo - pmmdemo
 
-This project aims at providing a convenient means to streamline the provisioning
-of a PMM Server that allows to monitor and manage a number of different databases, including
-those deployed on major public cloud environments.
+This project aims at providing a convenient means to streamline the provisioning of a PMM Server that allows to monitor and manage a number of different databases, including those deployed on major public cloud environments.
 
 The project is based on the battle-tested Hashicorp's [terraform](https://www.terraform.io) tool,
 which has proven its effectiveness in many other open-source projects.
 
-We stick to Infrastructure as a Code (IaC) approach, which means that all of the provisioning
-logic is expressed in the code. This makes it easy to audit the project, learn from it and, finally,
-gives people a chance to improve it.
+We stick to Infrastructure as a Code (IaC) approach, which means that all of the provisioning logic is in the code. This makes it easy to audit the project, learn from it and, finally, gives people a chance to improve it.
 
 This project may help in the following use cases:
 
 - explore an environment where PMM Server is provisioned with a variety of databases
 - experiment with something we don't currently offer out-of-the-box, for example a new datasource or database
 
-## Tools to install
+## Tools to install (CLI)
 
-To be able to run terraform scripts you need to install the following tools:
+To be able to run terraform scripts provided in this folder you need to install the following tools:
 
 | Name      | Install command        | Run as    |
 | --------- | ---------------------- | --------- |
@@ -27,37 +23,41 @@ To be able to run terraform scripts you need to install the following tools:
 | azure cli | brew install azure-cli | az        |
 
 The `install` commands we provided above are only suitable for MacOS, but we believe it's not difficult to find
-their counterparts for a different operating systems given that `terraform` is widely supported.
+their counterparts for different operating systems given that these tools or CLIs are very popular.
 
 ## Prepare
 
-To prepare for a successul launch of pmmdemo infrastructure, please follow the instruction below:
+To prepare for a successul launch of pmmdemo infrastructure, please follow the instructions below:
 
-1. Create an S3 bucket `percona-terraform`, which will be used to store intermediary state.
+1. Create an S3 bucket `percona-terraform`, which will be used to store intermediary terraform state.
 2. Create an SSH key `pmm-demo`, which will be used to connect from outside to the bastion host. The bastion host
    is one entry point from which you can connect to other hosts. Apart from the bastion, all other hosts do not
    expose public IP addresses.
-3. Create a file `pmmdemo/terraform.tfvars` with two variables, for example:
+3. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`, for example:
    - pmm_domain = "pmmdemo.percona.net"
    - owner_email = "your.name@percona.com"
-4. Copy `.envrc.template` to `.envrc` and set a value for `AWS_PROFILE`. This value will be used as the
-   default profile name for your AWS configuration.
+4. Set the value of an environment variable called `AWS_PROFILE`. This value will be used as the default profile name for your AWS configuration. Example: `export AWS_PROFILE=dev`
 5. Make sure to login to your AWS cloud account with `aws login` ahead of time.
 6. Make sure to login to your Azure cloud account with `az login` ahead of time.
 
 ## Execute
 
-1. Run `direnv allow` to inject the variables from `.envrc` file to your environment.
-2. Run `terraform init` to initialize your terraform state.GitHub Pull Requests and Issues
+1. Run `terraform init` to initialize your terraform state and provision terraform modules
+2. Run `terraform apply` to provision the infrastructure defined in
 
-## List of servers
+## List of servers that will be privisioned
 
-We use default hostname in table below: `demo.local` but if you use non-default terraform profile then your hostname will contain your profile name. For example, `test.local` for test profile.
+We want all VM hosts to have a DNS name so the user does not have to remember their IP addresses. When creating the host names, we append a default suffix to all of them - `*.demo.local`, where `demo` is the name of the default terraform workspace. However, if you use a non-default terraform workspace, we'll append your workspace name to your hostname. For example, `*.test.local` is appended if the workspace is called `test`.
+
+The table below provides a map of servers and their hostnames, to which the suffixes we mentioned above will be appended. For example, for Percona Server 8.0 we will provision two servers with the following hostnames (in case of default workspace name):
+
+- pecona-server-80-0.demo.local
+- pecona-server-80-1.demo.local
 
 ### Databases
 
 | Name                       | Hostnames                                                 |
-|----------------------------|-----------------------------------------------------------|
+| -------------------------- | --------------------------------------------------------- |
 | Azure MySQL 8.0            | pmmdemo-azure                                             |
 | AWS MySQL 8.0              | pmmdemo-mysql                                             |
 | AWS Postgres 13            | pmmdemo-postgres                                          |
@@ -68,15 +68,13 @@ We use default hostname in table below: `demo.local` but if you use non-default 
 
 ### Other servers
 
-| Name        | Hostname   | Notes                                 |
-|-------------|------------|---------------------------------------|
-| ProxySQL    | proxysql   | Proxy for Percona XtraDB Cluster      |
-| HAProxy     | haproxy    | Proxy for Percona XtraDB Cluster      |
-| Sysbench    | sysbench   | Sysbbench instances for all databases |
-| PMM Server  | pmm-server | PMM Server instance                   |
-| Bastion     | bastion    | nginx + SSH access point              |
-
-
+| Name         | Hostname   | Notes                                                |
+| ------------ | ---------- | ---------------------------------------------------- |
+| ProxySQL     | proxysql   | Proxy for Percona XtraDB Cluster                     |
+| HAProxy      | haproxy    | Proxy for Percona XtraDB Cluster                     |
+| Sysbench     | sysbench   | Sysbench instances to provide workloads for some DBs |
+| PMM Server   | pmm-server | PMM Server instance                                  |
+| Bastion host | bastion    | nginx + SSH access point                             |
 
 ## FAQ
 
