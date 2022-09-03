@@ -74,28 +74,28 @@ write_files:
               dest: /etc/grafana/grafana.ini
               section: analytics
               option: reporting_enabled
-              value: false
+              value: "false"
 
           - name: Disable updates
             ini_file:
               dest: /etc/grafana/grafana.ini
               section: analytics
               option: check_for_updates
-              value: false
+              value: "false"
 
           - name: Enable alerting
             ini_file:
               dest: /etc/grafana/grafana.ini
               section: alerting
               option: enabled
-              value: true
+              value: "true"
 
           - name: Enable secure cookies
             ini_file:
               dest: /etc/grafana/grafana.ini
               section: security
               option: cookie_secure
-              value: true
+              value: "true"
 
           - name: Set auth cookie name
             ini_file:
@@ -116,7 +116,7 @@ write_files:
               dest: /etc/grafana/grafana.ini
               section: unified_alerting
               option: enabled
-              value: true
+              value: "true"
 
           - name: Set instance name
             ini_file:
@@ -130,14 +130,7 @@ write_files:
               dest: /etc/grafana/grafana.ini
               section: panels
               option: enable_alpha
-              value: true
-
-          - name: Set domain name
-            ini_file:
-              dest: /etc/grafana/grafana.ini
-              section: server
-              option: domain
-              value: ${full_domain}
+              value: "true"
 
           - name: Configure PMM's connection to the Portal
             when: ${oauth_enable}
