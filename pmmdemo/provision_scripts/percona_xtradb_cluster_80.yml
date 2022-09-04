@@ -5,8 +5,8 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
+# packages:
+# - docker
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -14,10 +14,10 @@ bootcmd:
   - mkdir -p /data
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
-  - chown 1001:1001 /data
+  # - systemctl enable docker
+  # - service docker start
+  # - usermod -a -G docker ec2-user
+  # - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - yum -y install percona-xtradb-cluster-full
   - percona-release setup -y pmm2-client
@@ -140,8 +140,8 @@ write_files:
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;"
 
       if [[ "${name}" == "percona-xtradb-cluster-0" ]]; then

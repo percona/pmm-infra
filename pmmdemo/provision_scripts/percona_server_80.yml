@@ -130,8 +130,8 @@ write_files:
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'%.ec2.internal'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
 
