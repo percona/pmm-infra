@@ -83,8 +83,24 @@ The table below provides a map of servers and their hostnames, to which the suff
 
 ### Can I create multiple pmmdemo environments?
 
-Yes, you can use terraform workspaces or different AWS accounts.
+Yes, you can use terraform workspaces or different AWS profiles.
 
 ```
+# aws dev profile
+export AWS_PROFILE=dev
 terraform workspace new demo1
+terraform init
+terraform apply
+...
+# aws prod profile
+export AWS_PROFILE=prod
+terraform workspace new demo2
+terraform init
+terraform apply
+...
+# then later...
+terraform destroy # demo2, profile=prod
+export AWS_PROFILE=dev
+terraform workspace select demo1
+terraform destroy # demo1, profile=dev
 ```

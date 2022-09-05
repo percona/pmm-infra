@@ -5,8 +5,8 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
+# packages:
+#   - docker
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -17,10 +17,10 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
-  - chown 1001:1001 /data
+  # - systemctl enable docker
+  # - service docker start
+  # - usermod -a -G docker ec2-user
+  # - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y ps-80
   - yum -y install percona-server-server
@@ -127,13 +127,13 @@ write_files:
       mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%.ec2.internal'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%.ec2.internal'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sqlproxy@'%.ec2.internal' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO sqlproxy@'%.ec2.internal'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%.ec2.internal'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE sbtest;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest;";
 
       if [ "${name}" == "percona-server-80-1" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
