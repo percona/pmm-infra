@@ -5,7 +5,7 @@ terraform {
       version = "~> 4.28.0"
     }
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = "3.1.2"
     }
     azurerm = {
@@ -33,6 +33,6 @@ provider "aws" {
 }
 
 provider "azurerm" {
-    alias = "demo"
-    features {}
+  alias = "demo"
+  features {}
 }

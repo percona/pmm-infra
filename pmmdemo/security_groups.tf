@@ -57,7 +57,7 @@ resource "aws_security_group" "default_access" {
 resource "aws_security_group" "aurora_engine" {
   name = "pmmdemo-aurora-engine-sg"
 
-  vpc_id      = aws_vpc.pmmdemo.id
+  vpc_id = aws_vpc.pmmdemo.id
 
   ingress {
     from_port   = 3306
