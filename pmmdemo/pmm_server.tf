@@ -78,7 +78,6 @@ resource "aws_iam_policy_attachment" "rds_policy" {
   name       = "rds_policy"
   users      = [aws_iam_user.rds_user.name]
   policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
-
 }
 
 resource "aws_iam_role" "pmmdemo_dlm_lifecycle" {

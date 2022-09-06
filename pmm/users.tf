@@ -1,29 +1,12 @@
-# TODO we need to use roles instead users
-resource "aws_iam_user" "nbeletskii" {
-  name = "nikita.beletskii-cli"
+# The pmmdemo-admin-group should be managed from UI, which allows to 
+# give users permissions other than just those related to pmmdemo.
+data "aws_iam_group" "pmmdemo_admin_group" {
+  group_name = "pmmdemo-admin-group"
 }
 
-resource "aws_iam_access_key" "nbeletskii" {
-  user = aws_iam_user.nbeletskii.name
-}
-
-resource "aws_iam_user" "atymchuk" {
-  name = "alex.tymchuk-cli"
-}
-
-resource "aws_iam_access_key" "atymchuk" {
-  user = aws_iam_user.atymchuk.name
-}
-
-resource "aws_iam_policy_attachment" "administrator_access" {
-  name       = "nikita.beletskii"
-  users      = [aws_iam_user.nbeletskii.name, aws_iam_user.atymchuk.name]
-  roles      = ["sso-aws-pmm-admin"]
+resource "aws_iam_group_policy_attachment" "admin_access" {
+  group = data.aws_iam_group.pmmdemo_admin_group.group_name
   policy_arn = aws_iam_policy.pmm_cli.arn
-
-  lifecycle {
-     prevent_destroy = true
-  }
 }
 
 resource "aws_iam_policy" "pmm_cli" {
@@ -31,14 +14,13 @@ resource "aws_iam_policy" "pmm_cli" {
   path        = "/"
   description = "Temporary policy for cli users"
 
-
   policy = jsonencode({
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Effect": "Allow",
-            "Action": "*",
-            "Resource": "*"
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*"
         }
     ]
   })

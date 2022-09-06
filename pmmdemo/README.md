@@ -90,13 +90,13 @@ Yes, you can use terraform workspaces or different AWS profiles.
 export AWS_PROFILE=dev
 terraform workspace new demo1
 terraform init
-terraform apply
+terraform apply # demo1, profile=dev
 ...
 # aws prod profile
 export AWS_PROFILE=prod
 terraform workspace new demo2
 terraform init
-terraform apply
+terraform apply # demo2, profile=prod
 ...
 # then later...
 terraform destroy # demo2, profile=prod

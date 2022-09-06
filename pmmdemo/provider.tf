@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.8.0"
+      version = "~> 4.28.0"
     }
     random = {
       source = "hashicorp/random"
@@ -13,7 +13,7 @@ terraform {
       version = "3.0.2"
     }
   }
-  required_version = "~> 1.2.2"
+  required_version = "~> 1.2.8"
 
   backend "s3" {
     bucket = "percona-terraform"
