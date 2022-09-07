@@ -26,7 +26,7 @@ resource "random_password" "postgres_pmm_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }
 
 module "postgres_13_disk" {

@@ -16,5 +16,5 @@ resource "random_password" "pmmdemo_postgres_13_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }

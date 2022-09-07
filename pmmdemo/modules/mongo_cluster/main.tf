@@ -121,14 +121,14 @@ resource "random_password" "mongodb_42_pmm_user_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric  = true
 }
 
 resource "random_password" "mongodb_42_pmm_admin_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric  = true
 }
 
 // TODO it's better use x.509 cert auth
@@ -136,5 +136,5 @@ resource "random_password" "mongodb_42_keyfile" {
   length  = 1000
   special = false
   upper   = true
-  number  = true
+  numeric  = true
 }

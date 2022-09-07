@@ -28,13 +28,13 @@ resource "random_password" "proxysql_monitor" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }
 
 resource "random_password" "proxysql_admin" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }
 

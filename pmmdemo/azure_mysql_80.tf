@@ -66,5 +66,5 @@ resource "random_password" "azure_mysql" {
   length  = 30
   special = true
   upper   = true
-  number  = true
+  numeric = true
 }

@@ -16,5 +16,5 @@ resource "random_password" "pmmdemo_aws_mysql_engine_80" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }

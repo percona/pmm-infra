@@ -3,7 +3,6 @@ locals {
   count                  = 2 # source and replica
 }
 
-
 module "percona_server_80" {
   source        = "./modules/ec2"
   count         = local.count
@@ -22,7 +21,7 @@ resource "random_password" "mysql80_root_password" {
   length      = 30
   special     = true
   upper       = true
-  number      = true
+  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -33,7 +32,7 @@ resource "random_password" "mysql80_replica_password" {
   length      = 30
   special     = true
   upper       = true
-  number      = true
+  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -44,7 +43,7 @@ resource "random_password" "mysql80_sysbench_password" {
   length      = 30
   special     = true
   upper       = true
-  number      = true
+  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_special = 1
