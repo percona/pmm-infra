@@ -38,6 +38,7 @@ resource "aws_security_group_rule" "https" {
 
 resource "aws_security_group" "default_access" {
   vpc_id = aws_vpc.pmmdemo.id
+  name = "pmmdemo-default-access-sg"
 
   ingress {
     protocol  = -1
