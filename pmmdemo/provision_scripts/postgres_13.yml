@@ -5,9 +5,6 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -17,9 +14,6 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y ppg-13
   - yum -y install percona-postgresql13-server percona-pg-stat-monitor13
