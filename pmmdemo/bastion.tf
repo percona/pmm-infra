@@ -42,7 +42,3 @@ module "bastion_disk" {
   disk_size   = "8"
   instance_id = module.bastion.instance_id
 }
-
-output "public_ip" {
-  value = module.bastion.public_ip
-}
