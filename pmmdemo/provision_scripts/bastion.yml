@@ -96,7 +96,7 @@ write_files:
           }
 
           upstream pmm_server {
-              server pmm-server.${project_name}.local:80;
+              server pmm-server.${environment_name}.local:80;
           }
       }
   - path: /tmp/cert.sh
