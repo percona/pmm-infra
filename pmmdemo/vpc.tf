@@ -38,9 +38,10 @@ resource "aws_subnet" "pmmdemo_public" {
 }
 
 resource "aws_subnet" "pmmdemo_private" {
-  vpc_id            = aws_vpc.pmmdemo.id
-  availability_zone = "us-east-1f"
-  cidr_block        = "10.0.2.0/24"
+  vpc_id                              = aws_vpc.pmmdemo.id
+  availability_zone                   = "us-east-1f"
+  cidr_block                          = "10.0.2.0/24"
+  private_dns_hostname_type_on_launch = "resource-name"
 
   tags = {
     "Name" = local.environment_name,
@@ -142,7 +143,7 @@ resource "aws_route53_zone" "demo_local" {
 
 resource "aws_vpc_dhcp_options" "additional_domain" {
   domain_name         = "ec2.internal ${aws_route53_zone.demo_local.name}"
-  domain_name_servers = ["10.0.0.2"]
+  domain_name_servers = ["127.0.0.1", "10.0.0.2"]
 }
 
 resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
