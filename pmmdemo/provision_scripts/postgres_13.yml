@@ -23,6 +23,8 @@ runcmd:
   - sed -i 's/\/var\/lib\/pgsql\/13\/data\//\/data/g' /usr/lib/systemd/system/postgresql-13.service
   - systemctl daemon-reload
   - /usr/pgsql-13/bin/postgresql-13-setup initdb
+  - echo 'host    all             all             10.0.2.0/24             password' >> /data/pg_hba.conf
+  - echo "listen_addresses = '*'" >> /data/postgresql.conf
   - systemctl start postgresql-13
   - chmod +x /tmp/init-postgres.sh
   - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
@@ -34,8 +36,9 @@ write_files:
   - path: /tmp/init-postgres.sh
     content: |
       #!/bin/bash
-      psql -c "CREATE USER pmm WITH SUPERUSER ENCRYPTED PASSWORD '${postgres_pmm_password}'"
-      psql -c "CREATE DATABASE pmmdemo"
-      psql -c "ALTER USER pmm CONNECTION LIMIT 10"
+      psql -c "CREATE ROLE pmm WITH SUPERUSER CONNECTION LIMIT 10 ENCRYPTED PASSWORD '${postgres_pmm_password}'"
+      psql -c "CREATE ROLE sysbench WITH LOGIN CONNECTION LIMIT 100 ENCRYPTED PASSWORD '${postgres_sysbench_password}'"
+      psql -c "CREATE DATABASE sbtest"
+      psql -c "GRANT ALL PRIVILEGES ON sbtest TO sysbench"
       psql -c "select pg_reload_conf()"
       psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor'"

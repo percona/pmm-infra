@@ -14,15 +14,23 @@ module "postgres_13" {
     aws_security_group.default_access.id
   ]
   user_data = templatefile("provision_scripts/postgres_13.yml", {
-    name                  = local.postgres_13,
-    fqdn                  = "${local.postgres_13}.${aws_route53_zone.demo_local.name}",
-    postgres_pmm_password = random_password.postgres_pmm_password.result,
-    pmm_password          = random_password.pmm_admin_pass.result,
-    pmm_server_endpoint   = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+    name                       = local.postgres_13,
+    fqdn                       = "${local.postgres_13}.${aws_route53_zone.demo_local.name}",
+    pmm_password               = random_password.pmm_admin_pass.result,
+    pmm_server_endpoint        = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+    postgres_pmm_password      = random_password.postgres_pmm_password.result,
+    postgres_sysbench_password = random_password.postgres_sysbench_password.result,
   })
 }
 
 resource "random_password" "postgres_pmm_password" {
+  length  = 30
+  special = false
+  upper   = true
+  numeric = true
+}
+
+resource "random_password" "postgres_sysbench_password" {
   length  = 30
   special = false
   upper   = true
