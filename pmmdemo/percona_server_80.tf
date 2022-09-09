@@ -11,6 +11,10 @@ module "percona_server_80" {
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
 
+  depends_on = [
+    module.pmm_server
+  ]
+
   security_groups = [
     aws_security_group.default_access.id
   ]

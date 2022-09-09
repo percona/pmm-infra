@@ -21,6 +21,10 @@ module "postgres_13" {
     postgres_pmm_password      = random_password.postgres_pmm_password.result,
     postgres_sysbench_password = random_password.postgres_sysbench_password.result,
   })
+
+  depends_on = [
+    module.pmm_server
+  ]  
 }
 
 resource "random_password" "postgres_pmm_password" {
