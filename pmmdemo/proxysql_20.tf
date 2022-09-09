@@ -22,6 +22,12 @@ module "proxysql" {
     percona_server_80_password         = random_password.mysql80_sysbench_password.result
     percona_xtradb_cluster_80_password = random_password.percona_xtradb_cluster_80_sysbench_password.result
   })
+
+  depends_on = [
+    module.pmm_server,
+    module.percona_server_80,
+    module.percona_xtradb_cluster_80
+  ]
 }
 
 resource "random_password" "proxysql_monitor" {

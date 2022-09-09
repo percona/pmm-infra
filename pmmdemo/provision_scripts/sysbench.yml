@@ -56,10 +56,12 @@ write_files:
 
   - path: /etc/sysbench/percona-server-pg-13.cnf
     content: |
+      db-driver=pgsql
       pgsql-host=postgres-13
       pgsql-port=5432
       pgsql-user=sysbench
       pgsql-password=${postgres_sysbench_password}
+      psql-db=sbtest
       rate=0
       report-interval=10
       verbosity=0
