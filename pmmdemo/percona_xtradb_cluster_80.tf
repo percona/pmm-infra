@@ -51,6 +51,6 @@ module "percona_xtradb_cluster_80_disk" {
   source      = "./modules/ebs"
   count       = local.percona_xtradb_cluster_80_count
   disk_name   = "percona_xtradb_cluster_80-${count.index}"
-  disk_size   = "64"
+  disk_size   = 64
   instance_id = module.percona_xtradb_cluster_80[count.index].instance_id
 }

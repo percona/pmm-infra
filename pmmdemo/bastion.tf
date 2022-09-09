@@ -39,6 +39,6 @@ resource "aws_route53_record" "pmmdemo_hostname" {
 module "bastion_disk" {
   source      = "./modules/ebs"
   disk_name   = "bastion"
-  disk_size   = "8"
+  disk_size   = 8
   instance_id = module.bastion.instance_id
 }

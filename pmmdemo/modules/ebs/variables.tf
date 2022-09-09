@@ -5,7 +5,7 @@ variable "disk_type" {
 }
 
 variable "disk_size" {
-  type        = string
+  type        = number
   description = "(Optional) The size of the drive in GiBs."
 }
 

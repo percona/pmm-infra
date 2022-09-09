@@ -70,6 +70,6 @@ module "percona_server_80_disk" {
   source      = "./modules/ebs"
   count       = local.count
   disk_name   = "percona-server-80"
-  disk_size   = "256"
+  disk_size   = 256
   instance_id = module.percona_server_80[count.index].instance_id
 }

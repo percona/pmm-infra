@@ -40,6 +40,6 @@ resource "random_password" "postgres_sysbench_password" {
 module "postgres_13_disk" {
   source      = "./modules/ebs"
   disk_name   = "postgres_13"
-  disk_size   = "256"
+  disk_size   = 256
   instance_id = module.postgres_13.instance_id
 }

@@ -35,7 +35,7 @@ module "pmm_server" {
 module "pmm_server_disk" {
   source      = "./modules/ebs"
   disk_name   = local.pmm_server_name
-  disk_size   = "256"
+  disk_size   = 256
   instance_id = module.pmm_server.instance_id
 }
 
