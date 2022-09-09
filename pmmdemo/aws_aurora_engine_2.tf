@@ -13,5 +13,5 @@ resource "random_password" "pmmdemo_aurora_57_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }

@@ -3,7 +3,6 @@ locals {
   count                  = 2 # source and replica
 }
 
-
 module "percona_server_80" {
   source        = "./modules/ec2"
   count         = local.count
@@ -12,6 +11,10 @@ module "percona_server_80" {
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
 
+  depends_on = [
+    module.pmm_server
+  ]
+
   security_groups = [
     aws_security_group.default_access.id
   ]
@@ -19,36 +22,36 @@ module "percona_server_80" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length  = 30
-  special = true
-  upper   = true
-  number  = true
-  min_lower = 1
+  length      = 30
+  special     = true
+  upper       = true
+  numeric     = true
+  min_lower   = 1
   min_numeric = 1
   min_special = 1
-  min_upper = 1
+  min_upper   = 1
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length  = 30
-  special = true
-  upper   = true
-  number  = true
-  min_lower = 1
+  length      = 30
+  special     = true
+  upper       = true
+  numeric     = true
+  min_lower   = 1
   min_numeric = 1
   min_special = 1
-  min_upper = 1
+  min_upper   = 1
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length  = 30
-  special = true
-  upper   = true
-  number  = true
-  min_lower = 1
+  length      = 30
+  special     = true
+  upper       = true
+  numeric     = true
+  min_lower   = 1
   min_numeric = 1
   min_special = 1
-  min_upper = 1
+  min_upper   = 1
 }
 
 data "template_file" "percona_server_80_user_data" {
@@ -71,6 +74,6 @@ module "percona_server_80_disk" {
   source      = "./modules/ebs"
   count       = local.count
   disk_name   = "percona-server-80"
-  disk_size   = "256"
+  disk_size   = 256
   instance_id = module.percona_server_80[count.index].instance_id
 }

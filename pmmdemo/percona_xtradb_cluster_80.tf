@@ -22,14 +22,14 @@ resource "random_password" "percona_xtradb_cluster_80_root_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }
 
 resource "random_password" "percona_xtradb_cluster_80_sysbench_password" {
   length  = 30
   special = false
   upper   = true
-  number  = true
+  numeric = true
 }
 
 data "template_file" "percona_xtradb_cluster_80_user_data" {
@@ -51,6 +51,6 @@ module "percona_xtradb_cluster_80_disk" {
   source      = "./modules/ebs"
   count       = local.percona_xtradb_cluster_80_count
   disk_name   = "percona_xtradb_cluster_80-${count.index}"
-  disk_size   = "64"
+  disk_size   = 64
   instance_id = module.percona_xtradb_cluster_80[count.index].instance_id
 }

@@ -38,9 +38,10 @@ resource "aws_subnet" "pmmdemo_public" {
 }
 
 resource "aws_subnet" "pmmdemo_private" {
-  vpc_id                  = aws_vpc.pmmdemo.id
-  availability_zone       = "us-east-1f"
-  cidr_block              = "10.0.2.0/24"
+  vpc_id                              = aws_vpc.pmmdemo.id
+  availability_zone                   = "us-east-1f"
+  cidr_block                          = "10.0.2.0/24"
+  private_dns_hostname_type_on_launch = "resource-name"
 
   tags = {
     "Name" = local.environment_name,
@@ -48,9 +49,9 @@ resource "aws_subnet" "pmmdemo_private" {
 }
 
 resource "aws_subnet" "pmmdemo_private_a" {
-  vpc_id                  = aws_vpc.pmmdemo.id
-  availability_zone       = "us-east-1a"
-  cidr_block              = "10.0.3.0/24"
+  vpc_id            = aws_vpc.pmmdemo.id
+  availability_zone = "us-east-1a"
+  cidr_block        = "10.0.3.0/24"
 
   tags = {
     "Name" = local.environment_name,
@@ -112,7 +113,7 @@ resource "aws_route_table" "nat_route_table" {
   vpc_id = aws_vpc.pmmdemo.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.external_nat_gateway.id
   }
 
@@ -141,16 +142,16 @@ resource "aws_route53_zone" "demo_local" {
 }
 
 resource "aws_vpc_dhcp_options" "additional_domain" {
-  domain_name = "ec2.internal ${aws_route53_zone.demo_local.name}"
-  domain_name_servers  = ["10.0.0.2"]
+  domain_name         = "ec2.internal ${aws_route53_zone.demo_local.name}"
+  domain_name_servers = ["127.0.0.1", "10.0.0.2"]
 }
 
 resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
-  vpc_id = aws_vpc.pmmdemo.id
+  vpc_id          = aws_vpc.pmmdemo.id
   dhcp_options_id = aws_vpc_dhcp_options.additional_domain.id
 }
 
 resource "aws_db_subnet_group" "database_subnet" {
-  name = "pmmdemo"
+  name       = "pmmdemo"
   subnet_ids = [aws_subnet.pmmdemo_private.id, aws_subnet.pmmdemo_private_a.id]
 }

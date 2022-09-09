@@ -1,5 +1,5 @@
 locals {
-  haproxy_name  = "haproxy"
+  haproxy_name = "haproxy"
 }
 
 module "haproxy" {

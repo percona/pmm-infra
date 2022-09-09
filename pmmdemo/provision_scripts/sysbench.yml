@@ -12,10 +12,12 @@ runcmd:
   - yum -y install pmm2-client sysbench
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
-  - systemctl enable sysbench.percona.server.80
+  - systemctl enable sysbench.ps.mysql80
   - systemctl enable sysbench.proxysql
-  - systemctl start sysbench.percona.server.80
+  - systemctl enable sysbench.ps.pg13
+  - systemctl start sysbench.ps.mysql80
   - systemctl start sysbench.proxysql
+  - systemctl start sysbench.ps.pg13
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
 
@@ -47,7 +49,17 @@ write_files:
       mysql-host=percona-server-80-0
       mysql-port=3306
       mysql-user=sysbench
-      mysql-password=${percona_server_80_password}
+      mysql-password=${mysql80_sysbench_password}
+      rate=0
+      report-interval=10
+      verbosity=0
+
+  - path: /etc/sysbench/percona-server-pg-13.cnf
+    content: |
+      pgsql-host=postgres-13
+      pgsql-port=5432
+      pgsql-user=sysbench
+      pgsql-password=${postgres_sysbench_password}
       rate=0
       report-interval=10
       verbosity=0
@@ -66,7 +78,7 @@ write_files:
       time=0
       threads=5
 
-  - path: /usr/lib/systemd/system/sysbench.percona.server.80.service
+  - path: /usr/lib/systemd/system/sysbench.ps.mysql80.service
     content: |
       [Unit]
       Description=Sysbench for Percona Server 8
@@ -92,6 +104,21 @@ write_files:
       Restart=on-failure
       RestartSec=10
       ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.ps.pg13.service
+    content: |
+      [Unit]
+      Description=Sysbench for Percona Server for PostgreSQL 13
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-pg-13.cnf
 
       [Install]
       WantedBy=multi-user.target

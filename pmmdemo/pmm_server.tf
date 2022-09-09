@@ -35,7 +35,7 @@ module "pmm_server" {
 module "pmm_server_disk" {
   source      = "./modules/ebs"
   disk_name   = local.pmm_server_name
-  disk_size   = "256"
+  disk_size   = 256
   instance_id = module.pmm_server.instance_id
 }
 
@@ -55,18 +55,27 @@ resource "aws_iam_policy" "pmmdemo-rds-policy" {
   description = "Policy for rds database discovery"
   policy = jsonencode({
     "Version" : "2012-10-17",
-    "Statement" : [{ "Sid" : "Stmt1508404837000",
-      "Effect" : "Allow",
-      "Action" : ["rds:DescribeDBInstances",
-        "cloudwatch:GetMetricStatistics",
-      "cloudwatch:ListMetrics"],
-      "Resource" : ["*"] },
-      { "Sid" : "Stmt1508410723001",
+    "Statement" : [
+      {
+        "Sid" : "Stmt1508404837000",
         "Effect" : "Allow",
-        "Action" : ["logs:DescribeLogStreams",
+        "Action" : [
+          "rds:DescribeDBInstances",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ],
+        "Resource" : ["*"]
+      },
+      {
+        "Sid" : "Stmt1508410723001",
+        "Effect" : "Allow",
+        "Action" : [
+          "logs:DescribeLogStreams",
           "logs:GetLogEvents",
-        "logs:FilterLogEvents"],
-      "Resource" : ["arn:aws:logs:*:*:log-group:RDSOSMetrics:*"] }
+          "logs:FilterLogEvents"
+        ],
+        "Resource" : ["arn:aws:logs:*:*:log-group:RDSOSMetrics:*"]
+      }
   ] })
 }
 
