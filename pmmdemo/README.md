@@ -59,15 +59,16 @@ The table below provides a map of servers and their hostnames, to which the suff
 
 ### Databases
 
-| Name                       | Hostnames                                                 |
-| -------------------------- | --------------------------------------------------------- |
-| Azure MySQL 8.0            | pmmdemo-azure                                             |
-| AWS MySQL 8.0              | pmmdemo-mysql                                             |
-| AWS Postgres 13            | pmmdemo-postgres                                          |
-| AWS Aurora 2               | pmmdemo-aurora-cluster                                    |
-| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongos-0 |
-| Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                          |
-| Percona Server 8.0         | percona-server-80-? (0,1)                                 |
+| Name                       | Hostnames                                                 | Workload |
+| -------------------------- | --------------------------------------------------------- | -------- |
+| Azure MySQL 8.0            | pmmdemo-azure                                             |          |
+| AWS MySQL 8.0              | pmmdemo-mysql                                             |          |
+| AWS Postgres 13            | pmmdemo-postgres                                          |          |
+| AWS Aurora 2               | pmmdemo-aurora-cluster                                    |          |
+| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongos-0 |          |
+| Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                          | yes      |
+| Percona Server 8.0         | percona-server-80-? (0,1)                                 | yes      |
+| Percona Server for PG 13   | postgres-13                                               | yes      |
 
 ### Other servers
 
@@ -77,7 +78,7 @@ The table below provides a map of servers and their hostnames, to which the suff
 | HAProxy      | haproxy    | Proxy for Percona XtraDB Cluster                     |
 | Sysbench     | sysbench   | Sysbench instances to provide workloads for some DBs |
 | PMM Server   | pmm-server | PMM Server instance                                  |
-| Bastion host | bastion    | nginx + SSH access point                             |
+| Bastion host | bastion    | nginx + ssh access point                             |
 
 ## FAQ
 

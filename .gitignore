@@ -3,3 +3,4 @@
 *.tfvars
 *.tfstate
 .envrc
+*.out
