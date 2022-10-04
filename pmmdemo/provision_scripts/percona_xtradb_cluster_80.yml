@@ -100,7 +100,7 @@ write_files:
       wsrep_provider=/usr/lib64/galera4/libgalera_smm.so
 
       # Slave thread to use
-      wsrep_slave_threads=8
+      wsrep_applier_threads=8
 
       # Enable logging of conflicting statements
       wsrep_log_conflicts
@@ -128,6 +128,7 @@ write_files:
       for (( i=1 ; i<=30 ; i++ )); do
           if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
               mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@'localhost' IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+              echo "password for root@localhost successfully changed"
               break;
           else
               echo "retry $${i}/30";
@@ -146,16 +147,16 @@ write_files:
 
       if [[ "${name}" == "percona-xtradb-cluster-0" ]]; then
           systemctl stop mysql
-          # If we are executing at the primary node (first in the row) start the PXC instanace with bootstrap mode.
+          # If we are executing at the primary node (first in the row) start the PXC instance with bootstrap mode.
           systemctl start mysql@bootstrap
 
-          # Check 600 times (1200sec/20min) if PXC is ready (all 3 nodes are joined and cluster is OPERATIONAL). Switch from bootstraping to normal execution
+          # Check 600 times (1200sec/20min) if PXC is ready (all 3 nodes have joined and cluster is OPERATIONAL). Switch from bootstraping to normal execution
           for (( i=1 ; i<=600 ; i++ )); do
               if $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_evs_state';" | grep "OPERATIONAL" >/dev/null) && \
                 $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_cluster_size';" | grep "3" >/dev/null)        && \
                 $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_local_state_comment';" | grep "Synced" >/dev/null); then
 
-                  # Proceed with the swtich only if we have 10 successfull checks. Avoide trigger on first occurance.
+                  # Proceed only if we have 10 successfull checks. Avoid trigger on first occurence.
                   if [[ "$${CHECK_COUNT:=1}" -ge "10" ]]; then
                       # Stop bootstrap mode
                       systemctl stop mysql@bootstrap

@@ -35,7 +35,7 @@ runcmd:
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
   - docker cp /root/ansible.yml pmm-server:/root/ansible.yml
-  - docker exec pmm-server ansible-playbook /root/ansible.yml
+  - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
 
 write_files:
@@ -121,7 +121,7 @@ write_files:
           - name: Set instance name
             ini_file:
               dest: /etc/grafana/grafana.ini
-              section: defaut
+              section: DEFAULT
               option: instance_name
               value: "PMM Demo"
 
