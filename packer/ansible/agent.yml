@@ -1,12 +1,12 @@
 ---
-- name: 'Provision Agent'
+- name: "Provision Agent"
   hosts: default
   become: true
   vars:
     docker_compose_version: "2.6.0"
     kubectl_version: "1.22.9"
-    doctl_version: "1.76.2"
-    node_version: "16.15.1"
+    doctl_version: "1.82.2"
+    node_version: "16.17.0"
 
   tasks:
     - name: set vm name
@@ -32,14 +32,14 @@
 
     - name: Upgrade system
       yum:
-        name: '*'
+        name: "*"
         state: latest
 
     - name: Install packages
       package:
         name:
           - docker
-          - java-1.8.0-openjdk
+          - java-11-openjdk
           - git
           - jq
           - gettext
@@ -66,19 +66,19 @@
       get_url:
         url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-{{ ansible_architecture }}"
         dest: /usr/local/bin/docker-compose
-        mode: 'u+x,g+x,o+x'
+        mode: "u+x,g+x,o+x"
 
     - name: Install kubectl
       get_url:
         url: https://storage.googleapis.com/kubernetes-release/release/v{{ kubectl_version }}/bin/linux/{{ ansible_architecture_alt }}/kubectl
         dest: /usr/local/bin/kubectl
-        mode: 'u+x,g+x,o+x'
+        mode: "u+x,g+x,o+x"
 
     - name: Install lacework
       get_url:
         url: "https://github.com/lacework/lacework-vulnerability-scanner/releases/latest/download/lw-scanner-linux-{{ ansible_architecture_alt }}"
         dest: /usr/local/bin/lw-scanner
-        mode: 'u+x,g+x,o+x'
+        mode: "u+x,g+x,o+x"
 
     - name: Install some software
       package:
@@ -93,10 +93,10 @@
 
     - name: Unarchive a file with doctl
       unarchive:
-        src:  /tmp/doctl.tar.gz
+        src: /tmp/doctl.tar.gz
         dest: /usr/local/bin/
         remote_src: yes
-        mode: 'u+x,g+x,o+x'
+        mode: "u+x,g+x,o+x"
 
     - name: Install Python modules
       pip:
@@ -110,29 +110,28 @@
         - linode-cli==5.19.0
       when: ansible_facts['distribution'] == "Amazon"
 
-
     - name: Install virtual box (only for digital ocean)
       block:
-      - name: Add base repository for VirtualBox
-        yum_repository:
-          name: virtualbox
-          description: VirtualBox
-          baseurl: 'http://download.virtualbox.org/virtualbox/rpm/el/$releasever/$basearch'
-          gpgcheck: true
-          gpgkey: https://www.virtualbox.org/download/oracle_vbox.asc
-          enabled: true
-          state: present
+        - name: Add base repository for VirtualBox
+          yum_repository:
+            name: virtualbox
+            description: VirtualBox
+            baseurl: "http://download.virtualbox.org/virtualbox/rpm/el/$releasever/$basearch"
+            gpgcheck: true
+            gpgkey: https://www.virtualbox.org/download/oracle_vbox.asc
+            enabled: true
+            state: present
 
-      - name: Install Virtualbox
-        yum:
-          state: present
-          name: VirtualBox-5.2
+        - name: Install Virtualbox
+          yum:
+            state: present
+            name: VirtualBox-5.2
 
-      - name: Reboot to the latest kernel
-        reboot:
-          reboot_timeout: 1200
-      - name: Recompile kernel
-        command: /sbin/vboxconfig
+        - name: Reboot to the latest kernel
+          reboot:
+            reboot_timeout: 1200
+        - name: Recompile kernel
+          command: /sbin/vboxconfig
       when: ansible_facts['distribution'] != "Amazon"
 
     - name: Copy docker daemon config
@@ -140,27 +139,29 @@
         src: daemon.json
         dest: /etc/docker/daemon.json
 
-    - name: Download and unarchive AWS installer
-      unarchive:
-        src: https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip
-        dest: /tmp
-        remote_src: yes
-
-    - name: Install awscl
-      shell: /tmp/aws/install
-
     - name: Enable Docker service
       systemd:
         name: docker.service
         state: started
         enabled: yes
 
-    - name: Add ec2-user user to "docker" group
-      user:
-        name: "ec2-user"
-        groups:
-          - "docker"
-        append: yes
+    - name: Install AWS CLI
+      block:
+        - name: Download and unarchive AWS installer
+          unarchive:
+            src: https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip
+            dest: /tmp
+            remote_src: yes
+
+        - name: Install awscl
+          shell: /tmp/aws/install
+
+        - name: Add ec2-user user to "docker" group
+          user:
+            name: "ec2-user"
+            groups:
+              - "docker"
+            append: yes
       when: ansible_facts['distribution'] == "Amazon"
 
     - name: Pull and cache docker images
@@ -177,7 +178,6 @@
         - ubuntu:focal
         - rockylinux:8
       when: ansible_facts['distribution'] == "Amazon"
-
 
     - name: Turn off swap
       sysctl:
