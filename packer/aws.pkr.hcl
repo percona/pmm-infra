@@ -1,18 +1,19 @@
 packer {
   required_plugins {
     amazon = {
-      version = "=1.0.3"
+      version = "=1.1.1"
       source  = "github.com/hashicorp/amazon"
     }
   }
 }
 
 source "amazon-ebs" "agent" {
-  ami_name      = "Docker Agent"
-  instance_type = "t3.xlarge"
-  force_deregister = true
+  name                  = "Packer Builder"
+  ami_name              = "Docker Agent v2"
+  instance_type         = "t3.xlarge"
+  force_deregister      = true
   force_delete_snapshot = true
-  region        = "us-east-2"
+  region                = "us-east-2"
   source_ami_filter {
     filters = {
       name                = "*amzn2-ami-hvm-*"
@@ -25,7 +26,7 @@ source "amazon-ebs" "agent" {
   }
   ssh_username = "ec2-user"
   tags = {
-    iit-billing-tag = "pmm-worker"
+    iit-billing-tag = "pmm-worker2"
   }
   run_tags = {
     iit-billing-tag = "pmm-worker"
@@ -35,7 +36,7 @@ source "amazon-ebs" "agent" {
   }
   launch_block_device_mappings {
     device_name = "/dev/xvda"
-    volume_size = 25
+    volume_size = 30
     volume_type = "gp3"
     delete_on_termination = true
   }
@@ -53,11 +54,12 @@ source "amazon-ebs" "agent" {
 }
 
 source "amazon-ebs" "arm-agent" {
-  ami_name      = "Docker Agent ARM"
-  instance_type = "t4g.xlarge"
-  force_deregister = true
+  name                  = "Packer Builder"
+  ami_name              = "Docker Agent ARM v2"
+  instance_type         = "t4g.xlarge"
+  force_deregister      = true
   force_delete_snapshot = true
-  region        = "us-east-2"
+  region                = "us-east-2"
   source_ami_filter {
     filters = {
       name                = "*amzn2-ami-hvm-*"
@@ -70,7 +72,7 @@ source "amazon-ebs" "arm-agent" {
   }
   ssh_username = "ec2-user"
   tags = {
-    iit-billing-tag = "pmm-worker"
+    iit-billing-tag = "pmm-worker2"
   }
   run_tags = {
     iit-billing-tag = "pmm-worker",
@@ -80,7 +82,7 @@ source "amazon-ebs" "arm-agent" {
   }
   launch_block_device_mappings {
     device_name = "/dev/xvda"
-    volume_size = 25
+    volume_size = 30
     volume_type = "gp3"
     delete_on_termination = true
   }
