@@ -9,7 +9,7 @@
     node_version: "16.17.0"
 
   tasks:
-    - name: set vm name
+    - name: Detect vm architecture
       set_fact:
         # Alternative architecture name just because we never can have only one name in computers
         ansible_architecture_alt: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}none{% endif %}"
@@ -39,7 +39,6 @@
       package:
         name:
           - docker
-          - java-11-openjdk
           - git
           - jq
           - gettext
@@ -61,6 +60,16 @@
           - packer
           - xmlstarlet
         state: present
+
+    - name: Install Java11 on DO
+      package:
+        name: java-11-openjdk
+        state: present
+      when: ansible_facts['distribution'] != "Amazon"
+
+    - name: Install Java11 on AWS
+      command: amazon-linux-extras install -y java-openjdk11
+      when: ansible_facts['distribution'] == "Amazon"
 
     - name: Install docker-compose
       get_url:
