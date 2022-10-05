@@ -3,7 +3,7 @@
   hosts: default
   become: true
   vars:
-    docker_compose_version: "2.6.0"
+    docker_compose_version: "2.11.2"
     kubectl_version: "1.22.9"
     doctl_version: "1.82.2"
     node_version: "16.17.0"
