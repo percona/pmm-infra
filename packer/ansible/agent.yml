@@ -97,6 +97,8 @@
         dest: /usr/local/bin/
         remote_src: yes
         mode: "u+x,g+x,o+x"
+        group: ec2-user
+        owner: ec2-user
 
     - name: Install Python modules
       pip:
