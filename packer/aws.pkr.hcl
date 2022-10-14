@@ -22,11 +22,11 @@ source "amazon-ebs" "agent" {
       architecture        = "x86_64"
     }
     most_recent = true
-    owners = ["amazon"]
+    owners      = ["amazon"]
   }
   ssh_username = "ec2-user"
   tags = {
-    iit-billing-tag = "pmm-worker2"
+    iit-billing-tag = "pmm-worker"
   }
   run_tags = {
     iit-billing-tag = "pmm-worker"
@@ -35,9 +35,9 @@ source "amazon-ebs" "agent" {
     iit-billing-tag = "pmm-worker"
   }
   launch_block_device_mappings {
-    device_name = "/dev/xvda"
-    volume_size = 30
-    volume_type = "gp3"
+    device_name           = "/dev/xvda"
+    volume_size           = 30
+    volume_type           = "gp3"
     delete_on_termination = true
   }
   vpc_filter {
@@ -68,11 +68,11 @@ source "amazon-ebs" "arm-agent" {
       architecture        = "arm64"
     }
     most_recent = true
-    owners = ["amazon"]
+    owners      = ["amazon"]
   }
   ssh_username = "ec2-user"
   tags = {
-    iit-billing-tag = "pmm-worker2"
+    iit-billing-tag = "pmm-worker"
   }
   run_tags = {
     iit-billing-tag = "pmm-worker",
@@ -81,9 +81,9 @@ source "amazon-ebs" "arm-agent" {
     iit-billing-tag = "pmm-worker"
   }
   launch_block_device_mappings {
-    device_name = "/dev/xvda"
-    volume_size = 30
-    volume_type = "gp3"
+    device_name           = "/dev/xvda"
+    volume_size           = 30
+    volume_type           = "gp3"
     delete_on_termination = true
   }
   vpc_filter {
@@ -100,7 +100,7 @@ source "amazon-ebs" "arm-agent" {
 }
 
 build {
-  name    = "jenkins-farm"
+  name = "jenkins-farm"
   sources = [
     "source.amazon-ebs.agent",
     "source.amazon-ebs.arm-agent"
