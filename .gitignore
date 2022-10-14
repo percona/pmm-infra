@@ -4,3 +4,4 @@
 *.tfstate
 .envrc
 *.out
+*.json

@@ -1,18 +1,19 @@
 packer {
   required_plugins {
     amazon = {
-      version = "=1.0.3"
+      version = "=1.1.1"
       source  = "github.com/hashicorp/amazon"
     }
   }
 }
 
 source "amazon-ebs" "agent" {
-  ami_name      = "Docker Agent"
-  instance_type = "t3.xlarge"
-  force_deregister = true
+  name                  = "Packer Builder"
+  ami_name              = "Docker Agent v2"
+  instance_type         = "t3.xlarge"
+  force_deregister      = true
   force_delete_snapshot = true
-  region        = "us-east-2"
+  region                = "us-east-2"
   source_ami_filter {
     filters = {
       name                = "*amzn2-ami-hvm-*"
@@ -21,7 +22,7 @@ source "amazon-ebs" "agent" {
       architecture        = "x86_64"
     }
     most_recent = true
-    owners = ["amazon"]
+    owners      = ["amazon"]
   }
   ssh_username = "ec2-user"
   tags = {
@@ -34,9 +35,9 @@ source "amazon-ebs" "agent" {
     iit-billing-tag = "pmm-worker"
   }
   launch_block_device_mappings {
-    device_name = "/dev/xvda"
-    volume_size = 25
-    volume_type = "gp3"
+    device_name           = "/dev/xvda"
+    volume_size           = 30
+    volume_type           = "gp3"
     delete_on_termination = true
   }
   vpc_filter {
@@ -53,11 +54,12 @@ source "amazon-ebs" "agent" {
 }
 
 source "amazon-ebs" "arm-agent" {
-  ami_name      = "Docker Agent ARM"
-  instance_type = "t4g.xlarge"
-  force_deregister = true
+  name                  = "Packer Builder"
+  ami_name              = "Docker Agent ARM v2"
+  instance_type         = "t4g.xlarge"
+  force_deregister      = true
   force_delete_snapshot = true
-  region        = "us-east-2"
+  region                = "us-east-2"
   source_ami_filter {
     filters = {
       name                = "*amzn2-ami-hvm-*"
@@ -66,7 +68,7 @@ source "amazon-ebs" "arm-agent" {
       architecture        = "arm64"
     }
     most_recent = true
-    owners = ["amazon"]
+    owners      = ["amazon"]
   }
   ssh_username = "ec2-user"
   tags = {
@@ -79,9 +81,9 @@ source "amazon-ebs" "arm-agent" {
     iit-billing-tag = "pmm-worker"
   }
   launch_block_device_mappings {
-    device_name = "/dev/xvda"
-    volume_size = 25
-    volume_type = "gp3"
+    device_name           = "/dev/xvda"
+    volume_size           = 30
+    volume_type           = "gp3"
     delete_on_termination = true
   }
   vpc_filter {
@@ -98,7 +100,7 @@ source "amazon-ebs" "arm-agent" {
 }
 
 build {
-  name    = "jenkins-farm"
+  name = "jenkins-farm"
   sources = [
     "source.amazon-ebs.agent",
     "source.amazon-ebs.arm-agent"
