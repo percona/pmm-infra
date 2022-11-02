@@ -64,7 +64,7 @@ resource "azurerm_resource_group" "pmmdemo" {
 
 resource "random_password" "azure_mysql" {
   length  = 30
-  special = true
+  special = false
   upper   = true
   numeric = true
 }
