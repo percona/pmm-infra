@@ -27,9 +27,9 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - curl -fsSL https://www.percona.com/get/pmm -o /tmp/pmm.sh
-  - sed -i -e 's/:443/:443 -p 80:80/g' /tmp/pmm.sh
-  - /bin/bash /tmp/pmm.sh
+  - docker pull percona/pmm-server:2
+  - docker volume create pmm-data || true
+  - docker run -d -p 443:443 -p 80:80 --volumes-from pmm-data --name pmm-server --restart always percona/pmm-server:2
   - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
@@ -195,3 +195,33 @@ write_files:
                 section: auth
                 option: signout_redirect_url
                 value: ${oauth_signout_redirect_url}
+  - path: /root/volume-backup.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash -xe
+
+      docker run --rm --volumes-from pmm-data -v /root/backup:/backup busybox tar czvf /backup/backup-$(date "+%F").tar /srv
+  - path: /root/upgrade-pmm.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash -xe
+
+      docker pull percona/pmm-server:2
+
+      docker stop pmm-server
+      docker rm pmm-server
+
+      docker run -d -p 443:443 -p 80:80 --volumes-from pmm-data --name pmm-server --restart always percona/pmm-server:2
+      echo "PMM Server has been successfully upgraded to the next version. Don't forget to purge the old image."
+
+      bash /root/apply-custom-settings.sh
+  - path: /root/apply-custom-settings.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash -xe
+
+      echo "Running the ansible script..."
+      docker cp /root/ansible.yml pmm-server:/root/ansible.yml
+      docker exec pmm-server ansible-playbook -v /root/ansible.yml
+      docker exec pmm-server supervisorctl restart grafana
+      echo "PMM settings updated."
