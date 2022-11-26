@@ -92,8 +92,9 @@ write_files:
       slave_parallel_workers=2
       slave_preserve_commit_order=1
 
-      sync_binlog=0
+      sync_binlog=1
       log_slave_updates=0
+      read_only=1
 
       innodb_flush_log_at_trx_commit=0
       innodb_flush_neighbors=0
