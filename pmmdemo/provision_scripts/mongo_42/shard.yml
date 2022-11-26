@@ -58,7 +58,7 @@ write_files:
         path: /var/log/mongo/mongod.log
 
       setParameter:
-       logLevel: 0        
+        logLevel: 0        
 
       processManagement:
         fork: true
