@@ -75,5 +75,3 @@ variable "mongo_config_disk_size" {
   description = "Size of config instance of Mongo cluster"
   default     = 16
 }
-
-

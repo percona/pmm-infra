@@ -31,3 +31,13 @@ output "percona_xtradb_cluster_80_password" {
   value     = random_password.percona_xtradb_cluster_80_sysbench_password.result
   sensitive = true
 }
+
+output "mongodb_42_pmm_user_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_42_pmm_user_password
+  sensitive = true
+}
+
+output "mongodb_42_pmm_admin_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_42_pmm_admin_password
+  sensitive = true
+}
