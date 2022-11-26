@@ -33,18 +33,21 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 2. Create an SSH key `pmm-demo`, which will be used to connect from outside to the bastion host. The bastion host
    is one entry point from which you can connect to other hosts. Apart from the bastion, all other hosts do not
    expose public IP addresses.
-3. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`, for example:
-   - pmm_domain = "pmmdemo.percona.net"
-   - owner_email = "your.name@percona.com"
+3. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`. Minimal configuration example:
+   ```
+   pmm_domain = "pmmdemo.percona.net"
+   owner_email = "your.name@percona.com"
+   ```
 4. Set the value of an environment variable called `AWS_PROFILE`. This value will be used as the default profile name for your AWS configuration. Example: `export AWS_PROFILE=dev`
 5. Make sure to login to your AWS cloud account with `aws login` ahead of time.
 6. Make sure to login to your Azure cloud account with `az login` ahead of time.
 
 ## Execute
 
-1. Run `terraform init` to initialize your terraform state and provision terraform modules
-2. Run `terraform apply` to provision the infrastructure defined in terraform files
-3. Run `terraform destroy` to tear down everything provisioned before.
+1. Run `terraform init` to initialize your terraform state and provision terraform modules.
+2. Run `terrfaform validate` to confirm your code or any change thereof are syntactically valid.
+3. Run `terraform apply` to provision the infrastructure defined as code.
+4. Run `terraform destroy` to tear down everything provisioned before.
 
 Note: You can partially update(apply) or destroy resources by using the `-target` parameter. Read [more](https://learn.hashicorp.com/tutorials/terraform/resource-targeting?in=terraform/state).
 
@@ -59,16 +62,16 @@ The table below provides a map of servers and their hostnames, to which the suff
 
 ### Databases
 
-| Name                       | Hostnames                                                 | Workload |
-| -------------------------- | --------------------------------------------------------- | -------- |
-| Azure MySQL 8.0            | pmmdemo-azure                                             |          |
-| AWS MySQL 8.0              | pmmdemo-mysql                                             |          |
-| AWS Postgres 13            | pmmdemo-postgres                                          |          |
-| AWS Aurora 2               | pmmdemo-aurora-cluster                                    |          |
-| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongos-0 |          |
-| Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                          | yes      |
-| Percona Server 8.0         | percona-server-80-? (0,1)                                 | yes      |
-| Percona Server for PG 13   | postgres-13                                               | yes      |
+| Name                       | Hostnames                                                         | Workload |
+| -------------------------- | ----------------------------------------------------------------- | -------- |
+| Azure MySQL 8.0            | pmmdemo-azure                                                     |          |
+| AWS MySQL 8.0              | pmmdemo-mysql                                                     |          |
+| AWS Postgres 13            | pmmdemo-postgres                                                  |          |
+| AWS Aurora 2               | pmmdemo-aurora-cluster                                            |          |
+| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongo42-mongos-0 |          |
+| Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                                  | yes      |
+| Percona Server 8.0         | percona-server-80-? (0,1)                                         | yes      |
+| Percona Server for PG 13   | postgres-13                                                       | yes      |
 
 ### Other servers
 
@@ -105,3 +108,11 @@ export AWS_PROFILE=dev
 terraform workspace select demo1
 terraform destroy # demo1, profile=dev
 ```
+
+### I need to be able to output my passwords when troubleshooting connectivity issues. Can I?
+
+Yes. Run the following command: `terraform output -json | jq`.
+
+### How do I force a member of a MongoDB replicaset to become a primary?
+
+Refer to the manual (v4.2) https://www.mongodb.com/docs/v4.2/tutorial/force-member-to-be-primary.

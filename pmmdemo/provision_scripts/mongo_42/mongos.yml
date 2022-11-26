@@ -28,131 +28,99 @@ runcmd:
   - mongo -u pmm-admin -p '${mongodb_42_pmm_admin_password}' /tmp/user.js
   - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
-
 write_files:
-- path: /etc/mongos.conf
-  content: |
-    sharding:
-      configDB: ${replica_set_name}/mongo-42-cfg-0.${route53_name}:27019,mongo-42-cfg-1.${route53_name}:27019,mongo-42-cfg-2.${route53_name}:27019
+  - path: /etc/mongos.conf
+    content: |
+      sharding:
+        configDB: ${replica_set_name}/mongo-42-cfg-0.${route53_name}:27019,mongo-42-cfg-1.${route53_name}:27019,mongo-42-cfg-2.${route53_name}:27019
 
-    net:
-      bindIp: 0.0.0.0
+      net:
+        bindIp: 0.0.0.0
 
-    systemLog:
-      destination: file
-      logAppend: true
-      path: /var/log/mongo/mongos.log
+      systemLog:
+        destination: file
+        logAppend: true
+        path: /var/log/mongo/mongos.log
 
-    security:
-      keyFile: /etc/mongo-key
+      security:
+        keyFile: /etc/mongo-key
 
-    processManagement:
-      fork: true
-      pidFilePath: /var/run/mongo/mongos.pid
+      processManagement:
+        fork: true
+        pidFilePath: /var/run/mongo/mongos.pid
 
-- path: /etc/mongo-key
-  content: |
-    ${mongodb_42_keyfile}
+  - path: /etc/mongo-key
+    content: |
+      ${mongodb_42_keyfile}
 
-- path: /tmp/init.js
-  content: |
-    sh.addShard("shard-0/mongo-42-rs-0-0.${route53_name}:27019,mongo-42-rs-0-1.${route53_name}:27019,mongo-42-rs-0-2.${route53_name}:27019")
-    sh.addShard("shard-1/mongo-42-rs-1-0.${route53_name}:27019,mongo-42-rs-1-1.${route53_name}:27019,mongo-42-rs-1-2.${route53_name}:27019")
-    admin = db.getSiblingDB("admin")
-    admin.createUser(
-      {
-        user: "pmm-admin",
-        pwd: "${mongodb_42_pmm_admin_password}",
-        roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-      }
-    )
+  - path: /tmp/init.js
+    content: |
+      sh.addShard("shard-0/mongo-42-rs-0-0.${route53_name}:27019,mongo-42-rs-0-1.${route53_name}:27019,mongo-42-rs-0-2.${route53_name}:27019")
+      sh.addShard("shard-1/mongo-42-rs-1-0.${route53_name}:27019,mongo-42-rs-1-1.${route53_name}:27019,mongo-42-rs-1-2.${route53_name}:27019")
+      admin = db.getSiblingDB("admin")
+      admin.createUser(
+        {
+          user: "pmm-admin",
+          pwd: "${mongodb_42_pmm_admin_password}",
+          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+        }
+      )
 
+  - path: /usr/lib/systemd/system/mongos.service
+    content: |
+      [Unit]
+      Description=High-performance, schema-free document-oriented database
+      After=network.target
 
-- path: /tmp/users.js
-  content: |
-    db.getSiblingDB("admin").createRole({
-        role: "explainRole",
-        privileges: [{
-            resource: {
-                db: "",
-                collection: "system.profile"
-                },
-            actions: [
-                "listIndexes",
-                "listCollections",
-                "dbStats",
-                "dbHash",
-                "collStats",
-                "find"
-                ]
-            }],
-        roles:[]
-    })
-    db.getSiblingDB("admin").createUser({
-      user: "pmm",
-      pwd: "${mongodb_42_pmm_user_password}",
-      roles: [
-          { role: "explainRole", db: "admin" },
-          { role: "clusterMonitor", db: "admin" },
-          { role: "read", db: "local" }
-      ]
-    })
+      [Service]
+      User=mongod
+      Group=mongod
+      Type=forking
+      ExecStart=/bin/mongos --config /etc/mongos.conf --fork
+      PIDFile=/var/run/mongo/mongos.pid
+      LimitFSIZE=infinity
+      LimitCPU=infinity
+      LimitAS=infinity
+      LimitNOFILE=64000
+      LimitNPROC=64000
+      LimitMEMLOCK=infinity
+      TasksMax=infinity
+      TasksAccounting=false
 
-- path: /usr/lib/systemd/system/mongos.service
-  content: |
-    [Unit]
-    Description=High-performance, schema-free document-oriented database
-    After=network.target
+      [Install]
+      WantedBy=multi-user.target
 
-    [Service]
-    User=mongod
-    Group=mongod
-    Type=forking
-    ExecStart=/bin/mongos --config /etc/mongos.conf --fork
-    PIDFile=/var/run/mongo/mongos.pid
-    LimitFSIZE=infinity
-    LimitCPU=infinity
-    LimitAS=infinity
-    LimitNOFILE=64000
-    LimitNPROC=64000
-    LimitMEMLOCK=infinity
-    TasksMax=infinity
-    TasksAccounting=false
-
-    [Install]
-    WantedBy=multi-user.target
-
-- path: /root/.bashrc
-  append: true
-  content: |
+  - path: /root/.bashrc
+    append: true
+    content: |
       alias mng='mongo --nodb'
 
-- path: /tmp/user.js
-  content: |
-    db.getSiblingDB("admin").createRole({
-        role: "explainRole",
-        privileges: [{
-            resource: {
-                db: "",
-                collection: "system.profile"
-                },
-            actions: [
-                "listIndexes",
-                "listCollections",
-                "dbStats",
-                "dbHash",
-                "collStats",
-                "find"
-                ]
-            }],
-        roles:[]
-    })
-    db.getSiblingDB("admin").createUser({
-      user: "pmm",
-      pwd: "${mongodb_42_pmm_user_password}",
-      roles: [
-          { role: "explainRole", db: "admin" },
-          { role: "clusterMonitor", db: "admin" },
-          { role: "read", db: "local" }
-      ]
-    })
+  - path: /tmp/user.js
+    content: |
+      db.getSiblingDB("admin").createRole({
+          role: "explainRole",
+          privileges: [{
+              resource: {
+                  db: "",
+                  collection: "system.profile"
+                  },
+              actions: [
+                  "listIndexes",
+                  "listCollections",
+                  "dbStats",
+                  "dbHash",
+                  "collStats",
+                  "find"
+                  ]
+              }],
+          roles:[]
+      })
+      db.getSiblingDB("admin").createUser({
+        user: "pmm",
+        pwd: "${mongodb_42_pmm_user_password}",
+        roles: [
+            { role: "explainRole", db: "admin" },
+            { role: "clusterMonitor", db: "admin" },
+            { role: "read", db: "local" }
+        ]
+      })
