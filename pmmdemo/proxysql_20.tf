@@ -43,4 +43,3 @@ resource "random_password" "proxysql_admin" {
   upper   = true
   numeric = true
 }
-
