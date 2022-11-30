@@ -5,7 +5,7 @@ variable "pmm_domain" {
 
 variable "owner_email" {
   type        = string
-  description = "E-mail for letsencrypt account"
+  description = "Email for letsencrypt account"
 }
 
 # OPTIONAL
