@@ -1,4 +1,4 @@
-module "mongo_42_rs_0" {
+module "mongo_60_rs_0" {
   source        = "../ec2"
   count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-rs-0-${count.index}"
@@ -16,22 +16,22 @@ module "mongo_42_rs_0" {
     replica_set_name              = "shard-0",
     shard_number                  = 0,
     route53_name                  = var.route53_name,
-    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
-    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
+    mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
+    mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
   })
 }
 
-module "mongo_42_rs_0_disk" {
+module "mongo_60_rs_0_disk" {
   source      = "../ebs"
   count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-rs-0-${count.index}"
   disk_size   = var.mongo_disk_size
-  instance_id = module.mongo_42_rs_0[count.index].instance_id
+  instance_id = module.mongo_60_rs_0[count.index].instance_id
 }
 
 
-module "mongo_42_rs_1" {
+module "mongo_60_rs_1" {
   source        = "../ec2"
   count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-rs-1-${count.index}"
@@ -49,21 +49,21 @@ module "mongo_42_rs_1" {
     replica_set_name              = "shard-1",
     shard_number                  = 1,
     route53_name                  = var.route53_name,
-    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
-    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
+    mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
+    mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
+    mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
   })
 }
 
-module "mongo_42_rs_1_disk" {
+module "mongo_60_rs_1_disk" {
   source      = "../ebs"
   count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-rs-1-${count.index}"
   disk_size   = var.mongo_disk_size
-  instance_id = module.mongo_42_rs_1[count.index].instance_id
+  instance_id = module.mongo_60_rs_1[count.index].instance_id
 }
 
-module "mongo_42_cfg" {
+module "mongo_60_cfg" {
   source        = "../ec2"
   count         = var.count_of_shards
   server_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
@@ -80,21 +80,21 @@ module "mongo_42_cfg" {
     pmm_server_endpoint          = var.pmm_server_endpoint,
     replica_set_name             = "cfg",
     route53_name                 = var.route53_name,
-    mongodb_42_keyfile           = random_password.mongodb_42_keyfile.result,
-    mongodb_42_pmm_user_password = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_60_keyfile           = random_password.mongodb_60_keyfile.result,
+    mongodb_60_pmm_user_password = random_password.mongodb_60_pmm_user_password.result,
 
   })
 }
 
-module "mongo_42_cfg_disk" {
+module "mongo_60_cfg_disk" {
   source      = "../ebs"
   count       = var.count_of_shards
   disk_name   = "${local.mongo_cluster_name}-cfg-${count.index}"
   disk_size   = var.mongo_config_disk_size
-  instance_id = module.mongo_42_cfg[count.index].instance_id
+  instance_id = module.mongo_60_cfg[count.index].instance_id
 }
 
-module "mongo_42_mongos" {
+module "mongo_60_mongos" {
   source        = "../ec2"
   count         = var.count_of_mongos
   server_name   = "${local.mongo_cluster_name}-mongos-${count.index}"
@@ -111,20 +111,20 @@ module "mongo_42_mongos" {
     pmm_server_endpoint           = var.pmm_server_endpoint,
     route53_name                  = var.route53_name,
     replica_set_name              = "cfg",
-    mongodb_42_keyfile            = random_password.mongodb_42_keyfile.result,
-    mongodb_42_pmm_admin_password = random_password.mongodb_42_pmm_admin_password.result,
-    mongodb_42_pmm_user_password  = random_password.mongodb_42_pmm_user_password.result,
+    mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
+    mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
+    mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
   })
 }
 
-resource "random_password" "mongodb_42_pmm_user_password" {
+resource "random_password" "mongodb_60_pmm_user_password" {
   length  = 30
   special = false
   upper   = true
   numeric = true
 }
 
-resource "random_password" "mongodb_42_pmm_admin_password" {
+resource "random_password" "mongodb_60_pmm_admin_password" {
   length  = 30
   special = false
   upper   = true
@@ -132,19 +132,19 @@ resource "random_password" "mongodb_42_pmm_admin_password" {
 }
 
 // TODO it's better use x.509 cert auth
-resource "random_password" "mongodb_42_keyfile" {
+resource "random_password" "mongodb_60_keyfile" {
   length  = 1000
   special = false
   upper   = true
   numeric = true
 }
 
-output "mongodb_42_pmm_user_password" {
-  value     = random_password.mongodb_42_pmm_user_password.result
+output "mongodb_60_pmm_user_password" {
+  value     = random_password.mongodb_60_pmm_user_password.result
   sensitive = true
 }
 
-output "mongodb_42_pmm_admin_password" {
-  value     = random_password.mongodb_42_pmm_admin_password.result
+output "mongodb_60_pmm_admin_password" {
+  value     = random_password.mongodb_60_pmm_admin_password.result
   sensitive = true
 }

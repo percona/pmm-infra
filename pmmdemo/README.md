@@ -68,7 +68,7 @@ The table below provides a map of servers and their hostnames, to which the suff
 | AWS MySQL 8.0              | pmmdemo-mysql                                                     |          |
 | AWS Postgres 13            | pmmdemo-postgres                                                  |          |
 | AWS Aurora 2               | pmmdemo-aurora-cluster                                            |          |
-| Mongo 4.2                  | mongo-42-cfg-? (0,1,2), mongo-42-rs-?-? (0,1,2), mongo42-mongos-0 |          |
+| MongoDB 6.0                | mongo-60-cfg-? (0,1,2), mongo-60-rs-?-? (0,1,2), mongo60-mongos-0 |          |
 | Percona XtraDB Cluster 8.0 | percona-xtradb-cluster-? (0,1,2)                                  | yes      |
 | Percona Server 8.0         | percona-server-80-? (0,1)                                         | yes      |
 | Percona Server for PG 13   | postgres-13                                                       | yes      |
@@ -115,4 +115,4 @@ Yes. Run the following command: `terraform output -json | jq`.
 
 ### How do I force a member of a MongoDB replicaset to become a primary?
 
-Refer to the manual (v4.2) https://www.mongodb.com/docs/v4.2/tutorial/force-member-to-be-primary.
+Refer to the [manual] (https://www.mongodb.com/docs/manual/tutorial/force-member-to-be-primary/).

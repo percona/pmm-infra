@@ -21,7 +21,7 @@ runcmd:
   - service docker start
   - usermod -a -G docker ec2-user
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y psmdb-42
+  - percona-release setup -y psmdb-60
   - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
@@ -31,18 +31,15 @@ runcmd:
   - systemctl start mongod
   - systemctl status mongod
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
-  - mongo --port 27019 /tmp/init.js || true
-  - sleep 5s
-  - mongo --port 27019 /tmp/admin.js || true
-  - mongo --port 27019 -u pmm-admin -p '${mongodb_42_pmm_admin_password}' /tmp/user.js || true
+  - mongo --port 27019 /tmp/init.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_42_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --port 27019
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 write_files:
   - path: /etc/mongod.conf
     content: |
       sharding:
-        clusterRole: shardsvr
+        clusterRole: configsvr
 
       replication:
         replSetName: ${replica_set_name}
@@ -57,9 +54,6 @@ write_files:
         logAppend: true
         path: /var/log/mongo/mongod.log
 
-      setParameter:
-        logLevel: 0        
-
       processManagement:
         fork: true
         pidFilePath: /var/run/mongod.pid
@@ -70,15 +64,11 @@ write_files:
 
       operationProfiling:
         mode: all
-        slowOpThresholdMs: 200
+        slowOpThresholdMs: 100
         rateLimit: 100
 
       security:
         keyFile: /etc/mongo-key
-
-  - path: /etc/mongo-key
-    content: |
-      ${mongodb_42_keyfile}
 
   - path: /tmp/init.js
     content: |
@@ -86,54 +76,18 @@ write_files:
       rs.initiate(
         {
           _id: "${replica_set_name}",
+          configsvr: true,
           members: [
-            { _id : 0, host : "mongo-42-rs-${shard_number}-0.${route53_name}:27019" },
-            { _id : 1, host : "mongo-42-rs-${shard_number}-1.${route53_name}:27019" },
-            { _id : 2, host : "mongo-42-rs-${shard_number}-2.${route53_name}:27019" }
+            { _id : 0, host : "mongo-60-cfg-0.${route53_name}:27019" },
+            { _id : 1, host : "mongo-60-cfg-1.${route53_name}:27019" },
+            { _id : 2, host : "mongo-60-cfg-2.${route53_name}:27019" }
           ]
         }
       )
 
-  - path: /tmp/admin.js
+  - path: /etc/mongo-key
     content: |
-      admin = db.getSiblingDB("admin")
-      admin.createUser(
-        {
-          user: "pmm-admin",
-          pwd: "${mongodb_42_pmm_admin_password}",
-          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-        }
-      )
-
-  - path: /tmp/user.js
-    content: |
-      db.getSiblingDB("admin").createRole({
-          role: "explainRole",
-          privileges: [{
-              resource: {
-                  db: "",
-                  collection: "system.profile"
-                  },
-              actions: [
-                  "listIndexes",
-                  "listCollections",
-                  "dbStats",
-                  "dbHash",
-                  "collStats",
-                  "find"
-                  ]
-              }],
-          roles:[]
-      })
-      db.getSiblingDB("admin").createUser({
-        user: "pmm",
-        pwd: "${mongodb_42_pmm_user_password}",
-        roles: [
-            { role: "explainRole", db: "admin" },
-            { role: "clusterMonitor", db: "admin" },
-            { role: "read", db: "local" }
-        ]
-      })
+      ${mongodb_60_keyfile}
 
   - path: /root/.mongorc.js
     content: |
