@@ -29,7 +29,7 @@ runcmd:
   - usermod -a -G docker ec2-user
   - docker pull percona/pmm-server:2
   - docker volume create pmm-data || true
-  - docker run -d -p 443:443 -p 80:80 --volumes-from pmm-data --name pmm-server --restart always percona/pmm-server:2
+  - docker run -d -p 443:443 -p 80:80 -v pmm-data:/srv --name pmm-server --restart always percona/pmm-server:2
   - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
