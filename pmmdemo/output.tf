@@ -41,3 +41,8 @@ output "mongodb_60_pmm_admin_password" {
   value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_admin_password
   sensitive = true
 }
+
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password.result
+  sensitive = true
+}

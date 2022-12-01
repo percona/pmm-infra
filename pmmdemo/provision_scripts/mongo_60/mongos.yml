@@ -124,3 +124,11 @@ write_files:
             { role: "read", db: "local" }
         ]
       })
+      db.getSiblingDB("admin").createUser({
+        user: "ycsb",
+        pwd: "${mongodb_ycsb_password}",
+        roles: [
+            { role: "readWrite", db: "" },
+            { role: "clusterManager", db: "" }
+        ]
+      })

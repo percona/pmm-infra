@@ -19,3 +19,13 @@ module "mongo_cluster_pmmdemo" {
   pmm_password        = random_password.pmm_admin_pass.result
 }
 
+resource "random_password" "mongodb_ycsb_password" {
+  length      = 10
+  special     = true
+  upper       = true
+  numeric     = true
+  min_lower   = 1
+  min_numeric = 1
+  min_special = 1
+  min_upper   = 1
+}
