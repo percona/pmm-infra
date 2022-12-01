@@ -31,10 +31,10 @@ runcmd:
   - systemctl start mongod
   - systemctl status mongod
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
-  - mongo --port 27019 /tmp/init.js || true
+  - mongosh --port 27019 /tmp/init.js || true
   - sleep 5s
-  - mongo --port 27019 /tmp/admin.js || true
-  - mongo --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js || true
+  - mongosh --port 27019 /tmp/admin.js || true
+  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js || true
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --port 27019
 
@@ -142,4 +142,4 @@ write_files:
   - path: /root/.bashrc
     append: true
     content: |
-      alias mng='mongo --nodb'
+      alias mng='mongosh --nodb'
