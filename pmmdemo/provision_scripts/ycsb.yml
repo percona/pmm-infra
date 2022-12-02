@@ -9,7 +9,9 @@ runcmd:
   - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
-  - yum -y install pmm2-client python2 java-1.8.0-openjdk percona-server-mongodb
+  - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
   - tar xfz ycsb-0.17.0.tar.gz
   - rm ycsb-0.17.0.tar.gz
