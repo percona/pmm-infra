@@ -22,6 +22,11 @@ output "proxysql_monitor_password" {
   sensitive = true
 }
 
+output "proxysql_admin_password" {
+  value     = random_password.proxysql_admin.result
+  sensitive = true
+}
+
 output "percona_server_80_password" {
   value     = random_password.mysql80_sysbench_password.result
   sensitive = true
@@ -39,6 +44,21 @@ output "mongodb_60_pmm_user_password" {
 
 output "mongodb_60_pmm_admin_password" {
   value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_admin_password
+  sensitive = true
+}
+
+output "aws_postgres_13_password" {
+  value     = random_password.pmmdemo_postgres_13_password.result
+  sensitive = true
+}
+
+output "aws_mysql_engine_80" {
+  value     = random_password.pmmdemo_aws_mysql_engine_80.result
+  sensitive = true
+}
+
+output "aws_aurora_engine_2" {
+  value     = random_password.pmmdemo_aurora_57_password.result
   sensitive = true
 }
 
