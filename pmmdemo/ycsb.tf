@@ -22,8 +22,7 @@ module "ycsb" {
 }
 
 resource "random_password" "mongodb_ycsb_password" {
-  length      = 10
-  special     = true
+  length      = 30
   upper       = true
   numeric     = true
   min_lower   = 1

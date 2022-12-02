@@ -23,9 +23,9 @@ runcmd:
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - sleep 10s
-  - mongo /tmp/init.js
+  - mongosh /tmp/init.js
   - sleep 5s
-  - mongo -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
+  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
   - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
 
 write_files:
@@ -128,7 +128,7 @@ write_files:
         user: "ycsb",
         pwd: "${mongodb_ycsb_password}",
         roles: [
-            { role: "readWrite", db: "" },
-            { role: "clusterManager", db: "" }
+            { role: "readWriteAnyDatabase", db: "admin" },
+            { role: "clusterManager", db: "admin" }
         ]
       })

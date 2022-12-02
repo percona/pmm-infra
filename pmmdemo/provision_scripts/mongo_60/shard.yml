@@ -82,7 +82,7 @@ write_files:
 
   - path: /tmp/init.js
     content: |
-      rs.secondaryOk()
+      db.getMongo().setReadPref("primaryPreferred")
       rs.initiate(
         {
           _id: "${replica_set_name}",
@@ -135,7 +135,7 @@ write_files:
         ]
       })
 
-  - path: /root/.mongorc.js
+  - path: /root/.mongoshrc.js
     content: |
       db = connect("localhost:27019/")
 
