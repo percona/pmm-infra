@@ -37,13 +37,13 @@ output "percona_xtradb_cluster_80_password" {
   sensitive = true
 }
 
-output "mongodb_42_pmm_user_password" {
-  value     = module.mongo_cluster_pmmdemo.mongodb_42_pmm_user_password
+output "mongodb_60_pmm_user_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_user_password
   sensitive = true
 }
 
-output "mongodb_42_pmm_admin_password" {
-  value     = module.mongo_cluster_pmmdemo.mongodb_42_pmm_admin_password
+output "mongodb_60_pmm_admin_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_admin_password
   sensitive = true
 }
 

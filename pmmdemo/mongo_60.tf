@@ -1,5 +1,5 @@
 locals {
-  mongo_cluster_name = "mongo-42"
+  mongo_cluster_name = "mongo-60"
   mongodb_count      = 3
 }
 
