@@ -12,6 +12,7 @@ runcmd:
   - yum -y install pmm2-client python2 java-1.8.0-openjdk percona-server-mongodb
   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
   - tar xfz ycsb-0.17.0.tar.gz
+  - rm ycsb-0.17.0.tar.gz
   - mkdir -p /etc/ycsb
   - chmod +x /etc/ycsb/initial_load.sh
   - chmod +x /etc/ycsb/exec_ycsb.sh
@@ -28,15 +29,13 @@ write_files:
       sh.enableSharding(ycsb)
       use ycsb
       sh.shardCollection(fullName, { "_id" : "hashed" }, false, { numInitialChunks : 100 })
-      
-write_files:
+
   - path: /etc/ycsb/initial_load.sh
     content: |
       #!/bin/bash
 
       /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-mongos:27017/"
 
-write_files:
   - path: /etc/ycsb/exec_ycsb.sh
     content: |
       #!/bin/bash

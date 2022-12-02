@@ -74,15 +74,15 @@ module "mongo_60_cfg" {
   security_groups = var.security_groups
 
   user_data = templatefile(local.provision_script_cfg, {
-    pmm_password                 = var.pmm_password,
-    name                         = "${local.mongo_cluster_name}-cfg-${count.index}",
-    fqdn                         = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
-    pmm_server_endpoint          = var.pmm_server_endpoint,
-    replica_set_name             = "cfg",
-    route53_name                 = var.route53_name,
-    mongodb_60_keyfile           = random_password.mongodb_60_keyfile.result,
-    mongodb_60_pmm_user_password = random_password.mongodb_60_pmm_user_password.result,
-
+    pmm_password                  = var.pmm_password,
+    name                          = "${local.mongo_cluster_name}-cfg-${count.index}",
+    fqdn                          = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
+    pmm_server_endpoint           = var.pmm_server_endpoint,
+    replica_set_name              = "cfg",
+    route53_name                  = var.route53_name,
+    mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
+    mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
+    mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
   })
 }
 
@@ -114,6 +114,7 @@ module "mongo_60_mongos" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
+    mongodb_ycsb_password         = var.mongodb_ycsb_password,
   })
 }
 
