@@ -47,6 +47,11 @@ output "mongodb_60_pmm_admin_password" {
   sensitive = true
 }
 
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password.result
+  sensitive = true
+}
+
 output "aws_postgres_13_password" {
   value     = random_password.pmmdemo_postgres_13_password.result
   sensitive = true
@@ -59,10 +64,5 @@ output "aws_mysql_engine_80" {
 
 output "aws_aurora_engine_2" {
   value     = random_password.pmmdemo_aurora_57_password.result
-  sensitive = true
-}
-
-output "mongodb_ycsb_password" {
-  value     = random_password.mongodb_ycsb_password.result
   sensitive = true
 }
