@@ -12,14 +12,13 @@ runcmd:
   - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - mkdir -p /data
   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
   - tar xfz ycsb-0.17.0.tar.gz
   - rm ycsb-0.17.0.tar.gz
-  - mkdir -p /etc/ycsb
-  - chmod +x /etc/ycsb/initial_load.sh
-  - chmod +x /etc/ycsb/exec_ycsb.sh
-  - mongosh mongo-mongos -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
-  - /etc/ysdb/initial_load.sh
+  - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
+  - mongosh --host mongo-60-mongos-0 -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
+  - /bin/bash /etc/ycsb/initial_load.sh
   - systemctl enable ycsb.mongodb60
   - systemctl start ycsb.mongodb60
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
@@ -28,21 +27,23 @@ runcmd:
 write_files:
   - path: /etc/ycsb/shard.js
     content: |
-      sh.enableSharding(ycsb)
-      use ycsb
-      sh.shardCollection(fullName, { "_id" : "hashed" }, false, { numInitialChunks : 100 })
+      sh.enableSharding('ycsb');
+      use ycsb;
+      sh.shardCollection('ycsb.ycsb', { "_id" : "hashed" }, false, { numInitialChunks : 100 })
 
   - path: /etc/ycsb/initial_load.sh
+    permissions: "0744"
     content: |
       #!/bin/bash
 
-      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-mongos:27017/"
+      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
 
   - path: /etc/ycsb/exec_ycsb.sh
+    permissions: "0744"
     content: |
       #!/bin/bash
 
-      /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-mongos:27017/"
+      /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
 
   - path: /usr/lib/systemd/system/ycsb.mongodb60.service
     content: |
