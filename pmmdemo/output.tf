@@ -57,7 +57,7 @@ output "aws_postgres_13_password" {
   sensitive = true
 }
 
-/* output "aws_mysql_engine_80" {
+output "aws_mysql_engine_80" {
   value     = random_password.pmmdemo_aws_mysql_engine_80.result
   sensitive = true
 }
@@ -65,4 +65,4 @@ output "aws_postgres_13_password" {
 output "aws_aurora_engine_2" {
   value     = random_password.pmmdemo_aurora_57_password.result
   sensitive = true
-} */
+}
