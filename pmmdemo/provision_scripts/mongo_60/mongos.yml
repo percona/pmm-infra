@@ -26,7 +26,7 @@ runcmd:
   - mongosh /tmp/init.js
   - sleep 5s
   - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --enable-all-collectors
 
 write_files:
   - path: /etc/mongos.conf
