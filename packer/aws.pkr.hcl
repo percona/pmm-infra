@@ -109,7 +109,7 @@ build {
     use_proxy              = false
     user                   = "ec2-user"
     ansible_ssh_extra_args = ["-o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o ForwardAgent=yes -o UserKnownHostsFile=/dev/null"]
-    extra_arguments        = ["-vvv"]
+    extra_arguments        = ["-v"]
     playbook_file          = "./ansible/agent.yml"
   }
 }
