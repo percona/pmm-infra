@@ -3,10 +3,10 @@
   hosts: default
   become: true
   vars:
-    docker_compose_version: "2.11.2"
+    docker_compose_version: "2.14.0"
     kubectl_version: "1.22.9"
-    doctl_version: "1.82.2"
-    node_version: "16.17.0"
+    doctl_version: "1.88.0"
+    node_version: "16.18.1"
 
   tasks:
     - name: Detect vm architecture
@@ -188,6 +188,7 @@
         - ubuntu:bionic
         - ubuntu:focal
         - rockylinux:8
+        - oraclelinux:9
       when: ansible_facts['distribution'] == "Amazon"
 
     - name: Turn off swap
@@ -304,12 +305,6 @@
         regexp: "^UUID={{ disk_uuid.stdout }}"
         line: "UUID={{ disk_uuid.stdout }}     /           xfs    defaults,noatime,nobarrier,discard  1   1"
       when: ansible_facts['distribution'] == "Amazon"
-
-    - name: Add vbox-01.ci.percona.com to /etc/hosts
-      lineinfile:
-        dest: /etc/hosts
-        line: "10.30.6.220 vbox-01.ci.percona.com"
-        state: present
 
     - name: Add repo.ci.percona.com to /etc/hosts
       lineinfile:
