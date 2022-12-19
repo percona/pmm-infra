@@ -5,44 +5,39 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-# packages:
-# - docker
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
   - mkdir -p /data
 
 runcmd:
-  # - systemctl enable docker
-  # - service docker start
-  # - usermod -a -G docker ec2-user
-  # - chown 1001:1001 /data
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - yum -y install percona-xtradb-cluster-full
+  - percona-release enable-only pxc-80 release
+  - percona-release enable tools release
+  - yum install -y percona-xtradb-cluster
+  - percona-release enable tools pmm2-client
   - percona-release setup -y pmm2-client
-  - yum -y install pmm2-client
+  - yum install -y pmm2-client
   - systemctl enable mysql
-  - systemctl start mysql
-  - cp -f /etc/my.cnf /etc/my.cnf_original
-  - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
-  - chmod +x /root/init-mysql.sh
+  # - systemctl start mysql
   - bash /root/init-mysql.sh
-  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 60 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}
 
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 write_files:
   - path: /root/.my.cnf
+    permissions: "0644"
     content: |
       [client]
       user=root
       password="${mysql_root_password}"
 
-  - path: /etc/my.cnf.d/mysql_pxc_80.cnf
+  - path: /etc/my.cnf
+    permissions: "0644"
     content: |
       [mysqld]
 
@@ -64,9 +59,9 @@ write_files:
 
       # Config binary and slow_query logs
       #
-      log-bin
+      log-bin=percona-xtradb-cluster-{index}-bin
       binlog_format=ROW
-      #binlog_expire_logs_seconds=21600
+      binlog_expire_logs_seconds=604800
 
       slow_query_log=ON
       slow_query_log_always_write_time=1
@@ -74,7 +69,7 @@ write_files:
       log_slow_rate_limit=10
       log_slow_rate_type='query'
       log_slow_admin_statements=ON
-      log_slow_slave_statements=ON
+      log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
 
@@ -120,37 +115,44 @@ write_files:
       [sst]
       wsrep_debug=ON
 
+      !includedir /etc/my.cnf.d/
+
   - path: /root/init-mysql.sh
-    permissions: "0400"
+    permissions: "0500"
     content: |
       #!/bin/bash
 
-      for (( i=1 ; i<=30 ; i++ )); do
-          if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-              mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@'localhost' IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-              echo "password for root@localhost successfully changed"
-              break;
-          else
-              echo "retry $${i}/30";
-              sleep 2;
-          fi;
-      done;
+      # This need not be run on the replicas because replication will propagate them everywhere
+      provision_users() {
+        INITIAL_ROOT_PASSWORD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | awk '{print $NF}')
 
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON performance_schema.* TO root@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest;"
+        if [ -n "$INITIAL_ROOT_PASSWORD" ]; then
+          mysql --connect-expired-password -uroot -p$INITIAL_ROOT_PASSWORD -Bse "ALTER USER root@'localhost' IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;"
+          echo "Password for root@localhost successfully changed"
+          break
+        else
+          echo "Error: Initial root password not found in /var/log/mysqld.log"
+          exit 1
+        fi      
+
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT SELECT ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest;"
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
+      }
+
 
       if [[ "${name}" == "percona-xtradb-cluster-0" ]]; then
-          systemctl stop mysql
-          # If we are executing at the primary node (first in the row) start the PXC instance with bootstrap mode.
+          # If we are running on the primary node (i.e., index == 0), start the PXC instance in bootstrap mode.
           systemctl start mysql@bootstrap
 
-          # Check 600 times (1200sec/20min) if PXC is ready (all 3 nodes have joined and cluster is OPERATIONAL). Switch from bootstraping to normal execution
+          provision_users
+
+          # Check 600 times (1200sec or 20min) if PXC is ready (all 3 nodes have joined and cluster is OPERATIONAL). Switch from bootstrapping to regular operation
           for (( i=1 ; i<=600 ; i++ )); do
               if $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_evs_state';" | grep "OPERATIONAL" >/dev/null) && \
                 $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_cluster_size';" | grep "3" >/dev/null)        && \
@@ -163,39 +165,31 @@ write_files:
 
                       # Start primary node and break the loop
                       systemctl start mysql
-                      break;
+                      break
                   else
                       # Increment + sleep
-                      CHECK_COUNT="$(($${CHECK_COUNT:=1} + 1))";
-                      sleep 1;
+                      CHECK_COUNT="$(($${CHECK_COUNT:=1} + 1))"
+                      sleep 1
                   fi;
               else
                   # Wait for 2sec until next retry
-                  echo "retry $${i}/600";
-                  sleep 2;
-              fi;
-          done;
+                  echo "retry $${i}/600"
+                  sleep 2
+              fi
+          done
       else
-          # Check 300 times (600sec/10min) if Primary is ready (equlize differences in deployment times - Primary can finish pre_provisoining last).
+          systemctl start mysql
+
+          # Check 300 times (600sec/10min) if Primary is ready (equalize differences in deployment times - Primary can finish pre_provisoining last).
           for (( i=1 ; i<=300 ; i++ )); do
               if $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_evs_state';" | grep "OPERATIONAL" >/dev/null); then
                   # Start secondary node and brake the loop
                   systemctl start mysql
-                  break;
+                  break
               else
                   # Wait for 2sec until next retry
-                  echo "retry $${i}/300";
-                  sleep 2;
-              fi;
-          done;
-      fi;
-
-  # temporary solution while percona-release is broken for Amazon Linux 2
-  - path: /etc/yum.repos.d/percona-pxc-80-release.repo
-    content: |
-      [pxc-80-release-x86_64]
-      name = Percona XtraDB Cluster 8.0 release/x86_64 YUM repository
-      baseurl = http://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64
-      enabled = 1
-      gpgcheck = 1
-      gpgkey = file:///etc/pki/rpm-gpg/PERCONA-PACKAGING-KEY
+                  echo "retry $${i}/300"
+                  sleep 2
+              fi
+          done
+      fi

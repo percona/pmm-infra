@@ -1,14 +1,13 @@
 packer {
   required_plugins {
     amazon = {
-      version = "=1.1.1"
+      version = "=1.1.6"
       source  = "github.com/hashicorp/amazon"
     }
   }
 }
 
 source "amazon-ebs" "agent" {
-  name                  = "Packer Builder"
   ami_name              = "Docker Agent v2"
   instance_type         = "t3.xlarge"
   force_deregister      = true
@@ -26,6 +25,7 @@ source "amazon-ebs" "agent" {
   }
   ssh_username = "ec2-user"
   tags = {
+    Name            = "Jenkins Agent x86_64"
     iit-billing-tag = "pmm-worker"
   }
   run_tags = {
@@ -54,7 +54,6 @@ source "amazon-ebs" "agent" {
 }
 
 source "amazon-ebs" "arm-agent" {
-  name                  = "Packer Builder"
   ami_name              = "Docker Agent ARM v2"
   instance_type         = "t4g.xlarge"
   force_deregister      = true
@@ -72,6 +71,7 @@ source "amazon-ebs" "arm-agent" {
   }
   ssh_username = "ec2-user"
   tags = {
+    Name            = "Jenkins Agent arm64"
     iit-billing-tag = "pmm-worker"
   }
   run_tags = {
@@ -106,6 +106,10 @@ build {
     "source.amazon-ebs.arm-agent"
   ]
   provisioner "ansible" {
-    playbook_file = "./ansible/agent.yml"
+    use_proxy              = false
+    user                   = "ec2-user"
+    ansible_ssh_extra_args = ["-o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o ForwardAgent=yes -o UserKnownHostsFile=/dev/null"]
+    extra_arguments        = ["-v"]
+    playbook_file          = "./ansible/agent.yml"
   }
 }

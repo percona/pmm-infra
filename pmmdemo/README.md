@@ -116,3 +116,7 @@ Yes. Run the following command: `terraform output -json | jq`.
 ### How do I force a member of a MongoDB replicaset to become a primary?
 
 Refer to the [manual] (https://www.mongodb.com/docs/manual/tutorial/force-member-to-be-primary/).
+
+A few links to the docs of the respective servers we used to monitor:
+
+- https://docs.percona.com/percona-xtradb-cluster/8.0/howtos/centos_howto.html
