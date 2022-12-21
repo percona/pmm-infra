@@ -36,7 +36,7 @@ write_files:
     content: |
       #!/bin/bash
 
-      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
 
   - path: /etc/ycsb/exec_ycsb.sh
     permissions: "0744"
@@ -44,15 +44,15 @@ write_files:
       #!/bin/bash
 
       while true; do
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloada -threads 4 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloada -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
         sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
         sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadc -threads 4 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadc -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
         sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloade -threads 4 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloade -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
         sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadf -threads 4 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadf -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
         sleep 5s
       done
 
