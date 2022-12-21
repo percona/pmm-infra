@@ -141,21 +141,6 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
-  - path: /usr/lib/systemd/system/sysbench.proxysql.service
-    content: |
-      [Unit]
-      Description=Sysbench for Proxy SQL
-      After=network.target
-
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=10
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
-
-      [Install]
-      WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.ps.pg13.service
     content: |
       [Unit]
