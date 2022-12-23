@@ -47,6 +47,11 @@ output "postgres_pmm_password" {
   sensitive = true
 }
 
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password.result
+  sensitive = true
+}
+
 output "proxysql_admin_password" {
   value     = random_password.proxysql_admin.result
   sensitive = true

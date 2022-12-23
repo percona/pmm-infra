@@ -31,9 +31,12 @@ runcmd:
   - systemctl start mongod
   - systemctl status mongod
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
-  - mongo --port 27019 /tmp/init.js
+  - mongosh --port 27019 /tmp/init.js || true
+  - sleep 5s
+  - mongosh --port 27019 /tmp/admin.js || true
+  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js || true
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --service-name=${name} --enable-all-collectors
 
 write_files:
   - path: /etc/mongod.conf
@@ -70,9 +73,13 @@ write_files:
       security:
         keyFile: /etc/mongo-key
 
+  - path: /etc/mongo-key
+    content: |
+      ${mongodb_60_keyfile}
+
   - path: /tmp/init.js
     content: |
-      rs.secondaryOk()
+      db.getMongo().setReadPref("primaryPreferred")
       rs.initiate(
         {
           _id: "${replica_set_name}",
@@ -85,15 +92,52 @@ write_files:
         }
       )
 
-  - path: /etc/mongo-key
+  - path: /tmp/admin.js
     content: |
-      ${mongodb_60_keyfile}
+      admin = db.getSiblingDB("admin")
+      admin.createUser(
+        {
+          user: "pmm-admin",
+          pwd: "${mongodb_60_pmm_admin_password}",
+          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+        }
+      )
 
-  - path: /root/.mongorc.js
+  - path: /tmp/user.js
+    content: |
+      db.getSiblingDB("admin").createRole({
+          role: "explainRole",
+          privileges: [{
+              resource: {
+                  db: "",
+                  collection: "system.profile"
+                  },
+              actions: [
+                  "listIndexes",
+                  "listCollections",
+                  "dbStats",
+                  "dbHash",
+                  "collStats",
+                  "find"
+                  ]
+              }],
+          roles:[]
+      })
+      db.getSiblingDB("admin").createUser({
+        user: "pmm",
+        pwd: "${mongodb_60_pmm_user_password}",
+        roles: [
+            { role: "explainRole", db: "admin" },
+            { role: "clusterMonitor", db: "admin" },
+            { role: "read", db: "local" }
+        ]
+      })
+
+  - path: /root/.mongoshrc.js
     content: |
       db = connect("localhost:27019/")
 
   - path: /root/.bashrc
     append: true
     content: |
-      alias mng='mongo --nodb'
+      alias mng='mongosh --nodb'

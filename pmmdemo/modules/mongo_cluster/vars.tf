@@ -46,6 +46,11 @@ variable "pmm_password" {
   description = "Admin password for PMM Server"
 }
 
+variable "mongodb_ycsb_password" {
+  type        = string
+  description = "YCSB password for mongos"
+}
+
 variable "route53_name" {
   type        = string
   description = "Route53 zone name"
