@@ -3,9 +3,9 @@
   hosts: default
   become: true
   vars:
-    docker_compose_version: "2.14.0"
+    docker_compose_version: "2.14.2"
     kubectl_version: "1.22.9"
-    doctl_version: "1.88.0"
+    doctl_version: "1.91.0"
     node_version: "16.18.1"
 
   tasks:
@@ -14,10 +14,17 @@
         # Alternative architecture name just because we never can have only one name in computers
         ansible_architecture_alt: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}none{% endif %}"
 
-    - name: Add hashicorp repository to yum
+    - name: Add hashicorp repository
       get_url:
         url: https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
         dest: /etc/yum.repos.d/hashicorp.repo
+      when: ansible_facts['distribution'] == "Amazon"
+
+    - name: Add hashicorp repository
+      get_url:
+        url: https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+        dest: /etc/yum.repos.d/hashicorp.repo
+      when: ansible_facts['distribution'] != "Amazon"
 
     - name: Enable epel repo
       command: amazon-linux-extras install -y epel
@@ -30,7 +37,7 @@
       when: ansible_facts['distribution'] != "Amazon"
       # TODO maybe we can use the same repo for both
 
-    - name: Upgrade system
+    - name: Upgrade OS packages
       yum:
         name: "*"
         state: latest
@@ -89,11 +96,13 @@
         dest: /usr/local/bin/lw-scanner
         mode: "u+x,g+x,o+x"
 
-    - name: Install software
+    - name: Install other software
       package:
         name:
           - chromium
-      when: ansible_architecture == "x86_64" # TODO ARM doesn't have chromium package
+        state: present
+      when: ansible_architecture == "x86_64"
+      # NOTE: no chromium package for arm64
 
     - name: Install doctl client for digital ocean
       get_url:
@@ -103,22 +112,30 @@
     - name: Unarchive a file with doctl
       unarchive:
         src: /tmp/doctl.tar.gz
-        dest: /usr/local/bin/
+        dest: /usr/local/bin
         remote_src: yes
         mode: "u+x,g+x,o+x"
-        group: ec2-user
-        owner: ec2-user
+        group: "{{ (ansible_facts['distribution'] == 'Amazon') | ternary('ec2-user', 'root') }}"
+        owner: "{{ (ansible_facts['distribution'] == 'Amazon') | ternary('ec2-user', 'root') }}"
+
+    - name: Instal yq
+      get_url:
+        url: https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        dest: /usr/bin/yq
+        mode: "555"
+        group: "{{ (ansible_facts['distribution'] == 'Amazon') | ternary('ec2-user', 'root') }}"
+        owner: "{{ (ansible_facts['distribution'] == 'Amazon') | ternary('ec2-user', 'root') }}"
 
     - name: Install Python modules
       pip:
         name: "{{ item }}"
-      loop:
+      loop: # Lookup versions at: https://pypi.org/search/
         - pyaml==21.10.1
-        - GitPython==3.1.27
-        - PyGithub==1.55
+        - GitPython==3.1.29
+        - PyGithub==1.57
         - python-digitalocean==1.17.0
-        - docker==5.0.3
-        - linode-cli==5.19.0
+        - docker==6.0.1
+        - linode-cli==5.27.2
       when: ansible_facts['distribution'] == "Amazon"
 
     - name: Install virtual box (only for digital ocean)
@@ -133,10 +150,13 @@
             enabled: true
             state: present
 
-        - name: Install Virtualbox
+        - name: Install packages for virtualization
           yum:
             state: present
-            name: VirtualBox-5.2
+            name: "{{ item }}"
+          loop:
+            - VirtualBox-6.1
+            - vagrant
 
         - name: Reboot to the latest kernel
           reboot:
@@ -164,7 +184,7 @@
             dest: /tmp
             remote_src: yes
 
-        - name: Install CLI
+        - name: Run the install command
           shell: /tmp/aws/install
 
         - name: Add ec2-user user to "docker" group
@@ -173,7 +193,7 @@
             groups:
               - "docker"
             append: yes
-          when: ansible_facts['distribution'] == "Amazon"
+      when: ansible_facts['distribution'] == "Amazon"
 
     - name: Pull and cache docker images
       docker_image:
