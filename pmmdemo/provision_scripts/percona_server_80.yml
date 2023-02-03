@@ -25,11 +25,10 @@ runcmd:
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
   - systemctl status mysqld.service;
-  - chmod +x /root/init-mysql.sh
   - bash /root/init-mysql.sh
-  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 60 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
 
 write_files:
   - path: /root/.my.cnf
@@ -56,7 +55,7 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
-
+      expire-logs-days=3
 
       # Config binary and slow_query logs
       #
@@ -104,7 +103,7 @@ write_files:
       skip-log-bin
 
   - path: /root/init-mysql.sh
-    permissions: "0400"
+    permissions: "0555"
     content: |
       #!/bin/bash
 
@@ -118,16 +117,16 @@ write_files:
         fi;
       done;
 
-      mysql --defaults-file=/root/.my.cnf -Be "CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT ON performance_schema.* TO root@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
 
       if [ "${name}" == "percona-server-80-1" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
@@ -164,8 +163,8 @@ write_files:
           create 600 mysql mysql
           notifempty
           daily
-          rotate 3
-          size 50G
+          rotate 2
+          size 30G
           missingok
           nocompress
         postrotate
