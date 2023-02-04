@@ -56,13 +56,14 @@ write_files:
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
 
-      # Config binary and slow_query logs
+      # Configure binary logs
       #
       log-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
       binlog_space_limit=100G
 
+      # Configure slow logs
       slow_query_log=ON
       slow_query_log_always_write_time=1
       slow_query_log_use_global_control=all
@@ -72,6 +73,8 @@ write_files:
       log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
+      max_slowlog_size=30G
+      max_slowlog_files=3
 
       # Configure statistics
       #
@@ -116,6 +119,7 @@ write_files:
         fi;
       done;
 
+      mysql --defaults-file=/root/.my.cnf -Be "SET GLOBAL validate_password.special_char_count = 0;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
@@ -123,14 +127,15 @@ write_files:
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
 
       if [ "${name}" == "percona-server-80-1" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
-                mysql --defaults-file=/root/.my.cnf -Be "CHANGE MASTER TO MASTER_HOST='percona-server-80-0', MASTER_PORT=3306, MASTER_USER='replica', MASTER_PASSWORD='${mysql_replica_password}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;";
+                # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
+                mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-80-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
                 mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
                 break;
             else
@@ -149,21 +154,6 @@ write_files:
           daily
           rotate 5
           size 5G
-          missingok
-          nocompress
-        postrotate
-          if test -x /usr/bin/mysqladmin && /usr/bin/mysqladmin ping &>/dev/null
-          then
-            /usr/bin/mysqladmin flush-logs
-          fi
-        endscript
-      }
-      /data/${name}-slow.log {
-          create 600 mysql mysql
-          notifempty
-          daily
-          rotate 2
-          size 30G
           missingok
           nocompress
         postrotate
