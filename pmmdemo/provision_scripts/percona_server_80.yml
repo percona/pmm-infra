@@ -24,7 +24,7 @@ runcmd:
   - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
-  - systemctl status mysqld.service;
+  - systemctl status mysqld.service
   - bash /root/init-mysql.sh
   - timeout 60 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
@@ -55,13 +55,13 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
-      expire-logs-days=3
 
       # Config binary and slow_query logs
       #
       log-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
+      binlog_space_limit=100G
 
       slow_query_log=ON
       slow_query_log_always_write_time=1
@@ -72,7 +72,6 @@ write_files:
       log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
-
 
       # Configure statistics
       #
@@ -87,17 +86,16 @@ write_files:
   - path: /tmp/replica-config.cnf
     content: |
       [mysqld]
-      slave_parallel_type=LOGICAL_CLOCK
-      slave_parallel_workers=2
-      slave_preserve_commit_order=1
+      replica_parallel_workers=2
+      replica_preserve_commit_order=1
 
       sync_binlog=1
-      log_slave_updates=0
+      log_replica_updates=0
       read_only=1
 
       innodb_flush_log_at_trx_commit=0
       innodb_flush_neighbors=0
-      innodb_fast_shutdown=2
+      # innodb_fast_shutdown=2
       innodb_flush_method=O_DIRECT
 
       skip-log-bin
@@ -109,7 +107,8 @@ write_files:
 
       for (( i=1 ; i<=30 ; i++ )); do
         if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-            mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+            MYSQL_ROOT_PASSWROD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
+            mysql --connect-expired-password -uroot -p"$MYSQL_ROOT_PASSWORD" -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
             break;
         else
             echo "retry";
@@ -132,7 +131,7 @@ write_files:
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
                 mysql --defaults-file=/root/.my.cnf -Be "CHANGE MASTER TO MASTER_HOST='percona-server-80-0', MASTER_PORT=3306, MASTER_USER='replica', MASTER_PASSWORD='${mysql_replica_password}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;";
-                mysql --defaults-file=/root/.my.cnf -Be "START SLAVE;";
+                mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
                 break;
             else
                 echo "retry";
