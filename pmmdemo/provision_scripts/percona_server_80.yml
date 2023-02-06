@@ -28,7 +28,7 @@ runcmd:
   - bash /root/init-mysql.sh
   - timeout 60 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=perfschema --service-name=${name}
 
 write_files:
   - path: /root/.my.cnf
@@ -61,7 +61,7 @@ write_files:
       log-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
-      binlog_space_limit=100G
+      binlog_space_limit=50G
 
       # Configure slow logs
       slow_query_log=ON
