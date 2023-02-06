@@ -25,12 +25,15 @@ runcmd:
   - /usr/pgsql-13/bin/postgresql-13-setup initdb
   - echo 'host    all             all             10.0.2.0/24             password' >> /data/pg_hba.conf
   - echo "listen_addresses = '*'" >> /data/postgresql.conf
+  - echo "shared_preload_libraries = 'pg_stat_monitor'" >> /data/postgresql.conf
+  - echo "pg_stat_monitor.pgsm_query_max_len = 2048" >> /data/postgresql.conf
+  - echo "pg_stat_monitor.pgsm_enable_query_plan = 1" >> /data/postgresql.conf
   - systemctl start postgresql-13
   - chmod +x /tmp/init-postgres.sh
   - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --query-source="pgstatmonitor" --environment=demo --service-name=${name}
 
 write_files:
   - path: /tmp/init-postgres.sh
@@ -40,5 +43,5 @@ write_files:
       psql -c "CREATE ROLE sysbench WITH LOGIN CONNECTION LIMIT 100 ENCRYPTED PASSWORD '${postgres_sysbench_password}'"
       psql -c "CREATE DATABASE sbtest"
       psql -c "GRANT ALL PRIVILEGES ON sbtest TO sysbench"
+      psql -c "CREATE EXTENSION pg_stat_monitor"
       psql -c "select pg_reload_conf()"
-      psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor'"
