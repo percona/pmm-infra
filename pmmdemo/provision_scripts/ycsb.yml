@@ -1,0 +1,72 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+runcmd:
+  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y psmdb-60
+  - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
+  - mkdir -p /data
+  - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
+  - tar xfz ycsb-0.17.0.tar.gz
+  - rm ycsb-0.17.0.tar.gz
+  - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
+  - mongosh --host mongo-60-mongos-0 -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
+  - /bin/bash /etc/ycsb/initial_load.sh
+  - systemctl enable ycsb.mongodb60
+  - systemctl start ycsb.mongodb60
+  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+
+write_files:
+  - path: /etc/ycsb/shard.js
+    content: |
+      sh.enableSharding('ycsb');
+      use ycsb;
+      sh.shardCollection('ycsb.ycsb', { "_id" : "hashed" }, false, { numInitialChunks : 100 })
+
+  - path: /etc/ycsb/initial_load.sh
+    permissions: "0744"
+    content: |
+      #!/bin/bash
+
+      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+
+  - path: /etc/ycsb/exec_ycsb.sh
+    permissions: "0744"
+    content: |
+      #!/bin/bash
+
+      while true; do
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloada -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        sleep 10s
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        sleep 5s
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadc -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        sleep 10s
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloade -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        sleep 5s
+        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadf -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27017/"
+        sleep 5s
+      done
+
+  - path: /usr/lib/systemd/system/ycsb.mongodb60.service
+    content: |
+      [Unit]
+      Description=YCSB for MongoDB 6.0
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/ycsb/exec_ycsb.sh
+
+      [Install]
+      WantedBy=multi-user.target

@@ -23,10 +23,10 @@ runcmd:
   - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - sleep 10s
-  - mongo /tmp/init.js
+  - mongosh /tmp/init.js
   - sleep 5s
-  - mongo -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls
+  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
 
 write_files:
   - path: /etc/mongos.conf
@@ -122,5 +122,13 @@ write_files:
             { role: "explainRole", db: "admin" },
             { role: "clusterMonitor", db: "admin" },
             { role: "read", db: "local" }
+        ]
+      })
+      db.getSiblingDB("admin").createUser({
+        user: "ycsb",
+        pwd: "${mongodb_ycsb_password}",
+        roles: [
+            { role: "readWriteAnyDatabase", db: "admin" },
+            { role: "clusterManager", db: "admin" }
         ]
       })
