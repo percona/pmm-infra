@@ -24,12 +24,11 @@ runcmd:
   - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
-  - systemctl status mysqld.service;
-  - chmod +x /root/init-mysql.sh
+  - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 60 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=root --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}-mysql
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=perfschema --service-name=${name}
 
 write_files:
   - path: /root/.my.cnf
@@ -57,13 +56,14 @@ write_files:
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
 
-
-      # Config binary and slow_query logs
+      # Configure binary logs
       #
       log-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
+      binlog_space_limit=50G
 
+      # Configure slow logs
       slow_query_log=ON
       slow_query_log_always_write_time=1
       slow_query_log_use_global_control=all
@@ -73,7 +73,8 @@ write_files:
       log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
-
+      max_slowlog_size=30G
+      max_slowlog_files=3
 
       # Configure statistics
       #
@@ -88,29 +89,29 @@ write_files:
   - path: /tmp/replica-config.cnf
     content: |
       [mysqld]
-      slave_parallel_type=LOGICAL_CLOCK
-      slave_parallel_workers=2
-      slave_preserve_commit_order=1
+      replica_parallel_workers=2
+      replica_preserve_commit_order=1
 
       sync_binlog=1
-      log_slave_updates=0
+      log_replica_updates=0
       read_only=1
 
       innodb_flush_log_at_trx_commit=0
       innodb_flush_neighbors=0
-      innodb_fast_shutdown=2
+      # innodb_fast_shutdown=2
       innodb_flush_method=O_DIRECT
 
       skip-log-bin
 
   - path: /root/init-mysql.sh
-    permissions: "0400"
+    permissions: "0555"
     content: |
       #!/bin/bash
 
       for (( i=1 ; i<=30 ; i++ )); do
         if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-            mysql --connect-expired-password -uroot -p$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev) -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+            MYSQL_ROOT_PASSWROD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
+            mysql --connect-expired-password -uroot -p"$MYSQL_ROOT_PASSWORD" -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
             break;
         else
             echo "retry";
@@ -118,22 +119,24 @@ write_files:
         fi;
       done;
 
-      mysql --defaults-file=/root/.my.cnf -Be "CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT ON performance_schema.* TO root@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO root@'%'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "SET GLOBAL validate_password.special_char_count = 0;";
+      mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
       mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
-      mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
 
       if [ "${name}" == "percona-server-80-1" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
-                mysql --defaults-file=/root/.my.cnf -Be "CHANGE MASTER TO MASTER_HOST='percona-server-80-0', MASTER_PORT=3306, MASTER_USER='replica', MASTER_PASSWORD='${mysql_replica_password}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;";
-                mysql --defaults-file=/root/.my.cnf -Be "START SLAVE;";
+                # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
+                mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-80-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
+                mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
                 break;
             else
                 echo "retry";
@@ -151,21 +154,6 @@ write_files:
           daily
           rotate 5
           size 5G
-          missingok
-          nocompress
-        postrotate
-          if test -x /usr/bin/mysqladmin && /usr/bin/mysqladmin ping &>/dev/null
-          then
-            /usr/bin/mysqladmin flush-logs
-          fi
-        endscript
-      }
-      /data/${name}-slow.log {
-          create 600 mysql mysql
-          notifempty
-          daily
-          rotate 3
-          size 50G
           missingok
           nocompress
         postrotate
