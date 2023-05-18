@@ -5,7 +5,7 @@ locals {
 module "pmm_server" {
   source        = "./modules/ec2"
   server_name   = local.pmm_server_name
-  instance_type = "m5.xlarge"
+  instance_type = "m5a.xlarge"
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
 

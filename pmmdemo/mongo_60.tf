@@ -11,9 +11,9 @@ module "mongo_cluster_pmmdemo" {
   security_groups = [
     aws_security_group.default_access.id
   ]
-  instance_type        = "t3.medium"
-  config_instance_type = "t3.small"
-  mongos_instance_type = "t3.small"
+  instance_type        = "t3a.medium"
+  config_instance_type = "t3a.small"
+  mongos_instance_type = "t3a.small"
 
   pmm_server_endpoint   = local.pmm_server_endpoint
   pmm_password          = random_password.pmm_admin_pass.result

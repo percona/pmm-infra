@@ -5,7 +5,7 @@ locals {
 module "haproxy" {
   source        = "./modules/ec2"
   server_name   = local.haproxy_name
-  instance_type = "t3.small"
+  instance_type = "t3a.small"
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
   security_groups = [

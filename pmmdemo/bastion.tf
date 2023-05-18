@@ -5,7 +5,7 @@ locals {
 module "bastion" {
   source        = "./modules/ec2"
   server_name   = local.bastion_name
-  instance_type = "t3.small"
+  instance_type = "t3a.small"
   has_public_ip = true
   subnet_id     = aws_subnet.pmmdemo_public.id
   route53_id    = aws_route53_zone.demo_local.id
