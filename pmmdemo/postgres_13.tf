@@ -6,7 +6,7 @@ locals {
 module "postgres_13" {
   source        = "./modules/ec2"
   server_name   = local.postgres_13
-  instance_type = "t3.medium"
+  instance_type = "t3a.medium"
   subnet_id     = aws_subnet.pmmdemo_private.id
   route53_id    = aws_route53_zone.demo_local.id
 
