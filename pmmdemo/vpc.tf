@@ -151,6 +151,6 @@ resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
 }
 
 resource "aws_db_subnet_group" "database_subnet" {
-  name       = "pmmdemo"
+  name       = "${local.environment_name}-db-subnet"
   subnet_ids = [aws_subnet.pmmdemo_private.id, aws_subnet.pmmdemo_private_a.id]
 }
