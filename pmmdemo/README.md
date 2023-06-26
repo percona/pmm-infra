@@ -33,14 +33,20 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 2. Create an SSH key `pmm-demo`, which will be used to connect from outside to the bastion host. The bastion host
    is one entry point from which you can connect to other hosts. Apart from the bastion, all other hosts do not
    expose public IP addresses.
-3. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`. Minimal configuration example:
+   ```
+   ssh-keygen -t ed25519 -f ~/.ssh/pmm-demo-user_ed25519_key -C "pmm-infra pmm-demo user"
+   ssh-keygen -y -f ~/.ssh/pmm-demo-user_ed25519_key | awk '{print $1 " " $2}' | base64 -w0 > ~/.ssh/pmm-demo-user_ed25519_key.pub
+   aws ec2 import-key-pair --key-name pmm-demo-user  --public-key-material file:///home/michael/.ssh/pmm-demo-user_ed25519_key.pub --region us-west-1
+   ```
+3. Update modules/ec2/data.tf aws_key_pair.key_name with the name you imported under in step #2
+4. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`. Minimal configuration example:
    ```
    pmm_domain = "pmmdemo.percona.net"
    owner_email = "your.name@percona.com"
    ```
-4. Set the value of an environment variable called `AWS_PROFILE`. This value will be used as the default profile name for your AWS configuration. Example: `export AWS_PROFILE=dev`
-5. Make sure to login to your AWS cloud account with `aws login` ahead of time.
-6. Make sure to login to your Azure cloud account with `az login` ahead of time.
+5. Set the value of an environment variable called `AWS_PROFILE`. This value will be used as the default profile name for your AWS configuration. Example: `export AWS_PROFILE=dev`
+6. Make sure to login to your AWS cloud account with `aws login` ahead of time.
+7. Make sure to login to your Azure cloud account with `az login` ahead of time.
 
 ## Execute
 
