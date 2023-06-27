@@ -41,7 +41,7 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 3. Update modules/ec2/data.tf aws_key_pair.key_name with the name you imported under in step #2
 4. Create a file `pmmdemo/terraform.tfvars` and provide values to variables defined in `vars.tf`. Minimal configuration example:
    ```
-   pmm_domain = "pmmdemo.percona.net"
+   pmm_domain = "michael-pmmdemo.percona.net"
    owner_email = "your.name@percona.com"
    ```
 5. Set the value of an environment variable called `AWS_PROFILE`. This value will be used as the default profile name for your AWS configuration. Example: `export AWS_PROFILE=dev`
