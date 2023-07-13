@@ -1,7 +1,7 @@
 resource "aws_db_instance" "pmmdemo_postgres_13" {
   identifier           = "pmmdemo-postgres"
   engine               = "postgres"
-  engine_version       = "13.7"
+  engine_version       = "13.10"
   instance_class       = "db.m5.large"
   allocated_storage    = 10
   db_name              = "pmmdemo"
