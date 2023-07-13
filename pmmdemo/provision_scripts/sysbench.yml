@@ -20,7 +20,7 @@ runcmd:
   - systemctl start sysbench.ps.pxc80
   - systemctl start sysbench.proxysql
   - systemctl start sysbench.ps.pg13
-  - timeout 50 bash -c 'until curl --insecure -I https://${pmm_server_endpoint}; do sleep 3; done'
+  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
 
