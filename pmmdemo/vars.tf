@@ -8,14 +8,12 @@ variable "owner_email" {
   description = "Email for letsencrypt account"
 }
 
-# OPTIONAL
-
 variable "project_name" {
   type        = string
   description = "If you have default workspace and want to use different name then you can use the variable"
-  default     = "demo"
 }
 
+# OPTIONAL
 variable "google_analytics_id" {
   type        = string
   description = "Google Analytics tracking code"
