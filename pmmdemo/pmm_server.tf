@@ -44,74 +44,31 @@ resource "random_password" "pmm_admin_pass" {
   special = false
 }
 
-resource "aws_iam_user" "rds_user" {
-  name = "pmm-demo-rds-user"
+data "aws_iam_user" "rds_user" {
+  user_name = "pmm-demo-rds-user"
 }
 
+data "aws_iam_policy" "pmmdemo-rds-policy" {
+  name = "pmm-demo-rds-policy"
+}
 
-resource "aws_iam_policy" "pmmdemo-rds-policy" {
-  name        = "pmm-demo-rds-policy"
-  path        = "/"
-  description = "Policy for rds database discovery"
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Sid" : "Stmt1508404837000",
-        "Effect" : "Allow",
-        "Action" : [
-          "rds:DescribeDBInstances",
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics"
-        ],
-        "Resource" : ["*"]
-      },
-      {
-        "Sid" : "Stmt1508410723001",
-        "Effect" : "Allow",
-        "Action" : [
-          "logs:DescribeLogStreams",
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents"
-        ],
-        "Resource" : ["arn:aws:logs:*:*:log-group:RDSOSMetrics:*"]
-      }
-  ] })
+data "aws_iam_role" "pmmdemo_dlm_lifecycle" {
+  name = "pmmdemo-dlm-lifecycle"
 }
 
 resource "aws_iam_access_key" "rds_user_access_key" {
-  user = aws_iam_user.rds_user.name
+  user = data.aws_iam_user.rds_user.user_name
 }
 
 resource "aws_iam_policy_attachment" "rds_policy" {
   name       = "rds_policy"
-  users      = [aws_iam_user.rds_user.name]
-  policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
-}
-
-resource "aws_iam_role" "pmmdemo_dlm_lifecycle" {
-  name = "pmmdemo-dlm-lifecycle"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "dlm.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
+  users      = [data.aws_iam_user.rds_user.user_name]
+  policy_arn = data.aws_iam_policy.pmmdemo-rds-policy.arn
 }
 
 resource "aws_iam_role_policy" "pmmdemo_dlm_lifecycle" {
   name = "pmmdemo-dlm-lifecycle"
-  role = aws_iam_role.pmmdemo_dlm_lifecycle.id
+  role = data.aws_iam_role.pmmdemo_dlm_lifecycle.id
 
   policy = <<EOF
 {
@@ -143,7 +100,7 @@ EOF
 
 resource "aws_dlm_lifecycle_policy" "pmmdemo" {
   description        = "PMM Demo DLM lifecycle policy"
-  execution_role_arn = aws_iam_role.pmmdemo_dlm_lifecycle.arn
+  execution_role_arn = data.aws_iam_role.pmmdemo_dlm_lifecycle.arn
   state              = "ENABLED"
 
   policy_details {

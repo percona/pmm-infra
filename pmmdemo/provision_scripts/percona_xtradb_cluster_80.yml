@@ -78,6 +78,7 @@ write_files:
       #
       userstat=ON
       performance_schema=ON
+      innodb_monitor_enable=module_index
 
       # wsrep
       #
