@@ -6,15 +6,12 @@ manage_etc_hosts: true
 repo_upgrade: all
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
   - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - mkdir /var/run/mongo/
+  - mkdir -p /var/run/mongo/
   - chown mongod:mongod /etc/mongo-key /var/run/mongo/
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
@@ -26,7 +23,7 @@ runcmd:
   - mongosh /tmp/init.js
   - sleep 5s
   - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
 
 write_files:
   - path: /etc/mongos.conf
