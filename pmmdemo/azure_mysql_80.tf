@@ -35,6 +35,7 @@ resource "azurerm_mysql_server" "pmmdemo" {
   tags = {
     Terraform       = "Yes"
     iit-billing-tag = "pmm-demo"
+    CreatedBy       = local.environment_name
   }
 }
 
