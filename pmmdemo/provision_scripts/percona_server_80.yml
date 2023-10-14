@@ -111,7 +111,7 @@ write_files:
 
       for (( i=1 ; i<=30 ; i++ )); do
         if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
-            MYSQL_ROOT_PASSWROD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
+            MYSQL_ROOT_PASSWORD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
             mysql --connect-expired-password -uroot -p"$MYSQL_ROOT_PASSWORD" -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
             break;
         else
