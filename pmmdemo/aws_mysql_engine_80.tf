@@ -1,6 +1,6 @@
 resource "aws_db_instance" "pmmdemo_aws_mysql_engine_80" {
   identifier           = "pmmdemo-mysql"
-  availability_zone    = "us-east-1f"
+  availability_zone    = "us-west-2b"
   allocated_storage    = 10
   engine               = "mysql"
   engine_version       = "8.0.28"

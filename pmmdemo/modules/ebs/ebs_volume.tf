@@ -1,5 +1,5 @@
 resource "aws_ebs_volume" "data_disk" {
-  availability_zone = "us-east-1f"
+  availability_zone = "us-west-2b"
   size              = var.disk_size
   type              = var.disk_type
 

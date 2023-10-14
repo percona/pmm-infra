@@ -16,19 +16,19 @@ terraform {
   required_version = "~> 1.3.4"
 
   backend "s3" {
-    bucket = "percona-terraform"
-    key    = "pmmdemo.tfstate"
-    region = "us-east-1"
+    bucket  = "percona-terraform"
+    region  = "us-east-1"
+    profile = "pmmdemosso"
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = "us-west-2"
   default_tags {
     tags = {
       Terraform       = "Yes"
       iit-billing-tag = "pmm-demo"
-      CreatedBy       = local.environment_name
+      CreatedBy       = var.owner_email
     }
   }
 }
