@@ -18,11 +18,11 @@ runcmd:
   - systemctl start mongos
   - systemctl status mongos
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - sleep 10s
-  - mongosh /tmp/init.js
   - sleep 5s
-  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
+  - mongosh /tmp/init.js
+  - sleep 15s
+  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
 
 write_files:
@@ -32,6 +32,7 @@ write_files:
         configDB: ${replica_set_name}/mongo-60-cfg-0.${route53_name}:27019,mongo-60-cfg-1.${route53_name}:27019,mongo-60-cfg-2.${route53_name}:27019
 
       net:
+        port:	27019
         bindIp: 0.0.0.0
 
       systemLog:
@@ -87,12 +88,7 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
-  - path: /root/.bashrc
-    append: true
-    content: |
-      alias mng='mongo --nodb'
-
-  - path: /tmp/user.js
+  - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",

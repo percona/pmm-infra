@@ -98,7 +98,7 @@ write_files:
         }
       )
 
-  - path: /tmp/user.js
+  - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
@@ -127,6 +127,13 @@ write_files:
             { role: "read", db: "local" }
         ]
       })
+      db.getSiblingDB("admin").createUser({
+        user: "ycsb",
+        pwd: "${mongodb_ycsb_password}",
+        roles: [
+            { role: "readWrite", db: "ycsb" }
+        ]
+      })
 
   - path: /root/.mongoshrc.js
     content: |
@@ -143,20 +150,42 @@ write_files:
       #!/bin/bash
       
       myhostname=$(hostname -f)
+      memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f5)
       
-      # Wait for mongod
+      echo "-- MonogoDB RS"
+      echo "--- $${myhostname}"
+      echo "--- This is member id $${memberid}"
+      
+      # Wait for mongods
+      echo "-- Waiting for all 3 members..."
+      
       for (( i=1 ; i<=100 ; i++ )); do
-        mongosh --port 27019 --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
-        if [ $? -eq 0 ]; then
-          echo "-- Mongod appears alive"
+        let s=0
+        for j in 0 1 2; do
+          h="mongo-60-cfg-$${j}"
+          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
+          if [ $? -eq 0 ]; then
+            echo "-- Mongod $${h} appears alive"
+            ((s++))
+          fi
+        done
+        
+        if [ $s -eq 3 ]; then
+          echo "-- Looks like all 3 members are online"
           break
         fi
-        echo "-- Waiting on mongod, retry $${i}/100"
+        
+        echo "-- Only $${s} members responding to ping; retry $${i}/100"
         sleep 2
       done
       
-      # Configure this mongo as a replicaset member
-      mongosh --port 27019 /tmp/init.js
+      # We pick rs-[01]-0 to be primary. Run the init only on the primary
+      if [ "$${memberid}" == "0" ]; then
+        echo "-- We are shard 0; run init"
+        mongosh --port 27019 /tmp/init.js
+      else
+        echo "-- We are NOT shard 0; We will wait"
+      fi
       
       # Wait for replicaset to have 3 members
       # Get the replicaset status. Loop through all members adding up their 'health' value (1 or 0).
@@ -166,7 +195,8 @@ write_files:
         health=$(mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; var s=0; m.forEach(function(a){ s+=a.health; }); print(s);")
         if [ $? -eq 0 ]; then
           if [ $health -eq 3 ]; then
-            echo "-- Found 3 healthy voting members of replicaset"
+            echo "-- Found 3 healthy members of replicaset"
+            sleep 2
             break
           fi
         fi
@@ -178,17 +208,24 @@ write_files:
       echo "-- ReplicaSet Members:"
       mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; m.forEach(function(a){ print(a.stateStr+':'+a.name); });"
       
-      # Determine who is primary
-      primary=$(mongosh --port 27019 --eval 'rs.isMaster().primary' -quiet | cut -d: -f1)
-      
-      echo "-- $${primary} is PRIMARY, we are $${myhostname}"
+      # Determine/wait for primary
+      for (( i=1 ; i<=100 ; i++ )); do
+        primary=$(mongosh --port 27019 --eval 'rs.isMaster().primary' -quiet | cut -d: -f1)
+        if [ "$${primary:0:5}" == "mongo" ]; then
+          echo "-- $${primary} is PRIMARY, we are $${myhostname}"
+          sleep 2
+          break
+        fi
+        echo "-- Waiting on a primary, retry $${i}/100"
+        sleep 2
+      done
       
       # Is this host PRIMARY? If so, create the pmm-admin user and pmm user
       if [ "$${myhostname}" == "$${primary}" ]; then
         echo "-- We are PRIMARY!"
         mongosh --port 27019 /tmp/admin.js
         sleep 2
-        mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
+        mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
       else
         echo "-- We are NOT primary, waiting for auth"
         # Since we are not primary, we need to wait until the primary has replicated
