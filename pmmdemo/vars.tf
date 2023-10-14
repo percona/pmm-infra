@@ -16,7 +16,6 @@ variable "project_name" {
   description = "If you are using the 'default' workspace, and want to use a different name, then you can use this variable"
 }
 
-# OPTIONAL
 variable "google_analytics_id" {
   type        = string
   description = "Google Analytics tracking code"
