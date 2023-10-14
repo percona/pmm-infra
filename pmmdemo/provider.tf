@@ -16,9 +16,9 @@ terraform {
   required_version = "~> 1.3.4"
 
   backend "s3" {
-    bucket  = "percona-terraform"
-    region  = "us-east-1"
-    profile = "pmmdemosso"
+    bucket = "percona-terraform"
+    key    = "pmmdemo.tfstate"
+    region = "us-east-1"
   }
 }
 
