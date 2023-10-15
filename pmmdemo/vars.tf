@@ -9,11 +9,11 @@ variable "owner_email" {
 }
 
 # OPTIONAL
+# These variables can be added to terraform.tfvars for additional customization
 
 variable "project_name" {
   type        = string
-  description = "If you have default workspace and want to use different name then you can use the variable"
-  default     = "demo"
+  description = "If you are using the 'default' workspace, and want to use a different name, then you can use this variable"
 }
 
 variable "google_analytics_id" {

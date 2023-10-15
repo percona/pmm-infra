@@ -50,21 +50,22 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 
 ## Execute
 
-1. Run `terraform init` to initialize your terraform state and provision terraform modules.
-2. Run `terrfaform validate` to confirm your code or any change thereof are syntactically valid.
-3. Run `terraform apply` to provision the infrastructure defined as code.
-4. Run `terraform destroy` to tear down everything provisioned before.
+1. Run `terraform workspace new XXXXX` to create a new terraform workspace. Please do not use the 'default' workspace. Example: `terraform workspace new mbpmm` Verify using `terraform workspace list`. The workspace name will be used to automatically tag any created resources.
+2. Run `terraform init` to initialize your terraform state and provision terraform modules.
+3. Run `terrfaform validate` to confirm your code or any change thereof are syntactically valid.
+4. Run `terraform apply` to provision the infrastructure defined as code.
+5. Run `terraform destroy` to tear down everything provisioned before.
 
 Note: You can partially update(apply) or destroy resources by using the `-target` parameter. Read [more](https://learn.hashicorp.com/tutorials/terraform/resource-targeting?in=terraform/state).
 
 ## List of servers that will be privisioned
 
-We want all VM hosts to have a DNS name so the user does not have to remember their IP addresses. When creating the host names, we append a default suffix to all of them - `*.demo.local`, where `demo` is the name of the default terraform workspace. However, if you use a non-default terraform workspace, we'll append your workspace name to your hostname. For example, `*.test.local` is appended if the workspace is called `test`.
+We want all VM hosts to have a DNS name so the user does not have to remember their IP addresses. When creating the host names, we append a default suffix to all of them - `*.demo.local`, where `demo` is the name of the default terraform workspace. However, if you use a non-default terraform workspace (See step #1 above), we'll append your workspace name to your hostname. For example, `*.mbpmm.local` is appended if the workspace is called `mbpmm`.
 
-The table below provides a map of servers and their hostnames, to which the suffixes we mentioned above will be appended. For example, for Percona Server 8.0 we will provision two servers with the following hostnames (in case of default workspace name):
+The table below provides a map of servers and their hostnames, to which the suffixes we mentioned above will be appended. For example, for Percona Server 8.0 we will provision two servers with the following hostnames, given 'mbpmm' as the workspace name:
 
-- pecona-server-80-0.demo.local
-- pecona-server-80-1.demo.local
+- pecona-server-80-0.mbpmm.local
+- pecona-server-80-1.mbpmm.local
 
 ### Databases
 
