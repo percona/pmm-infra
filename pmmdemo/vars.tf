@@ -14,7 +14,6 @@ variable "owner_email" {
 variable "project_name" {
   type        = string
   description = "If you are using the 'default' workspace, and want to use a different name, then you can use this variable"
-  default     = "pmmdemo123"
 }
 
 variable "google_analytics_id" {

@@ -5,9 +5,6 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -17,9 +14,6 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
   - yum -y install percona-server-mongodb
@@ -31,12 +25,9 @@ runcmd:
   - systemctl start mongod
   - systemctl status mongod
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - mongosh --port 27019 /tmp/init.js || true
-  - sleep 5s
-  - mongosh --port 27019 /tmp/admin.js || true
-  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js || true
+  - bash /tmp/mongodb-init-rs.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --service-name=${name} --enable-all-collectors
 
 write_files:
   - path: /etc/mongod.conf
@@ -87,9 +78,9 @@ write_files:
         {
           _id: "${replica_set_name}",
           members: [
-            { _id : 0, host : "mongo-60-rs-${shard_number}-0.${route53_name}:27019" },
-            { _id : 1, host : "mongo-60-rs-${shard_number}-1.${route53_name}:27019" },
-            { _id : 2, host : "mongo-60-rs-${shard_number}-2.${route53_name}:27019" }
+            { _id : 0, host : "mongo-60-rs-${shard_number}-0.${route53_name}:27019", priority: 2 },
+            { _id : 1, host : "mongo-60-rs-${shard_number}-1.${route53_name}:27019", priority: 1 },
+            { _id : 2, host : "mongo-60-rs-${shard_number}-2.${route53_name}:27019", priority: 1 }
           ]
         }
       )
@@ -105,7 +96,7 @@ write_files:
         }
       )
 
-  - path: /tmp/user.js
+  - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
@@ -134,6 +125,13 @@ write_files:
             { role: "read", db: "local" }
         ]
       })
+      db.getSiblingDB("admin").createUser({
+        user: "ycsb",
+        pwd: "${mongodb_ycsb_password}",
+        roles: [
+            { role: "readWrite", db: "ycsb" }
+        ]
+      })
 
   - path: /root/.mongoshrc.js
     content: |
@@ -143,3 +141,102 @@ write_files:
     append: true
     content: |
       alias mng='mongosh --nodb'
+
+  - path: /tmp/mongodb-init-rs.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      
+      myhostname=$(hostname -f)
+      memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f5)
+      
+      echo "-- MonogoDB RS"
+      echo "--- $${myhostname}"
+      echo "--- This is member id $${memberid}"
+      
+      # Wait for mongods
+      echo "-- Waiting for all 3 members..."
+      
+      for (( i=1 ; i<=100 ; i++ )); do
+        let s=0
+        for j in 0 1 2; do
+          h="mongo-60-rs-${shard_number}-$${j}"
+          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
+          if [ $? -eq 0 ]; then
+            echo "-- Mongod $${h} appears alive"
+            ((s++))
+          fi
+        done
+        
+        if [ $s -eq 3 ]; then
+          echo "-- Looks like all 3 members are online"
+          break
+        fi
+        
+        echo "-- Only $${s} members responding to ping; retry $${i}/100"
+        sleep 2
+      done
+      
+      # We pick rs-[01]-0 to be primary. Run the init only on the primary
+      if [ "$${memberid}" == "0" ]; then
+        echo "-- We are shard 0; run init"
+        mongosh --port 27019 /tmp/init.js
+      else
+        echo "-- We are NOT shard 0; We will wait"
+      fi
+      
+      # Wait for replicaset to have 3 members
+      # Get the replicaset status. Loop through all members adding up their 'health' value (1 or 0).
+      # If all 3 servers are online, health should = 3. If it doesn't, sleep and try again
+
+      for (( i=1 ; i<=100 ; i++ )); do
+        health=$(mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; var s=0; m.forEach(function(a){ s+=a.health; }); print(s);")
+        if [ $? -eq 0 ]; then
+          if [ $health -eq 3 ]; then
+            echo "-- Found 3 healthy members of replicaset"
+            sleep 2
+            break
+          fi
+        fi
+        echo "-- Waiting on replicaset members, retry $${i}/100"
+        sleep 2
+      done
+      
+      # Print report to cloud log
+      echo "-- ReplicaSet Members:"
+      mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; m.forEach(function(a){ print(a.stateStr+':'+a.name); });"
+      
+      # Determine/wait for primary
+      for (( i=1 ; i<=100 ; i++ )); do
+        primary=$(mongosh --port 27019 --eval 'rs.isMaster().primary' -quiet | cut -d: -f1)
+        if [ "$${primary:0:5}" == "mongo" ]; then
+          echo "-- $${primary} is PRIMARY, we are $${myhostname}"
+          sleep 2
+          break
+        fi
+        echo "-- Waiting on a primary, retry $${i}/100"
+        sleep 2
+      done
+      
+      # Is this host PRIMARY? If so, create the pmm-admin user and pmm user
+      if [ "$${myhostname}" == "$${primary}" ]; then
+        echo "-- We are PRIMARY!"
+        mongosh --port 27019 /tmp/admin.js
+        sleep 2
+        mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
+      else
+        echo "-- We are NOT primary, waiting for auth"
+        # Since we are not primary, we need to wait until the primary has replicated
+        # the PMM user to us, otherwise pmm add mongo will fail
+        
+        for (( i=1 ; i<=100 ; i++ )); do
+          # This will fail until auth replicates, so we keep running the ping with auth until it no longer fails
+          ret=$(mongosh --port 27019 -quiet --eval 'db.runCommand("ping").ok' -u pmm-admin -p "${mongodb_60_pmm_admin_password}" 2>&1 >/dev/null)
+          if [ $? -eq 0 ]; then
+            echo "-- Auth is enabled"
+            break
+          fi
+          echo "-- Waiting on auth, retry $${i}/100"
+          sleep 2
+        done
+      fi

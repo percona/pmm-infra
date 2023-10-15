@@ -2,12 +2,20 @@ locals {
   azure_region = "East US"
 }
 
+# Import the resource group, as there can only be one and it should not
+# be recreated/destroyed each time someone wants to rebuild in Azure
+data "azurerm_resource_group" "pmmdemo" {
+  name = "pmmdemov2"
+  provider = azurerm.demo
+}
+
+# Create the Azure MySQL "RDS" server
 resource "azurerm_mysql_server" "pmmdemo" {
   name     = "pmmdemo-azure"
   provider = azurerm.demo
 
   location            = local.azure_region
-  resource_group_name = azurerm_resource_group.pmmdemo.name
+  resource_group_name = data.azurerm_resource_group.pmmdemo.name
 
   administrator_login          = "pmmdemo"
   administrator_login_password = random_password.azure_mysql.result
@@ -27,7 +35,7 @@ resource "azurerm_mysql_server" "pmmdemo" {
   tags = {
     Terraform       = "Yes"
     iit-billing-tag = "pmm-demo"
-    CreatedBy       = vars.owner_email
+    CreatedBy       = var.owner_email
   }
 }
 
@@ -36,7 +44,7 @@ resource "azurerm_mysql_server" "pmmdemo" {
 resource "azurerm_mysql_database" "pmmdemo_sysbench" {
   name                = "sbtest"
   provider            = azurerm.demo
-  resource_group_name = azurerm_resource_group.pmmdemo.name
+  resource_group_name = data.azurerm_resource_group.pmmdemo.name
   server_name         = azurerm_mysql_server.pmmdemo.name
   charset             = "utf8"
   collation           = "utf8_unicode_ci"
@@ -47,20 +55,10 @@ resource "azurerm_mysql_database" "pmmdemo_sysbench" {
 resource "azurerm_mysql_firewall_rule" "allow_pmmdemo_server" {
   name                = "allow_pmmdemo_server"
   provider            = azurerm.demo
-  resource_group_name = azurerm_resource_group.pmmdemo.name
+  resource_group_name = data.azurerm_resource_group.pmmdemo.name
   server_name         = azurerm_mysql_server.pmmdemo.name
   start_ip_address    = aws_eip.external_ip.public_ip
   end_ip_address      = aws_eip.external_ip.public_ip
-}
-
-resource "azurerm_resource_group" "pmmdemo" {
-  name     = "pmmdemov2"
-  provider = azurerm.demo
-  location = local.azure_region
-  tags = {
-    Terraform       = "Yes"
-    iit-billing-tag = "pmm-demo"
-  }
 }
 
 resource "random_password" "azure_mysql" {
