@@ -28,6 +28,7 @@ provider "aws" {
     tags = {
       Terraform       = "Yes"
       iit-billing-tag = "pmm-demo"
+      CreatedBy       = var.owner_email
     }
   }
 }

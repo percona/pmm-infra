@@ -4,7 +4,7 @@ resource "aws_ebs_volume" "data_disk" {
   type              = var.disk_type
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags = {
