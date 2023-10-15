@@ -130,6 +130,8 @@ write_files:
               mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-ps'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO 'sysbench-ps'@'%'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";

@@ -87,7 +87,7 @@ write_files:
       mysql-host=proxysql
       mysql-port=3306
       mysql-user=sysbench
-      mysql-password=${percona_xtradb_cluster_80_password}
+      mysql-password=${percona_server_80_password}
       events=0
       rand-type=pareto
       rate=0

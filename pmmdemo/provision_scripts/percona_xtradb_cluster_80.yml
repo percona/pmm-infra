@@ -142,6 +142,8 @@ write_files:
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER sysbench@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO sysbench@'%'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-pxc'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO 'sysbench-pxc'@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
       }
