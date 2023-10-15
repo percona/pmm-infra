@@ -5,6 +5,7 @@ resource "aws_rds_cluster" "pmmdemo_aurora_57" {
   database_name       = "pmmdemo"
   master_username     = "pmmdemo"
   master_password     = random_password.pmmdemo_aurora_57_password.result
+  db_subnet_group_name = "${local.environment_name}-db-subnet"
   skip_final_snapshot = true
   apply_immediately   = true
 }

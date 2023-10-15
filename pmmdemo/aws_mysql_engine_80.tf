@@ -9,7 +9,7 @@ resource "aws_db_instance" "pmmdemo_aws_mysql_engine_80" {
   username             = "pmmdemo"
   password             = random_password.pmmdemo_aurora_57_password.result
   skip_final_snapshot  = true
-  db_subnet_group_name = aws_db_subnet_group.database_subnet.name
+  db_subnet_group_name = "${local.environment_name}-db-subnet"
 }
 
 resource "random_password" "pmmdemo_aws_mysql_engine_80" {
