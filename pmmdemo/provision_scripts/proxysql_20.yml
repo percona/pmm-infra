@@ -81,8 +81,8 @@ write_files:
 
       mysql_users:
       (
-        { username = "sysbench-pxc" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 1000 , active = 1 },
-        { username = "sysbench-ps" , password = "${percona_server_80_password}" , default_hostgroup = 10 , active = 1 },
+        { username = "sysbench-proxysql-pxc" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 1000 , active = 1 },
+        { username = "sysbench-proxysql-ps" , password = "${percona_server_80_password}" , default_hostgroup = 10 , active = 1 },
 
       )
 
