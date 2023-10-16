@@ -62,7 +62,7 @@ write_files:
     content: |
       mysql-host=proxysql
       mysql-port=3306
-      mysql-user=sysbench
+      mysql-user=sysbench-pxc
       mysql-password=${percona_xtradb_cluster_80_password}
       rand-type=pareto
       rate=0
@@ -86,7 +86,7 @@ write_files:
     content: |
       mysql-host=proxysql
       mysql-port=3306
-      mysql-user=sysbench
+      mysql-user=sysbench-ps
       mysql-password=${percona_server_80_password}
       events=0
       rand-type=pareto
