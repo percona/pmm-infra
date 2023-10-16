@@ -26,7 +26,7 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - docker run -d --name consul-client consul agent client
+  - docker run -d --name consul-client hashicorp/consul agent client
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y ps-80
   - yum -y install percona-server-server
