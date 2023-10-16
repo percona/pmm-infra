@@ -94,7 +94,7 @@ resource "aws_security_group_rule" "allow_external_connections" {
 
 
 resource "aws_eip" "external_ip" {
-  vpc = true
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "external_nat_gateway" {
