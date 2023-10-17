@@ -58,7 +58,7 @@ write_files:
         "port": 3306,
         "checks": [
           {
-      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-pxc", "--password=${percona_xtradb_cluster_80_password}"],
+      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-pxc", "--password=${mysql_sysbench_password}"],
             "interval": "10s"
           }
         ]
