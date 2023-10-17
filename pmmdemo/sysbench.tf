@@ -22,6 +22,5 @@ module "sysbench" {
     percona_xtradb_cluster_80_password = random_password.percona_xtradb_cluster_80_sysbench_password.result
     postgres_pmm_password              = random_password.postgres_pmm_password.result
     postgres_sysbench_password         = random_password.postgres_sysbench_password.result
-    ip_address                         = aws_instance.pmm_server.public_ip
   })
 }

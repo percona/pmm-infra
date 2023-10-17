@@ -2,7 +2,6 @@
 preserve_hostname: false
 hostname: ${name}
 fqdn: ${fqdn}
-ip_address: ${ip_address}
 manage_etc_hosts: true
 repo_upgrade: all
 
@@ -28,7 +27,6 @@ write_files:
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
-    advertise_addr = "${ip_address}"
     bind_addr = "0.0.0.0"
     bootstrap_expect=3
     client_addr = "0.0.0.0"
@@ -52,7 +50,7 @@ write_files:
         "port": 3306,
         "checks": [
           {
-      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${mysql_sysbench_password}"],
+      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${percona_server_80_password}"],
             "interval": "10s"
           }
         ]

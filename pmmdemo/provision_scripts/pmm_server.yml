@@ -2,7 +2,6 @@
 preserve_hostname: false
 hostname: ${name}
 fqdn: ${fqdn}
-ip_address: ${ip_address}
 manage_etc_hosts: true
 repo_upgrade: all
 
@@ -51,7 +50,6 @@ write_files:
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
-    advertise_addr = "${ip_address}"
     bind_addr = "0.0.0.0"
     bootstrap_expect=3
     client_addr = "0.0.0.0"
