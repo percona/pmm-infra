@@ -12,7 +12,6 @@ packages:
   - htop
   - mc
   - jq
-  - docker
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -23,10 +22,10 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
-  - docker run -d --name consul-client hashicorp/consul agent client
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y ps-80
   - yum -y install percona-server-server
@@ -45,6 +44,37 @@ runcmd:
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=perfschema --service-name=${name}
 
 write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+    bind_addr = "0.0.0.0"
+    client_addr = "0.0.0.0"
+    data_dir = "/opt/consul"
+    enable_local_script_checks = true
+    node_name="${name}"
+    retry_join = ["pmm-server", "sysbench", "proxysql"]
+    server = false
+    ui_config{
+      enabled = true
+    }
+  - path: /etc/consul.d/ps-service.json
+    permissions: "0644"
+    content: |
+    {
+      "service": {
+        "id": "mysql",
+        "name": "mysql",
+        "tags": ["${name}"],
+        "address": "",
+        "port": 3306,
+        "checks": [
+          {
+      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${mysql_sysbench_password}"],
+            "interval": "10s"
+          }
+        ]
+      }
+    }
   - path: /root/.my.cnf
     content: |
       [client]
