@@ -50,32 +50,32 @@ write_files:
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
-    bind_addr = "0.0.0.0"
-    bootstrap_expect=3
-    client_addr = "0.0.0.0"
-    data_dir = "/opt/consul"
-    enable_local_script_checks = true
-    node_name="${name}"
-    retry_join = ["pmm-server", "sysbench", "proxysql"]
-    server = true
-    ui_config{
-      enabled = true
-    }
+      bind_addr = "0.0.0.0"
+      bootstrap_expect=3
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = true
+      ui_config{
+        enabled = true
+      }
   - path: /etc/consul.d/pmm-readyz.json
     permissions: "0644"
     content: |
-    {
-      "service": {
-        "id": "PMMreadyz",
-        "name": "PMMreadyz",
-        "checks": [
-          {
-            "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
-          "interval": "10s"
-          }
-        ]
+      {
+        "service": {
+          "id": "PMMreadyz",
+          "name": "PMMreadyz",
+          "checks": [
+            {
+              "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
+            "interval": "10s"
+            }
+          ]
+        }
       }
-    }
   - path: /root/ansible.yml
     permissions: "0400"
     content: |

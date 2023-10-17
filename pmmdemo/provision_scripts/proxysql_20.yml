@@ -27,35 +27,35 @@ write_files:
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
-    bind_addr = "0.0.0.0"
-    bootstrap_expect=3
-    client_addr = "0.0.0.0"
-    data_dir = "/opt/consul"
-    enable_local_script_checks = true
-    node_name="${name}"
-    retry_join = ["pmm-server", "sysbench", "proxysql"]
-    server = true
-    ui_config{
-      enabled = true
-    }
+      bind_addr = "0.0.0.0"
+      bootstrap_expect=3
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = true
+      ui_config{
+        enabled = true
+      }
   - path: /etc/consul.d/proxysql-service.json
     permissions: "0644"
     content: |
-    {
-      "service": {
-        "id": "proxysql",
-        "name": "proxysql",
-        "tags": ["${name}"],
-        "address": "",
-        "port": 3306,
-        "checks": [
-          {
-      "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${percona_server_80_password}"],
-            "interval": "10s"
-          }
-        ]
+      {
+        "service": {
+          "id": "proxysql",
+          "name": "proxysql",
+          "tags": ["${name}"],
+          "address": "",
+          "port": 3306,
+          "checks": [
+            {
+        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${percona_server_80_password}"],
+              "interval": "10s"
+            }
+          ]
+        }
       }
-    }
   - path: /etc/proxysql.cnf
     content: |
       datadir="/var/lib/proxysql"

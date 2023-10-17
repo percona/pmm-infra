@@ -34,17 +34,17 @@ write_files:
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
-    bind_addr = "0.0.0.0"
-    bootstrap_expect=3
-    client_addr = "0.0.0.0"
-    data_dir = "/opt/consul"
-    enable_local_script_checks = true
-    node_name="${name}"
-    retry_join = ["pmm-server", "sysbench", "proxysql"]
-    server = true
-    ui_config{
-      enabled = true
-    }
+      bind_addr = "0.0.0.0"
+      bootstrap_expect=3
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = true
+      ui_config{
+        enabled = true
+      }
   - path: /etc/sysbench/exec_sysbench.sh
     content: |
       #!/bin/bash
