@@ -46,8 +46,8 @@ resource "azurerm_mysql_database" "pmmdemo_sysbench" {
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
   server_name         = azurerm_mysql_server.pmmdemo.name
-  charset             = "utf8mb4"
-  collation           = "utf8mb4_general_ci"
+  charset             = "utf8"
+  collation           = "utf8_unicode_ci"
 }
 
 # Allow access from PMMDemo-server
