@@ -7,11 +7,6 @@ repo_upgrade: all
 
 packages:
   - curl
-  - lsof
-  - nmap
-  - htop
-  - mc
-  - jq
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
