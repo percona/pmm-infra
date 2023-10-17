@@ -15,6 +15,7 @@ packages:
   - jq
   - docker
   - git
+  - yum-utils
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -28,7 +29,11 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - docker run -d --net=host --name=consul-server hashicorp/consul agent -server -ui -node=${name} -bootstrap-expect=1 -client=0.0.0.0 -bin=${ip_address}
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y ps-80
+  - yum -y install percona-server-client
   - docker pull percona/pmm-server:2
   - docker volume create pmm-data || true
   - docker run -d -p 443:443 -p 80:80 -v pmm-data:/srv --name pmm-server --restart always percona/pmm-server:2
