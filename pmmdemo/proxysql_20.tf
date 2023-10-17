@@ -21,7 +21,7 @@ module "proxysql" {
     proxysql_admin_password            = random_password.proxysql_admin.result
     percona_server_80_password         = random_password.mysql80_sysbench_password.result
     percona_xtradb_cluster_80_password = random_password.percona_xtradb_cluster_80_sysbench_password.result
-    ip_address                         = aws_instance.pmm_server.public_ip
+    ip_address                         = aws_instance.pmm_server.0.private_ip
   })
 
   depends_on = [
