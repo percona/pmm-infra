@@ -18,11 +18,13 @@ runcmd:
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.ps.mysql80
   - systemctl enable sysbench.ps.pxc80
-  - systemctl enable sysbench.proxysql
+  - systemctl enable sysbench.proxysql_ps
+  - systemctl enable sysbench.proxysql_pxc
   - systemctl enable sysbench.ps.pg13
   - systemctl start sysbench.ps.mysql80
   - systemctl start sysbench.ps.pxc80
-  - systemctl start sysbench.proxysql
+  - systemctl start sysbench.proxysql_ps
+  - systemctl start sysbench.proxysql_pxc
   - systemctl start sysbench.ps.pg13
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
@@ -57,7 +59,7 @@ write_files:
       for (( ; ; )); do
           RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
           RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
-          RND_EXEC_TIME="$(( $${RANDOM} % 90 + 30 ))";    # 30..120
+          RND_EXEC_TIME="$(( $${RANDOM} % 300 + 600 ))";    # 600..900
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
           pmm-admin annotate "Sysench test:  $${RND_OLTP_BENCH}" --tags $${RND_OLTP_BENCH};
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
@@ -68,19 +70,23 @@ write_files:
 
   - path: /etc/sysbench/percona-server-80.cnf
     content: |
+      mysql-db=sbtest_direct
       mysql-host=percona-server-80-0
       mysql-port=3306
       mysql-user=sysbench-direct-ps
       mysql-password=${mysql80_sysbench_password}
       rate=0
       report-interval=10
+      table-size=1000000
+      tables=20
       verbosity=0
       
   - path: /etc/sysbench/percona_xtradb_cluster_80.cnf
     content: |
-      mysql-host=proxysql
+      mysql-db=sbtest_direct
+      mysql-host=percona-xtradb-cluster-1
       mysql-port=3306
-      mysql-user=sysbench-proxysql-pxc
+      mysql-user=sysbench-direct-pxc
       mysql-password=${percona_xtradb_cluster_80_password}
       rand-type=pareto
       rate=0
@@ -100,12 +106,28 @@ write_files:
       report-interval=10
       verbosity=0
 
-  - path: /etc/sysbench/proxysql.cnf
+  - path: /etc/sysbench/proxysql_ps.cnf
     content: |
+      mysql-db=sbtest_proxysql
       mysql-host=proxysql
       mysql-port=3306
       mysql-user=sysbench-proxysql-ps
       mysql-password=${percona_server_80_password}
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
+
+  - path: /etc/sysbench/proxysql_pxc.cnf
+    content: |
+      mysql-db=sbtest_proxysql
+      mysql-host=proxysql
+      mysql-port=3306
+      mysql-user=sysbench-proxysql-pxc
+      mysql-password=${percona_xtradb_cluster_80_password}
       events=0
       rand-type=pareto
       rate=0
@@ -144,17 +166,32 @@ write_files:
       [Install]
       WantedBy=multi-user.target
      
-  - path: /usr/lib/systemd/system/sysbench.proxysql.service
+  - path: /usr/lib/systemd/system/sysbench.proxysql_ps.service
     content: |
       [Unit]
-      Description=Sysbench for Proxy SQL
+      Description=Sysbench for ProxySQL against Percona Server for MySQL
       After=network.target
 
       [Service]
       Type=simple
       Restart=on-failure
       RestartSec=10
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.proxysql_ps.service
+    content: |
+      [Unit]
+      Description=Sysbench for ProxySQL against Percona XtraDB Cluster
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pxc.cnf
 
       [Install]
       WantedBy=multi-user.target
