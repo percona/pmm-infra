@@ -2,6 +2,7 @@
 preserve_hostname: false
 hostname: ${name}
 fqdn: ${fqdn}
+ip_address: ${ip_address}
 manage_etc_hosts: true
 repo_upgrade: all
 
@@ -27,7 +28,7 @@ runcmd:
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
-  - docker run -d -p 8500:8500 -p 8600:8600/udp --name=consul hashicorp/consul agent -server -ui -node=${name} -bootstrap-expect=1 -client=0.0.0.0
+  - docker run -d --net=host --name=consul-server hashicorp/consul agent -server -ui -node=${name} -bootstrap-expect=1 -client=0.0.0.0 -bin=${ip_address}
   - docker pull percona/pmm-server:2
   - docker volume create pmm-data || true
   - docker run -d -p 443:443 -p 80:80 -v pmm-data:/srv --name pmm-server --restart always percona/pmm-server:2

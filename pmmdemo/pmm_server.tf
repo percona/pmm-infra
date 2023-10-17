@@ -28,6 +28,7 @@ module "pmm_server" {
       oauth_scopes               = var.oauth_scopes
       oauth_role_attribute_path  = var.oauth_role_attribute_path
       oauth_signout_redirect_url = var.oauth_signout_redirect_url
+      ip_address                 = aws_instance.pmm_server.public_ip
     }
   )
 }
