@@ -11,6 +11,10 @@ bootcmd:
   - mkdir -p /data
 
 runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable-only pxc-80 release
   - percona-release enable tools release
@@ -29,6 +33,37 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+      ui_config{
+        enabled = true
+      }
+  - path: /etc/consul.d/pxc-service.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "pxc",
+          "name": "pxc",
+          "tags": ["${name}"],
+          "address": "",
+          "port": 3306,
+          "checks": [
+            {
+        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-pxc", "--password=${mysql_sysbench_password}"],
+              "interval": "10s"
+            }
+          ]
+        }
+      }
   - path: /root/.my.cnf
     permissions: "0644"
     content: |

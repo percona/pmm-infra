@@ -7,6 +7,10 @@ repo_upgrade: all
 
 runcmd:
   - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench
@@ -27,6 +31,20 @@ runcmd:
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
 
 write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      bootstrap_expect=3
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = true
+      ui_config{
+        enabled = true
+      }
   - path: /etc/sysbench/exec_sysbench.sh
     content: |
       #!/bin/bash
