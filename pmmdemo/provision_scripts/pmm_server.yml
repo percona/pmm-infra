@@ -76,6 +76,12 @@ write_files:
           ]
         }
       }
+  - path: /root/consul-advertise-addr.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
+      echo "advertise_addr = \"${private_ip}\"" >> /etc/consul.d/consul.hcl
   - path: /root/ansible.yml
     permissions: "0400"
     content: |
