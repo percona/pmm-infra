@@ -33,7 +33,7 @@ resource "aws_route53_record" "pmmdemo_hostname" {
   zone_id = data.aws_route53_zone.pmmdemo.id
   name    = var.pmm_domain
   type    = "A"
-  ttl     = "300"
+  ttl     = "60"
   records = [module.bastion.public_ip]
 }
 
