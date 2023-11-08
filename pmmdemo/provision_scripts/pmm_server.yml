@@ -31,6 +31,7 @@ runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul
+  - bash /root/consul-advertise-addr.sh
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y ps-80
