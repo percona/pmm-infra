@@ -107,8 +107,8 @@ write_files:
       log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
-      max_slowlog_size=3G
-      max_slowlog_files=3
+      #max_slowlog_size=3G
+      #max_slowlog_files=3
 
       # Configure statistics
       #
