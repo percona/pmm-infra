@@ -17,6 +17,8 @@ mounts:
 
 runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm
+  - yum -y install puppet
   - yum -y install consul
   - systemctl enable consul
   - systemctl start consul
@@ -38,6 +40,18 @@ runcmd:
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=perfschema --service-name=${name}
 
 write_files:
+  - path: /etc/puppet/puppet.conf
+    permissions: "0644"
+    content: |
+      [main]
+      server = pmm-server.pmmdemodev.local
+      logdir = /var/log/puppet
+      rundir = /var/run/puppet
+      ssldir = $vardir/ssl
+
+      [agent]
+      classfile = $vardir/classes.txt
+      localconfig = $vardir/localconfig
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
