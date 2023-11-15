@@ -46,6 +46,8 @@ runcmd:
   - docker cp /root/ansible.yml pmm-server:/root/ansible.yml
   - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
+  - yum -y install http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm
+  - yum -y install puppet-server
 
 write_files:
   - path: /etc/consul.d/consul.hcl
@@ -83,6 +85,12 @@ write_files:
       #!/bin/bash
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
+  - path: /etc/puppet/puppet.conf
+    permissions: "0644"
+    content: |
+      [main]
+      dns_alt_names=${hostname},${fqdn}
+      certname=${hostname}
   - path: /root/ansible.yml
     permissions: "0400"
     content: |
