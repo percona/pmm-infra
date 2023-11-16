@@ -48,6 +48,8 @@ runcmd:
   - docker exec pmm-server supervisorctl restart grafana
   - yum -y install http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm
   - yum -y install puppet-server
+  - systemctl enable puppetmaster.service
+  - systemctl start puppetmaster.service
 
 write_files:
   - path: /etc/consul.d/consul.hcl
