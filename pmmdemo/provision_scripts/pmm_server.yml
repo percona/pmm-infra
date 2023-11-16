@@ -91,8 +91,16 @@ write_files:
     permissions: "0644"
     content: |
       [main]
-      dns_alt_names=pmm-server,${fqdn}
-      certname=${fqdn}
+      autosign = true
+      certname = pmm-server.pmmdemoprod.local
+      dns_alt_names = pmm-server,pmm-server.pmmdemoprod.local
+      logdir = /var/log/puppet
+      rundir = /var/run/puppet
+      server = pmm-server.pmmdemoprod.local
+      ssldir = $vardir/ssl
+
+      [agent]
+      classfile = $vardir/classes.txt
   - path: /root/ansible.yml
     permissions: "0400"
     content: |

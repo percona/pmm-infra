@@ -19,6 +19,7 @@ runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm
   - yum -y install puppet
+  - puppet agent --test
   - yum -y install consul
   - systemctl enable consul
   - systemctl start consul
@@ -44,7 +45,7 @@ write_files:
     permissions: "0644"
     content: |
       [main]
-      server = pmm-server.pmmdemodev.local
+      server = pmm-server.pmmdemoprod.local
       logdir = /var/log/puppet
       rundir = /var/run/puppet
       ssldir = $vardir/ssl
