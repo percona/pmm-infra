@@ -1,6 +1,6 @@
 resource "aws_rds_cluster" "pmmdemo_aurora_57" {
-  cluster_identifier  = "pmmdemo-aurora-cluster"
-  engine              = "dev-aurora-mysql"
+  cluster_identifier  = "dev-pmmdemo-aurora-cluster"
+  engine              = "aurora-mysql"
   engine_version      = "5.7.mysql_aurora.2.11.3"
   database_name       = "pmmdemo"
   master_username     = "pmmdemo"
