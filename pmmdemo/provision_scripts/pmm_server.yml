@@ -28,6 +28,7 @@ runcmd:
   - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
   - amazon-linux-extras install java-openjdk11
   - yum -y install puppetserver
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set autosign true --section main
   - source /etc/profile.d/puppet-agent.sh ; puppetserver start
   - systemctl enable docker
   - service docker start
