@@ -25,6 +25,10 @@ mounts:
   - ["/dev/nvme1n1", "/var/lib/docker/", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
+  - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
+  - amazon-linux-extras install java-openjdk11
+  - yum -y install puppetserver
+  - source /etc/profile.d/puppet-agent.sh ; puppetserver start
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
@@ -46,17 +50,17 @@ runcmd:
   - docker cp /root/ansible.yml pmm-server:/root/ansible.yml
   - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
-  - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
-  - amazon-linux-extras install java-openjdk11
-  - yum -y install puppetserver
-  - source /etc/profile.d/puppet-agent.sh ; puppetserver start
-  - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_endpoint} --section main
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_host} --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet config set fact_value_length_soft_limit 16384 --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet ssl bootstrap
   - source /etc/profile.d/puppet-agent.sh ; puppet resource service puppet ensure=running enable=true
   - source /etc/profile.d/puppet-agent.sh ; puppet agent --test
 
 write_files:
+  - path: /etc/puppetlabs/puppet/autosign.conf
+    permissions: "0664"
+    content: |
+      *.local
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
