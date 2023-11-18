@@ -49,8 +49,7 @@ runcmd:
   - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
   - amazon-linux-extras install java-openjdk11
   - yum -y install puppetserver
-  - systemctl enable puppetserver.service
-  - systemctl start puppetserver.service
+  - source /etc/profile.d/puppet-agent.sh ; puppetserver start
   - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_endpoint} --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet config set fact_value_length_soft_limit 16384 --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet ssl bootstrap
