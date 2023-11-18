@@ -1,5 +1,5 @@
-resource "aws_db_instance" "pmmdemo_postgres_13" {
-  identifier           = "dev-pmmdemo-postgres"
+resource "aws_db_instance" "pmmdemo_postgres_13_dev" {
+  identifier           = "pmmdemo-postgres"
   engine               = "postgres"
   engine_version       = "13.10"
   instance_class       = "db.m5.large"

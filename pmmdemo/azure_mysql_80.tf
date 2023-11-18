@@ -10,8 +10,8 @@ data "azurerm_resource_group" "pmmdemo" {
 }
 
 # Create the Azure MySQL "RDS" server
-resource "azurerm_mysql_server" "pmmdemo" {
-  name     = "dev-pmmdemo-azure"
+resource "azurerm_mysql_server" "pmmdemo_dev" {
+  name     = "pmmdemo-azure"
   provider = azurerm.demo
 
   location            = local.azure_region
