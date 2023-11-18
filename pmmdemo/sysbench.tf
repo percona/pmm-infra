@@ -16,6 +16,7 @@ module "sysbench" {
     domain                             = var.pmm_domain
     pmm_admin_password                 = random_password.pmm_admin_pass.result
     pmm_server_endpoint                = local.pmm_server_endpoint
+    pmm_server_host                    = local.pmm_server_host
     fqdn                               = "${local.sysbench_name}.${aws_route53_zone.demo_local.name}"
     mysql80_sysbench_password          = random_password.mysql80_sysbench_password.result
     percona_server_80_password         = random_password.mysql80_sysbench_password.result

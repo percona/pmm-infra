@@ -41,6 +41,11 @@ variable "pmm_server_endpoint" {
   description = "Endpoint of PMM server for agent"
 }
 
+variable "pmm_server_host" {
+  type        = string
+  description = "FQDN of PMM server for puppet"
+}
+
 variable "pmm_password" {
   type        = string
   description = "Admin password for PMM Server"

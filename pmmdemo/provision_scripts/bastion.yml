@@ -31,6 +31,13 @@ runcmd:
   - docker exec nginx certbot --nginx --non-interactive --agree-tos -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/pmm-admin_password
   - chmod 400 /root/pmm-admin_password
+  - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
+  - yum -y install puppet-agent
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_host} --section main
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set fact_value_length_soft_limit 16384 --section main
+  - source /etc/profile.d/puppet-agent.sh ; puppet ssl bootstrap
+  - source /etc/profile.d/puppet-agent.sh ; puppet resource service puppet ensure=running enable=true
+  - source /etc/profile.d/puppet-agent.sh ; puppet agent --test
 
 write_files:
   - path: /root/.ssh/config

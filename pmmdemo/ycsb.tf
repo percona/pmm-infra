@@ -17,6 +17,7 @@ module "ycsb" {
     pmm_admin_password    = random_password.pmm_admin_pass.result
     mongodb_ycsb_password = random_password.mongodb_ycsb_password.result
     pmm_server_endpoint   = local.pmm_server_endpoint
+    pmm_server_host       = local.pmm_server_host
     fqdn                  = "${local.ycsb_name}.${aws_route53_zone.demo_local.name}"
   })
 }

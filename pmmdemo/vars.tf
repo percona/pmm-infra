@@ -78,5 +78,6 @@ variable "oauth_signout_redirect_url" {
 
 locals {
   pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+  pmm_server_host     = "pmm-server.${aws_route53_zone.demo_local.name}"
   environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
 }

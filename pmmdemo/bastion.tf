@@ -16,6 +16,7 @@ module "bastion" {
   user_data = templatefile("provision_scripts/bastion.yml", {
     name             = local.bastion_name,
     environment_name = local.environment_name,
+    pmm_server_host = local.pmm_server_host,
     domain           = var.pmm_domain,
     email            = var.owner_email,
     pmm_admin_pass   = random_password.pmm_admin_pass.result,
