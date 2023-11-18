@@ -11,7 +11,7 @@ data "azurerm_resource_group" "pmmdemo" {
 
 # Create the Azure MySQL "RDS" server
 resource "azurerm_mysql_server" "pmmdemo" {
-  name     = "pmmdemo-azure"
+  name     = "dev-pmmdemo-azure"
   provider = azurerm.demo
 
   location            = local.azure_region
@@ -53,7 +53,7 @@ resource "azurerm_mysql_database" "pmmdemo_sysbench" {
 # Allow access from PMMDemo-server
 #
 resource "azurerm_mysql_firewall_rule" "allow_pmmdemo_server" {
-  name                = "allow_pmmdemo_server"
+  name                = "dev-allow_pmmdemo_server"
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
   server_name         = azurerm_mysql_server.pmmdemo.name
@@ -63,7 +63,7 @@ resource "azurerm_mysql_firewall_rule" "allow_pmmdemo_server" {
 
 resource "random_password" "azure_mysql" {
   length  = 30
-  special = true
+  special = false
   upper   = true
   numeric = true
 }

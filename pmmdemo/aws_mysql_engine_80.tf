@@ -1,5 +1,5 @@
 resource "aws_db_instance" "pmmdemo_aws_mysql_engine_80" {
-  identifier           = "pmmdemo-mysql"
+  identifier           = "dev-pmmdemo-mysql"
   availability_zone    = "us-east-1f"
   allocated_storage    = 10
   engine               = "mysql"
