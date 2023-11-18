@@ -43,6 +43,7 @@ data "template_file" "percona_xtradb_cluster_80_user_data" {
     mysql_root_password       = random_password.percona_xtradb_cluster_80_root_password.result
     mysql_sysbench_password   = random_password.percona_xtradb_cluster_80_sysbench_password.result
     pmm_server_endpoint       = local.pmm_server_endpoint
+    pmm_server_host           = local.pmm_server_host
     proxysql_monitor_password = random_password.proxysql_monitor.result
   }
 }

@@ -16,6 +16,7 @@ module "proxysql" {
     domain                             = var.pmm_domain
     pmm_admin_password                 = random_password.pmm_admin_pass.result
     pmm_server_endpoint                = local.pmm_server_endpoint
+    pmm_server_host                    = local.pmm_server_host
     fqdn                               = "${local.proxysql_name}.${aws_route53_zone.demo_local.name}"
     proxysql_monitor_password          = random_password.proxysql_monitor.result
     proxysql_admin_password            = random_password.proxysql_admin.result
