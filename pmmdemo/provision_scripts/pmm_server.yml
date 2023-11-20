@@ -49,6 +49,8 @@ runcmd:
   - yum -y install https://github.com/openark/orchestrator/releases/download/v3.2.6/orchestrator-3.2.6-1.x86_64.rpm
   - systemctl enable orchestrator.service
   - systemctl start orchestrator.service
+  - /usr/local/orchestrator/resources/bin/orchestrator-client -c discover -i percona-server-80-0
+
 write_files:
   - path: /etc/orchestrator.conf.json
     permissions: "0664"
