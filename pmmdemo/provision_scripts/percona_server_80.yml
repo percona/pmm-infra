@@ -25,6 +25,8 @@ runcmd:
   - yum -y install percona-server-server
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - percona-release enable mysql-shell
+  - yum -y install percona-mysql-shell
   - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
   - chown mysql:mysql /data/
   - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
@@ -38,6 +40,12 @@ runcmd:
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=perfschema --service-name=${name}
 
 write_files:
+  - path: /root/.mysqlsh/options.json
+    permissions: "0644"
+    content: |
+      {
+        "history.autoSave": "true"
+      }
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
