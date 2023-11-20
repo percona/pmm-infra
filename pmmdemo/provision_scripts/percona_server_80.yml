@@ -88,7 +88,7 @@ write_files:
 
       # Host specific replication configuration
       #
-      report_host = ${fqdn}
+      report_host = ${name}
       report_port = 3306
       server_id   = 1${index}
 
@@ -139,15 +139,12 @@ write_files:
       replica_preserve_commit_order=1
 
       sync_binlog=1
-      log_replica_updates=0
       read_only=1
 
       innodb_flush_log_at_trx_commit=0
       innodb_flush_neighbors=0
       # innodb_fast_shutdown=2
       innodb_flush_method=O_DIRECT
-
-      skip-log-bin
 
   - path: /root/init-mysql.sh
     permissions: "0555"
@@ -194,6 +191,20 @@ write_files:
       fi
 
       if [ "${name}" == "percona-server-80-1" ]; then
+        for (( i=1 ; i<=300 ; i++ )); do
+            if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
+                # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
+                mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-80-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
+                mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
+                break;
+            else
+                echo "retry";
+                sleep 3;
+            fi;
+        done;
+      fi
+
+      if [ "${name}" == "percona-server-80-2" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
                 # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
