@@ -68,7 +68,7 @@ write_files:
           RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
           RND_EXEC_TIME="$(( $${RANDOM} % 300 + 600 ))";    # 600..900
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
-          pmm-admin annotate "Sysench test:  $${RND_OLTP_BENCH}" --tags $${RND_OLTP_BENCH};
+          pmm-admin annotate "${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --tags "${SYSBENCH_CFG},$${RND_OLTP_BENCH}"";
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
@@ -101,7 +101,7 @@ write_files:
       table_size=1000000
       tables=20
 
-  - path: /etc/sysbench/percona-server-pg-13.cnf
+  - path: /etc/sysbench/percona-server-postgres-13.cnf
     content: |
       db-driver=pgsql
       pgsql-host=postgres-13
@@ -143,7 +143,7 @@ write_files:
       time=0
       threads=5
 
-  - path: /usr/lib/systemd/system/sysbench.ps.mysql80.service
+  - path: /usr/lib/systemd/system/sysbench.ps80.service
     content: |
       [Unit]
       Description=Sysbench for Percona Server 8
@@ -152,13 +152,13 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
+      RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
 
       [Install]
       WantedBy=multi-user.target
 
-  - path: /usr/lib/systemd/system/sysbench.ps.pxc80.service
+  - path: /usr/lib/systemd/system/sysbench.pxc80.service
     content: |
       [Unit]
       Description=Sysbench for PXC 8
@@ -167,7 +167,7 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
+      RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh percona_xtradb_cluster_80.cnf
 
       [Install]
@@ -182,7 +182,7 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
+      RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps.cnf
 
       [Install]
@@ -197,13 +197,13 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
+      RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pxc.cnf
 
       [Install]
       WantedBy=multi-user.target
 
-  - path: /usr/lib/systemd/system/sysbench.ps.pg13.service
+  - path: /usr/lib/systemd/system/sysbench.postgres13.service
     content: |
       [Unit]
       Description=Sysbench for Percona Server for PostgreSQL 13
@@ -212,8 +212,8 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
-      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-pg-13.cnf
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-postgres-13.cnf
 
       [Install]
       WantedBy=multi-user.target
