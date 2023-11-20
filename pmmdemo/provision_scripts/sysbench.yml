@@ -16,16 +16,16 @@ runcmd:
   - yum -y install pmm2-client sysbench
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
-  - systemctl enable sysbench.ps.mysql80
-  - systemctl enable sysbench.ps.pxc80
-  - systemctl enable sysbench.proxysql_ps
-  - systemctl enable sysbench.proxysql_pxc
-  - systemctl enable sysbench.ps.pg13
-  - systemctl start sysbench.ps.mysql80
-  - systemctl start sysbench.ps.pxc80
-  - systemctl start sysbench.proxysql_ps
-  - systemctl start sysbench.proxysql_pxc
-  - systemctl start sysbench.ps.pg13
+  - systemctl enable sysbench.ps80
+  - systemctl enable sysbench.pxc80
+  - systemctl enable sysbench.proxysql_ps80
+  - systemctl enable sysbench.proxysql_pxc80
+  - systemctl enable sysbench.postgres13
+  - systemctl start sysbench.ps80
+  - systemctl start sysbench.pxc80
+  - systemctl start sysbench.proxysql_ps80
+  - systemctl start sysbench.proxysql_pxc80
+  - systemctl start sysbench.postgres13
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
@@ -68,7 +68,7 @@ write_files:
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
       done;
 
-  - path: /etc/sysbench/percona-server-80.cnf
+  - path: /etc/sysbench/ps80.cnf
     content: |
       mysql-db=sbtest_direct
       mysql-host=percona-server-80-0
@@ -81,7 +81,7 @@ write_files:
       tables=20
       verbosity=0
       
-  - path: /etc/sysbench/percona_xtradb_cluster_80.cnf
+  - path: /etc/sysbench/pxc80.cnf
     content: |
       mysql-db=sbtest_direct
       mysql-host=percona-xtradb-cluster-1
@@ -94,7 +94,7 @@ write_files:
       table_size=1000000
       tables=20
 
-  - path: /etc/sysbench/percona-server-postgres-13.cnf
+  - path: /etc/sysbench/postgres13.cnf
     content: |
       db-driver=pgsql
       pgsql-host=postgres-13
@@ -106,7 +106,7 @@ write_files:
       report-interval=10
       verbosity=0
 
-  - path: /etc/sysbench/proxysql_ps.cnf
+  - path: /etc/sysbench/proxysql_ps80.cnf
     content: |
       mysql-db=sbtest_proxysql
       mysql-host=proxysql
@@ -121,7 +121,7 @@ write_files:
       time=0
       threads=5
 
-  - path: /etc/sysbench/proxysql_pxc.cnf
+  - path: /etc/sysbench/proxysql_pxc80.cnf
     content: |
       mysql-db=sbtest_proxysql
       mysql-host=proxysql
@@ -146,7 +146,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh ps80.cnf
 
       [Install]
       WantedBy=multi-user.target
@@ -161,12 +161,12 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh percona_xtradb_cluster_80.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh pxc80.cnf
 
       [Install]
       WantedBy=multi-user.target
      
-  - path: /usr/lib/systemd/system/sysbench.proxysql_ps.service
+  - path: /usr/lib/systemd/system/sysbench.proxysql_ps80.service
     content: |
       [Unit]
       Description=Sysbench for ProxySQL against Percona Server for MySQL
@@ -176,12 +176,12 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps80.cnf
 
       [Install]
       WantedBy=multi-user.target
 
-  - path: /usr/lib/systemd/system/sysbench.proxysql_ps.service
+  - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
     content: |
       [Unit]
       Description=Sysbench for ProxySQL against Percona XtraDB Cluster
@@ -191,7 +191,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pxc.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pxc80.cnf
 
       [Install]
       WantedBy=multi-user.target
@@ -206,7 +206,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-postgres-13.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh postgres13.cnf
 
       [Install]
       WantedBy=multi-user.target
