@@ -175,6 +175,7 @@ write_files:
       ],
       "PostGracefulTakeoverProcesses": [
         "echo 'Planned takeover complete' >> /tmp/recovery.log"
+        pmm-admin annotate --tags "$(echo '{successorHost}')" "$(echo '{failureType} on {failureCluster}. Failed: {failedHost}:{failedPort}; Successor: {successorHost}:{successorPort}')"
       ],
       "CoMasterRecoveryMustPromoteOtherCoMaster": true,
       "DetachLostSlavesAfterMasterFailover": true,
@@ -190,6 +191,7 @@ write_files:
       "GraphiteConvertHostnameDotsToUnderscores": true,
       "KVClusterMasterPrefix": "mysql/master",
       "ConsulAddress": "127.0.0.1:8500",
+      "ConsulKVStoreProvider": "consul-txn",
       "ConsulAclToken": ""
       }
   - path: /etc/consul.d/consul.hcl
