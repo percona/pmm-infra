@@ -34,7 +34,8 @@ runcmd:
   - yum -y install pmm2-client
   - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
   - chown mysql:mysql /data/
-  - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
+  - if [ "${name}" == "percona-server-80-1" ]; then mv /tmp/replica-1-config.cnf /etc/my.cnf.d/; fi
+  - if [ "${name}" == "percona-server-80-2" ]; then mv /tmp/replica-2-config.cnf /etc/my.cnf.d/; fi
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
   - systemctl status mysqld.service
@@ -132,19 +133,27 @@ write_files:
       gtid_mode=ON
       enforce_gtid_consistency=ON
 
-  - path: /tmp/replica-config.cnf
+  - path: /tmp/replica-1-config.cnf
     content: |
       [mysqld]
+      innodb_flush_log_at_trx_commit=0
+      innodb_flush_method=O_DIRECT
+      innodb_flush_neighbors=0
+      read_only=1
       replica_parallel_workers=2
       replica_preserve_commit_order=1
-
       sync_binlog=1
-      read_only=1
 
+  - path: /tmp/replica-2-config.cnf
+    content: |
+      [mysqld]
       innodb_flush_log_at_trx_commit=0
-      innodb_flush_neighbors=0
-      # innodb_fast_shutdown=2
       innodb_flush_method=O_DIRECT
+      innodb_flush_neighbors=0
+      read_only=1
+      replica_parallel_workers=2
+      replica_preserve_commit_order=1
+      sync_binlog=1
 
   - path: /root/init-mysql.sh
     permissions: "0555"
