@@ -20,6 +20,7 @@ module "pmm_server" {
       proxysql_monitor_password  = random_password.proxysql_monitor.result
       name                       = local.pmm_server_name
       fqdn                       = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}"
+      domain                     = "${aws_route53_zone.demo_local.name}"
       full_domain                = var.pmm_domain
       google_analytics_id        = var.google_analytics_id
       oauth_enable               = var.oauth_enable
