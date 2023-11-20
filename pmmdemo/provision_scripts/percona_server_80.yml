@@ -184,7 +184,7 @@ write_files:
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER orc_client_user@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO orc_client_user@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO orc_client_user@'%'; FLUSH PRIVILEGES;GRANT SELECT ON meta.* TO orc_client_user@'%';";
               break;
             else
               echo "retry";
