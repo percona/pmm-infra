@@ -59,7 +59,7 @@ write_files:
       "EnableSyslog": false,
       "ListenAddress": ":3000",
       "MySQLTopologyUser": "orc_client_user",
-      "MySQLTopologyPassword": "orc_client_password",
+      "MySQLTopologyPassword": "${proxysql_monitor_password}",
       "MySQLTopologyCredentialsConfigFile": "",
       "MySQLTopologySSLPrivateKeyFile": "",
       "MySQLTopologySSLCertFile": "",
@@ -77,7 +77,7 @@ write_files:
         ".*[.]ignore_all_hosts_from_this_domain[.]example[.]com",
         "a_host_with_extra_port_i_want_to_ignore[.]example[.]com:3307"
       ],
-      "UnseenInstanceForgetHours": 240,
+      "UnseenInstanceForgetHours": 1,
       "SnapshotTopologiesIntervalHours": 0,
       "InstanceBulkOperationsWaitTimeoutSeconds": 10,
       "HostnameResolveMethod": "default",
@@ -92,7 +92,7 @@ write_files:
       "CandidateInstanceExpireMinutes": 60,
       "AuditLogFile": "",
       "AuditToSyslog": false,
-      "RemoveTextFromHostnameDisplay": ".mydomain.com:3306",
+      "RemoveTextFromHostnameDisplay": ".pmmdemodev.local:3306",
       "ReadOnly": false,
       "AuthenticationMethod": "",
       "HTTPAuthUser": "",
@@ -109,8 +109,8 @@ write_files:
       "DetectClusterDomainQuery": "",
       "DetectInstanceAliasQuery": "",
       "DetectPromotionRuleQuery": "",
-      "DataCenterPattern": "[.]([^.]+)[.][^.]+[.]mydomain[.]com",
-      "PhysicalEnvironmentPattern": "[.]([^.]+[.][^.]+)[.]mydomain[.]com",
+      "DataCenterPattern": "[.]([^.]+)[.][^.]+[.]pmmdemodev[.]local",
+      "PhysicalEnvironmentPattern": "[.]([^.]+[.][^.]+)[.]pmmdemodev[.]local",
       "PromotionIgnoreHostnameFilters": [],
       "DetectSemiSyncEnforcedQuery": "",
       "ServeAgentsHttp": false,
@@ -188,7 +188,8 @@ write_files:
       "GraphiteAddr": "",
       "GraphitePath": "",
       "GraphiteConvertHostnameDotsToUnderscores": true,
-      "ConsulAddress": "",
+      "KVClusterMasterPrefix": "mysql/master",
+      "ConsulAddress": "127.0.0.1:8500",
       "ConsulAclToken": ""
       }
   - path: /etc/consul.d/consul.hcl
