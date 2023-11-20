@@ -1,6 +1,6 @@
 locals {
   percona_server_80_name = "percona-server-80"
-  count                  = 2 # source and replica
+  count                  = 3 # source and replica
 }
 
 module "percona_server_80" {
