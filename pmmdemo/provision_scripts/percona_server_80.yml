@@ -132,6 +132,8 @@ write_files:
       #
       gtid_mode=ON
       enforce_gtid_consistency=ON
+      rpl_semi_sync_source_enabled=1
+      rpl_semi_sync_replica_enabled=1
 
   - path: /tmp/replica-1-config.cnf
     content: |
