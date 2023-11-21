@@ -28,11 +28,13 @@ runcmd:
   - until nc -z localhost 80; do sleep 1; done
   - docker exec nginx apt update
   - docker exec nginx apt install -y certbot python3-certbot-nginx
-  - docker exec nginx certbot --non-interactive --agree-tos -m ${email} -d ${domain}
+  - docker exec nginx certbot --nginx --non-interactive --agree-tos -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/admin_password
   - chmod 400 /root/pmm-admin-password
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_pass}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - echo "${pmm_admin_pass}" > /root/pmm-admin_password
+  - chmod 400 /root/pmm-admin_password
 
 write_files:
   - path: /root/.ssh/config
