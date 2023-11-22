@@ -104,6 +104,7 @@ write_files:
       log-bin=percona-xtradb-cluster-{index}-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
+      binlog_space_limit=10G
 
       slow_query_log=ON
       slow_query_log_always_write_time=1
