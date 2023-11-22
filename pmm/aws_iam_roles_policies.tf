@@ -18,6 +18,7 @@ resource "aws_iam_policy" "pmmdemo-rds-policy" {
         "Effect" : "Allow",
         "Action" : [
           "rds:DescribeDBInstances",
+          "rds:DescribeDBClusters",
           "cloudwatch:GetMetricStatistics",
           "cloudwatch:ListMetrics"
         ],

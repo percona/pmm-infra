@@ -13,67 +13,56 @@ variable "owner_email" {
 
 variable "project_name" {
   type        = string
-  description = "If you are using the 'default' workspace, and want to use a different name, then you can use this variable"
+  description = "Do not use 'default' namespace"
+  default     = "mypmmdemo123"
 }
 
 variable "google_analytics_id" {
   type        = string
   description = "Google Analytics tracking code"
-  default     = ""
+  default     = "UA-343802-29"
 }
 
 variable "oauth_enable" {
   type        = bool
   description = "Use oauth to connect PMM to the Portal"
-  default     = false
-}
-
-variable "oauth_client_id" {
-  type        = string
-  description = "Oauth client ID"
-  default     = ""
-}
-
-variable "oauth_secret" {
-  type        = string
-  description = "Oauth client secret"
-  default     = ""
+  default     = true
 }
 
 variable "oauth_scopes" {
   type        = string
   description = "scope for auth"
-  default     = ""
+  default     = "openid profile email offline_access percona"
 }
 
 variable "oauth_url" {
   type        = string
-  description = "Oauth domain url"
-  default     = ""
+  description = "Oauth auth url"
+  default     = "https://id.percona.com/oauth2/auskl7vxt4N1CAbjO1t7/v1/authorize"
 }
 
 variable "oauth_token_url" {
   type        = string
   description = "Oauth token URL"
-  default     = ""
+  default     = "https://id.percona.com/oauth2/auskl7vxt4N1CAbjO1t7/v1/token"
 }
 
 variable "oauth_api_url" {
   type        = string
   description = "Oauth API URL"
-  default     = ""
+  default     = "https://id.percona.com/oauth2/auskl7vxt4N1CAbjO1t7/v1/userinfo"
 }
 
 variable "oauth_role_attribute_path" {
   type        = string
   description = "Oauth Attribute path"
-  default     = ""
+  default     = "pmm_demo_role"
 }
 
 variable "oauth_signout_redirect_url" {
   type        = string
   description = "Oauth Signout Redirect URL"
-  default     = ""
+  default     = "https://id.percona.com/login/signout?fromURI=https://pmmdemo.dev.percona.net/graph/login"
 }
 
 locals {

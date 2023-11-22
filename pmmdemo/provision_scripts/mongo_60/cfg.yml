@@ -13,7 +13,14 @@ bootcmd:
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
+packages:
+  - curl
+
 runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
   - yum -y install percona-server-mongodb
@@ -23,14 +30,43 @@ runcmd:
   - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
-  - systemctl status mongod
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - mongosh --port 27019 /tmp/init.js || true
   - bash /tmp/mongodb-init-rs.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --service-name=${name} --enable-all-collectors
 
 write_files:
+
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+
+  - path: /etc/consul.d/mongod-service.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "${name}",
+          "name": "mongo",
+          "tags": ["${name}"],
+          "address": "",
+          "port": 3306,
+          "checks": [
+            {
+              "args": ["mongosh", "--port", "27019", "--eval", "db.serverStatus().ok", "-quiet"],
+              "interval": "10s"
+            }
+          ]
+        }
+      }
+
   - path: /etc/mongod.conf
     content: |
       sharding:
@@ -94,7 +130,10 @@ write_files:
         {
           user: "pmm-admin",
           pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+          roles: [
+              { role: "userAdminAnyDatabase", db: "admin" },
+              { role: "clusterMonitor", db: "admin" }
+          ]
         }
       )
 
@@ -105,7 +144,7 @@ write_files:
           privileges: [{
               resource: {
                   db: "",
-                  collection: "system.profile"
+                  collection: ""
                   },
               actions: [
                   "listIndexes",
@@ -113,7 +152,8 @@ write_files:
                   "dbStats",
                   "dbHash",
                   "collStats",
-                  "find"
+                  "find",
+                  "indexStats"
                   ]
               }],
           roles:[]
@@ -139,18 +179,13 @@ write_files:
     content: |
       db = connect("localhost:27019/")
 
-  - path: /root/.bashrc
-    append: true
-    content: |
-      alias mng='mongosh --nodb'
-
   - path: /tmp/mongodb-init-rs.sh
     permissions: "0500"
     content: |
       #!/bin/bash
       
       myhostname=$(hostname -f)
-      memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f5)
+      memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f4)
       
       echo "-- MonogoDB RS"
       echo "--- $${myhostname}"
@@ -179,7 +214,7 @@ write_files:
         sleep 2
       done
       
-      # We pick rs-[01]-0 to be primary. Run the init only on the primary
+      # We pick cfg-0 to be primary. Run the init only on the primary
       if [ "$${memberid}" == "0" ]; then
         echo "-- We are shard 0; run init"
         mongosh --port 27019 /tmp/init.js
@@ -205,7 +240,7 @@ write_files:
       done
       
       # Print report to cloud log
-      echo "-- ReplicaSet Members:"
+      echo "-- Cfg ReplicaSet Members:"
       mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; m.forEach(function(a){ print(a.stateStr+':'+a.name); });"
       
       # Determine/wait for primary
