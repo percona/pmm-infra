@@ -5,7 +5,14 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
+packages:
+  - curl
+
 runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
   - yum -y install percona-server-mongodb
@@ -16,16 +23,46 @@ runcmd:
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
   - systemctl start mongos
-  - systemctl status mongos
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - sleep 5s
-  - mongosh /tmp/init.js
+  - mongosh --port 27019 /tmp/init.js
   - sleep 15s
-  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
+  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
 
 write_files:
+
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+
+  - path: /etc/consul.d/mongod-service.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "${name}",
+          "name": "mongos",
+          "tags": ["${name}"],
+          "address": "",
+          "port": 3306,
+          "checks": [
+            {
+              "args": ["mongosh", "--port", "27019", "--eval", "db.serverStatus().ok", "-quiet"],
+              "interval": "10s"
+            }
+          ]
+        }
+      }
+
   - path: /etc/mongos.conf
     content: |
       sharding:
@@ -60,7 +97,10 @@ write_files:
         {
           user: "pmm-admin",
           pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+          roles: [
+              { role: "userAdminAnyDatabase", db: "admin" },
+              { role: "clusterMonitor", db: "admin" }
+          ]
         }
       )
 
@@ -95,7 +135,7 @@ write_files:
           privileges: [{
               resource: {
                   db: "",
-                  collection: "system.profile"
+                  collection: ""
                   },
               actions: [
                   "listIndexes",
@@ -103,7 +143,8 @@ write_files:
                   "dbStats",
                   "dbHash",
                   "collStats",
-                  "find"
+                  "find",
+                  "indexStats"
                   ]
               }],
           roles:[]
