@@ -23,11 +23,18 @@ runcmd:
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
   - systemctl enable mysql
-  # - systemctl start mysql
+  - systemctl start mysql
   - bash /root/init-mysql.sh
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='Prod' --query-source=perfschema --service-name=${name}
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='Prod' --query-source=slowlog --service-name=${name}
+  - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
+  - yum -y install puppet-agent
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_host} --section main
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set fact_value_length_soft_limit 16384 --section main
+  - source /etc/profile.d/puppet-agent.sh ; puppet ssl bootstrap
+  - source /etc/profile.d/puppet-agent.sh ; puppet resource service puppet ensure=running enable=true
+  - source /etc/profile.d/puppet-agent.sh ; puppet agent --test
 
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
@@ -97,17 +104,19 @@ write_files:
       log-bin=percona-xtradb-cluster-{index}-bin
       binlog_format=ROW
       binlog_expire_logs_seconds=604800
+      binlog_space_limit=10G
 
       slow_query_log=ON
       slow_query_log_always_write_time=1
       slow_query_log_use_global_control=all
-      log_slow_rate_limit=10
+      log_slow_rate_limit=1
       log_slow_rate_type='query'
       log_slow_admin_statements=ON
       log_slow_replica_statements=ON
       log_slow_verbosity=full
       long_query_time=0
-
+      #max_slowlog_size=3G
+      #max_slowlog_files=3
 
       # Configure statistics
       #

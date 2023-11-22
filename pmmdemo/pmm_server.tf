@@ -20,8 +20,8 @@ module "pmm_server" {
       full_domain                = var.pmm_domain
       google_analytics_id        = var.google_analytics_id
       oauth_enable               = var.oauth_enable
-      oauth_client_id            = var.oauth_client_id
-      oauth_secret               = var.oauth_secret
+      oauth_client_id            = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTID"]
+      oauth_secret               = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTSECRET"]
       oauth_url                  = var.oauth_url
       oauth_token_url            = var.oauth_token_url
       oauth_api_url              = var.oauth_api_url
@@ -54,6 +54,14 @@ data "aws_iam_policy" "pmmdemo-rds-policy" {
 
 data "aws_iam_role" "pmmdemo_dlm_lifecycle" {
   name = "pmmdemo-dlm-lifecycle"
+}
+
+data "aws_secretsmanager_secret" "sso_creds_mgr" {
+  name = "pmm-sso-oauth-creds"
+}
+
+data "aws_secretsmanager_secret_version" "sso_creds" {
+  secret_id = data.aws_secretsmanager_secret.sso_creds_mgr.id
 }
 
 resource "aws_iam_access_key" "rds_user_access_key" {

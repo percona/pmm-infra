@@ -46,8 +46,17 @@ runcmd:
   - docker cp /root/ansible.yml pmm-server:/root/ansible.yml
   - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
+  - bash /root/add-rds-to-pmm.sh
 
 write_files:
+
+  - path: /root/add-rds-to-pmm.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      echo "placeholder"
+      exit 0
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -62,6 +71,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /etc/consul.d/pmm-readyz.json
     permissions: "0644"
     content: |
@@ -77,12 +87,14 @@ write_files:
           ]
         }
       }
+
   - path: /root/consul-advertise-addr.sh
     permissions: "0700"
     content: |
       #!/bin/bash
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
+
   - path: /root/ansible.yml
     permissions: "0400"
     content: |
@@ -239,12 +251,14 @@ write_files:
                 section: auth
                 option: signout_redirect_url
                 value: ${oauth_signout_redirect_url}
+
   - path: /root/volume-backup.sh
     permissions: "0755"
     content: |
       #!/bin/bash -xe
 
       docker run --rm --volumes-from pmm-data -v /root/backup:/backup busybox tar czvf /backup/backup-$(date "+%F").tar /srv
+
   - path: /root/upgrade-pmm.sh
     permissions: "0755"
     content: |
@@ -259,6 +273,7 @@ write_files:
       echo "PMM Server has been successfully upgraded to the next version. Don't forget to purge the old image."
 
       bash /root/apply-custom-settings.sh
+
   - path: /root/apply-custom-settings.sh
     permissions: "0755"
     content: |
