@@ -14,6 +14,9 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench
+  - percona-release enable mysql-shell
+  - percona-release enable ps-80
+  - yum -y install percona-mysql-shell
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.ps80
@@ -33,6 +36,23 @@ runcmd:
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
 
 write_files:
+  - path: /root/.mysqlsh/options.json
+    permissions: "0644"
+    content: |
+      {
+        "history.autoSave": "true"
+      }
+  - path: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      # Percona Server for MySQL 8.0
+      password="${mysql80_sysbench_password}"
+      # MySQL root 
+      password="${mysql_root_password}"
+      # PXC 8
+      password="${percona_xtradb_cluster_80_password}"
+      
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
