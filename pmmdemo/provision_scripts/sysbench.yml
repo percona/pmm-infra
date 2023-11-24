@@ -14,23 +14,45 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench
+  - percona-release enable mysql-shell
+  - percona-release enable ps-80
+  - yum -y install percona-mysql-shell
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.ps80
   - systemctl enable sysbench.pxc80
   - systemctl enable sysbench.proxysql_ps80
   - systemctl enable sysbench.proxysql_pxc80
+  - systemctl enable sysbench.haproxy.pxc80
   - systemctl enable sysbench.postgres13
   - systemctl start sysbench.ps80
   - systemctl start sysbench.pxc80
   - systemctl start sysbench.proxysql_ps80
   - systemctl start sysbench.proxysql_pxc80
+  - systemctl start sysbench.haproxy.pxc80
   - systemctl start sysbench.postgres13
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
 
 write_files:
+  - path: /root/.mysqlsh/options.json
+    permissions: "0644"
+    content: |
+      {
+        "history.autoSave": "true"
+      }
+  - path: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      # Percona Server for MySQL 8.0
+      password="${mysql80_sysbench_password}"
+      # MySQL root 
+      password="${mysql_root_password}"
+      # PXC 8
+      password="${percona_xtradb_cluster_80_password}"
+      
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -136,6 +158,21 @@ write_files:
       time=0
       threads=5
 
+  - path: /etc/sysbench/haproxy_pxc80.cnf
+    content: |
+      mysql-db=sbtest_haproxy
+      mysql-host=haproxy
+      mysql-port=3306
+      mysql-user=sysbench-haproxy-pxc
+      mysql-password=BPwe4foqoGP9zTHSNUYbcAouSg4QfO
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
+
   - path: /usr/lib/systemd/system/sysbench.ps80.service
     content: |
       [Unit]
@@ -207,6 +244,21 @@ write_files:
       Restart=on-failure
       RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh postgres13.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.haproxy.pxc80.service
+    content: |
+      [Unit]
+      Description=Sysbench for PXC 8 behind HAProxy
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pxc80.cnf
 
       [Install]
       WantedBy=multi-user.target

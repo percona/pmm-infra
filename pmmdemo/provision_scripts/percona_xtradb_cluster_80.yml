@@ -185,11 +185,14 @@ write_files:
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest;"
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_direct;"
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_proxysql;"
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_haproxy;"
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-direct-pxc'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_direct.* TO 'sysbench-direct-pxc'@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-proxysql-pxc'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_proxysql.* TO 'sysbench-proxysql-pxc'@'%'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-haproxy-pxc'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_haproxy.* TO 'sysbench-haproxy-pxc'@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
       }
