@@ -281,6 +281,7 @@ write_files:
       WantedBy=multi-user.target
 
   - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
+  - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
     content: |
       [Unit]
       Description=Sysbench for ProxySQL against Percona XtraDB Cluster
@@ -319,8 +320,8 @@ write_files:
       [Service]
       Type=simple
       Restart=on-failure
-      RestartSec=10
-      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pxc80.cnf
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh postgres13.cnf
 
       [Install]
       WantedBy=multi-user.target
