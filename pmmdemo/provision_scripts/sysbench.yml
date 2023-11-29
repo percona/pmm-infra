@@ -281,7 +281,6 @@ write_files:
       WantedBy=multi-user.target
 
   - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
-  - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
     content: |
       [Unit]
       Description=Sysbench for ProxySQL against Percona XtraDB Cluster
