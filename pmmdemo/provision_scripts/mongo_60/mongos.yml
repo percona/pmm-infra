@@ -163,6 +163,7 @@ write_files:
         pwd: "${mongodb_ycsb_password}",
         roles: [
             { role: "readWriteAnyDatabase", db: "admin" },
-            { role: "clusterManager", db: "admin" }
+            { role: "clusterManager", db: "admin" },
+            { role: "enableSharding", db: "ycsb" }
         ]
       })

@@ -132,7 +132,7 @@ write_files:
           pwd: "${mongodb_60_pmm_admin_password}",
           roles: [
               { role: "userAdminAnyDatabase", db: "admin" },
-              { role: "clusterMonitor", db: "admin" }
+              { role: "clusterAdmin", db: "admin" }
           ]
         }
       )
