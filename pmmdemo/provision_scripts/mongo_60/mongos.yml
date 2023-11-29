@@ -29,7 +29,7 @@ runcmd:
   - sleep 15s
   - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --environment='demo' --enable-all-collectors
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --environment='prod' --enable-all-collectors
 
 write_files:
 
