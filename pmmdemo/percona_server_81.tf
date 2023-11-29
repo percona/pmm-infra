@@ -71,7 +71,7 @@ data "template_file" "percona_server_81_user_data" {
 
 module "percona_server_81_disk" {
   source      = "./modules/ebs"
-  count       = local.count
+  count       = local.count_81
   disk_name   = "percona-server-81"
   disk_size   = 256
   instance_id = module.percona_server_81[count.index].instance_id
