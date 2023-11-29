@@ -102,7 +102,20 @@ write_files:
       table-size=1000000
       tables=20
       verbosity=0
-      
+
+  - path: /etc/sysbench/ps81.cnf
+    content: |
+      mysql-db=sbtest_direct
+      mysql-host=percona-server-81-0
+      mysql-port=3306
+      mysql-user=sysbench-direct-ps81
+      mysql-password=${mysql81_sysbench_password}
+      rate=0
+      report-interval=10
+      table-size=1000000
+      tables=20
+      verbosity=0
+
   - path: /etc/sysbench/pxc80.cnf
     content: |
       mysql-db=sbtest_direct
@@ -143,6 +156,21 @@ write_files:
       time=0
       threads=5
 
+  - path: /etc/sysbench/proxysql_ps81.cnf
+    content: |
+      mysql-db=sbtest_proxysql
+      mysql-host=proxysql
+      mysql-port=3306
+      mysql-user=sysbench-proxysql-ps81
+      mysql-password=${percona_server_81_password}
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
+  
   - path: /etc/sysbench/proxysql_pxc80.cnf
     content: |
       mysql-db=sbtest_proxysql
@@ -188,6 +216,21 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /usr/lib/systemd/system/sysbench.ps81.service
+    content: |
+      [Unit]
+      Description=Sysbench for Percona Server 8.1
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh ps81.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
   - path: /usr/lib/systemd/system/sysbench.pxc80.service
     content: |
       [Unit]
@@ -214,6 +257,21 @@ write_files:
       Restart=on-failure
       RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps80.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.proxysql_ps81.service
+    content: |
+      [Unit]
+      Description=Sysbench for ProxySQL against Percona Server for MySQL 8.1
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps81.cnf
 
       [Install]
       WantedBy=multi-user.target
