@@ -52,8 +52,8 @@ write_files:
       user=root
       # Percona Server for MySQL 8.0
       password="${mysql80_sysbench_password}"
-      # MySQL root 
-      password="${mysql_root_password}"
+      # Percona Server for MySQL 8.1 
+      password="${mysql81_sysbench_password}"
       # PXC 8
       password="${percona_xtradb_cluster_80_password}"
       
@@ -151,7 +151,7 @@ write_files:
       mysql-host=proxysql
       mysql-port=3306
       mysql-user=sysbench-proxysql-ps
-      mysql-password=${percona_server_80_password}
+      mysql-password=${mysql80_sysbench_password}
       events=0
       rand-type=pareto
       rate=0
@@ -166,7 +166,7 @@ write_files:
       mysql-host=proxysql
       mysql-port=3306
       mysql-user=sysbench-proxysql-ps81
-      mysql-password=${percona_server_81_password}
+      mysql-password=${mysql81_sysbench_password}
       events=0
       rand-type=pareto
       rate=0
