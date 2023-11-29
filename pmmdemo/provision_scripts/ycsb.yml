@@ -6,7 +6,10 @@ manage_etc_hosts: true
 repo_upgrade: all
 
 runcmd:
-  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y psmdb-60
   - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
@@ -23,6 +26,18 @@ runcmd:
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
 
 write_files:
+
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+
   - path: /etc/ycsb/shard.js
     content: |
       sh.enableSharding('ycsb');
