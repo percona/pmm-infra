@@ -1,0 +1,220 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${name}
+fqdn: ${fqdn}
+manage_etc_hosts: true
+repo_upgrade: all
+
+packages:
+  - curl
+bootcmd:
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
+  - mkfs.xfs -L data /dev/nvme1n1
+  - mkdir -p /data
+
+mounts:
+  - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
+
+runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release enable-only pdps-8x-innovation
+  - yum -y install percona-server-server
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
+  - percona-release enable mysql-shell
+  - yum -y install percona-mysql-shell
+  - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
+  - chown mysql:mysql /data/
+  - if [ "${name}" == "percona-server-81-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
+  - systemctl enable mysqld.service
+  - systemctl start mysqld.service
+  - systemctl status mysqld.service
+  - bash /root/init-mysql.sh
+  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - timeout 60 bash -c 'until true ; do sleep 3; done'
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-81-cluster' --replication-set='ps-81-cluster' --environment='prod' --query-source=slowlog --service-name=${name}
+
+write_files:
+  - path: /root/.mysqlsh/options.json
+    permissions: "0644"
+    content: |
+      {
+        "history.autoSave": "true"
+      }
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+      ui_config{
+        enabled = true
+      }
+  - path: /etc/consul.d/ps-service.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "mysql",
+          "name": "mysql",
+          "tags": ["${name}"],
+          "address": "",
+          "port": 3306,
+          "checks": [
+            {
+        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps81", "--password=${mysql_sysbench_password}"],
+              "interval": "10s"
+            }
+          ]
+        }
+      }
+  - path: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      password="${mysql_root_password}"
+
+  - path: /etc/my.cnf.d/mysql_ps_81.cnf
+    content: |
+      [mysqld]
+
+      # Host specific replication configuration
+      #
+      report_host = ${fqdn}
+      report_port = 3306
+      server_id   = 1${index}
+
+
+      # Generic
+      #
+      datadir=/data
+      socket=/var/lib/mysql/mysql.sock
+      log-error=/var/log/mysqld.log
+      pid-file=/var/run/mysqld/mysqld.pid
+      log_error_verbosity=3
+
+      # Configure binary logs
+      #
+      log-bin
+      binlog_format=ROW
+      binlog_expire_logs_seconds=604800
+      binlog_space_limit=10G
+
+      # Configure slow logs
+      slow_query_log=ON
+      slow_query_log_always_write_time=1
+      slow_query_log_use_global_control=all
+      log_slow_rate_limit=1
+      log_slow_rate_type='query'
+      log_slow_admin_statements=ON
+      log_slow_replica_statements=ON
+      log_slow_verbosity=full
+      long_query_time=0
+      #max_slowlog_size=3G
+      #max_slowlog_files=3
+
+      # Configure statistics
+      #
+      userstat=ON
+      performance_schema=ON
+      innodb_monitor_enable=module_index
+
+      # Async replication
+      #
+      gtid_mode=ON
+      enforce_gtid_consistency=ON
+
+  - path: /tmp/replica-config.cnf
+    content: |
+      [mysqld]
+      innodb_flush_log_at_trx_commit=1
+      innodb_flush_method=O_DIRECT
+      innodb_flush_neighbors=0
+      read_only=1
+      replica_parallel_workers=2
+      replica_preserve_commit_order=1
+      sync_binlog=1
+
+  - path: /root/init-mysql.sh
+    permissions: "0555"
+    content: |
+      #!/bin/bash
+
+      for (( i=1 ; i<=30 ; i++ )); do
+        if [[ "$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | wc -l)" == "1" ]]; then
+            MYSQL_ROOT_PASSWORD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
+            mysql --connect-expired-password -uroot -p"$MYSQL_ROOT_PASSWORD" -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+            break;
+        else
+            echo "retry";
+            sleep 2;
+        fi;
+      done;
+
+      if [ "${name}" == "percona-server-81-0" ]; then
+        for (( i=1 ; i<=300 ; i++ )); do
+            if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
+              mysql --defaults-file=/root/.my.cnf -Be "SET GLOBAL validate_password.special_char_count = 0;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest_direct;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest_proxysql;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'sysbench-direct-ps81'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest_direct.* TO 'sysbench-direct-ps81'@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-proxysql-ps81'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_proxysql.* TO 'sysbench-proxysql-ps81'@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
+              break;
+            else
+              echo "retry";
+              sleep 3;
+            fi;
+        done;
+      fi
+
+      if [ "${name}" == "percona-server-81-1" ]; then
+        for (( i=1 ; i<=300 ; i++ )); do
+            if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
+                # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
+                mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-81-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
+                mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
+                break;
+            else
+                echo "retry";
+                sleep 3;
+            fi;
+        done;
+      fi
+
+  - path: /etc/logrotate.d/mysql
+    permissions: "0644"
+    content: |
+      /var/log/mysqld.log {
+          create 600 mysql mysql
+          notifempty
+          daily
+          rotate 5
+          size 5G
+          missingok
+          nocompress
+        postrotate
+          if test -x /usr/bin/mysqladmin && /usr/bin/mysqladmin ping &>/dev/null
+          then
+            /usr/bin/mysqladmin flush-logs
+          fi
+        endscript
+      }
