@@ -1,11 +1,11 @@
 locals {
   percona_server_81_name = "percona-server-81"
-  count                  = 2 # source and replica
+  count_81               = 2 # source and replica
 }
 
 module "percona_server_81" {
   source        = "./modules/ec2"
-  count         = local.count
+  count         = local.count_81
   server_name   = "${local.percona_server_81_name}-${count.index}"
   instance_type = "t3a.medium"
   subnet_id     = aws_subnet.pmmdemo_private.id
