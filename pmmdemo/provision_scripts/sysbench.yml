@@ -20,14 +20,18 @@ runcmd:
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.ps80
+  - systemctl enable sysbench.ps81
   - systemctl enable sysbench.pxc80
   - systemctl enable sysbench.proxysql_ps80
+  - systemctl enable sysbench.proxysql_ps81
   - systemctl enable sysbench.proxysql_pxc80
   - systemctl enable sysbench.haproxy.pxc80
   - systemctl enable sysbench.postgres13
   - systemctl start sysbench.ps80
+  - systemctl start sysbench.ps81
   - systemctl start sysbench.pxc80
   - systemctl start sysbench.proxysql_ps80
+  - systemctl start sysbench.proxysql_ps81
   - systemctl start sysbench.proxysql_pxc80
   - systemctl start sysbench.haproxy.pxc80
   - systemctl start sysbench.postgres13

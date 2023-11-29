@@ -21,7 +21,7 @@ runcmd:
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release enable pdps-8x-innovation
+  - percona-release enable-only pdps-8x-innovation
   - yum -y install percona-server-server
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
