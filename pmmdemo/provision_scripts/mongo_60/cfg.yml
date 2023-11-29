@@ -33,7 +33,7 @@ runcmd:
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - bash /tmp/mongodb-init-rs.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --service-name=${name} --enable-all-collectors
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='demo' --service-name=${name} --enable-all-collectors
 
 write_files:
 
@@ -55,12 +55,12 @@ write_files:
         "service": {
           "id": "${name}",
           "name": "mongo",
-          "tags": ["${name}"],
+          "tags": ["mongo-${replica_set_name}", "${name}"],
           "address": "",
-          "port": 3306,
+          "port": 27019,
           "checks": [
             {
-              "args": ["mongosh", "--port", "27019", "--eval", "db.serverStatus().ok", "-quiet"],
+              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
               "interval": "10s"
             }
           ]
@@ -111,51 +111,47 @@ write_files:
   - path: /tmp/init.js
     content: |
       db.getMongo().setReadPref("primaryPreferred")
-      rs.initiate(
-        {
-          _id: "${replica_set_name}",
-          configsvr: true,
-          members: [
-            { _id : 0, host : "mongo-60-cfg-0.${route53_name}:27019", priority: 2 },
-            { _id : 1, host : "mongo-60-cfg-1.${route53_name}:27019", priority: 1 },
-            { _id : 2, host : "mongo-60-cfg-2.${route53_name}:27019", priority: 1 }
-          ]
-        }
-      )
+      rs.initiate({
+        _id: "${replica_set_name}",
+        configsvr: true,
+        members: [
+          { _id : 0, host : "mongo-60-cfg-0.${route53_name}:27019", priority: 2 },
+          { _id : 1, host : "mongo-60-cfg-1.${route53_name}:27019", priority: 1 },
+          { _id : 2, host : "mongo-60-cfg-2.${route53_name}:27019", priority: 1 }
+        ]
+      })
 
   - path: /tmp/admin.js
     content: |
       admin = db.getSiblingDB("admin")
-      admin.createUser(
-        {
-          user: "pmm-admin",
-          pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [
-              { role: "userAdminAnyDatabase", db: "admin" },
-              { role: "clusterAdmin", db: "admin" }
-          ]
-        }
-      )
+      admin.createUser({
+        user: "pmm-admin",
+        pwd: "${mongodb_60_pmm_admin_password}",
+        roles: [
+            { role: "userAdminAnyDatabase", db: "admin" },
+            { role: "clusterAdmin", db: "admin" }
+        ]
+      })
 
   - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
           privileges: [{
-              resource: {
-                  db: "",
-                  collection: ""
-                  },
-              actions: [
-                  "listIndexes",
-                  "listCollections",
-                  "dbStats",
-                  "dbHash",
-                  "collStats",
-                  "find",
-                  "indexStats"
-                  ]
-              }],
+            resource: { db: '', collection: '' },
+            actions: [
+              'collStats',
+              'dbHash',
+              'dbStats',
+              'find',
+              'listCollections',
+              'listIndexes'
+            ]
+          },
+          {
+            resource: { db: '', collection: 'system.profile' },
+            actions: [ 'collStats', 'dbStats', 'indexStats' ]
+          }],
           roles:[]
       })
       db.getSiblingDB("admin").createUser({
@@ -167,27 +163,16 @@ write_files:
             { role: "read", db: "local" }
         ]
       })
-      db.getSiblingDB("admin").createUser({
-        user: "ycsb",
-        pwd: "${mongodb_ycsb_password}",
-        roles: [
-            { role: "readWrite", db: "ycsb" }
-        ]
-      })
-
-  - path: /root/.mongoshrc.js
-    content: |
-      db = connect("localhost:27019/")
 
   - path: /tmp/mongodb-init-rs.sh
-    permissions: "0500"
+    permissions: "0700"
     content: |
       #!/bin/bash
       
       myhostname=$(hostname -f)
       memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f4)
       
-      echo "-- MonogoDB RS"
+      echo "-- MongoDB RS"
       echo "--- $${myhostname}"
       echo "--- This is member id $${memberid}"
       

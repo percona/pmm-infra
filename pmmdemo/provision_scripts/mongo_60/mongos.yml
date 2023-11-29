@@ -29,7 +29,7 @@ runcmd:
   - sleep 15s
   - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --environment='demo' --enable-all-collectors
 
 write_files:
 
@@ -53,10 +53,10 @@ write_files:
           "name": "mongos",
           "tags": ["${name}"],
           "address": "",
-          "port": 3306,
+          "port": 27019,
           "checks": [
             {
-              "args": ["mongosh", "--port", "27019", "--eval", "db.serverStatus().ok", "-quiet"],
+              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
               "interval": "10s"
             }
           ]
@@ -93,16 +93,14 @@ write_files:
       sh.addShard("shard-0/mongo-60-rs-0-0.${route53_name}:27019,mongo-60-rs-0-1.${route53_name}:27019,mongo-60-rs-0-2.${route53_name}:27019")
       sh.addShard("shard-1/mongo-60-rs-1-0.${route53_name}:27019,mongo-60-rs-1-1.${route53_name}:27019,mongo-60-rs-1-2.${route53_name}:27019")
       admin = db.getSiblingDB("admin")
-      admin.createUser(
-        {
-          user: "pmm-admin",
-          pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [
-              { role: "userAdminAnyDatabase", db: "admin" },
-              { role: "clusterMonitor", db: "admin" }
-          ]
-        }
-      )
+      admin.createUser({
+        user: "pmm-admin",
+        pwd: "${mongodb_60_pmm_admin_password}",
+        roles: [
+            { role: "userAdminAnyDatabase", db: "admin" },
+            { role: "clusterAdmin", db: "admin" }
+        ]
+      })
 
   - path: /usr/lib/systemd/system/mongos.service
     content: |
@@ -114,7 +112,7 @@ write_files:
       User=mongod
       Group=mongod
       Type=forking
-      ExecStart=/bin/mongos --config /etc/mongos.conf --fork
+      ExecStart=/bin/mongos --config /etc/mongos.conf
       PIDFile=/var/run/mongo/mongos.pid
       LimitFSIZE=infinity
       LimitCPU=infinity
@@ -133,20 +131,20 @@ write_files:
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
           privileges: [{
-              resource: {
-                  db: "",
-                  collection: ""
-                  },
-              actions: [
-                  "listIndexes",
-                  "listCollections",
-                  "dbStats",
-                  "dbHash",
-                  "collStats",
-                  "find",
-                  "indexStats"
-                  ]
-              }],
+            resource: { db: '', collection: '' },
+            actions: [
+              'collStats',
+              'dbHash',
+              'dbStats',
+              'find',
+              'listCollections',
+              'listIndexes'
+            ]
+          },
+          {
+            resource: { db: '', collection: 'system.profile' },
+            actions: [ 'collStats', 'dbStats', 'indexStats' ]
+          }],
           roles:[]
       })
       db.getSiblingDB("admin").createUser({
