@@ -53,7 +53,6 @@ write_files:
         "service": {
           "name": "mongos",
           "tags": ["${name}"],
-          "address": "",
           "port": 27019,
           "checks": [
             {

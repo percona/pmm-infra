@@ -59,7 +59,6 @@ write_files:
           {
             "name": "mongo-60-${replica_set_name}",
             "tags": ["mongo-60-rs-${shard_number}", "${name}"],
-            "address": "",
             "port": 27019,
             "checks": [
               {
