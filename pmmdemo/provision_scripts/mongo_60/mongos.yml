@@ -7,10 +7,12 @@ repo_upgrade: all
 
 packages:
   - curl
+  - jq
 
 runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
+  - usermod -d /opt/consul consul
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
@@ -49,7 +51,6 @@ write_files:
     content: |
       {
         "service": {
-          "id": "${name}",
           "name": "mongos",
           "tags": ["${name}"],
           "address": "",

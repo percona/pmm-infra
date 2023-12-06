@@ -15,10 +15,12 @@ mounts:
 
 packages:
   - curl
+  - jq
 
 runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
+  - usermod -d /opt/consul consul
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
@@ -31,6 +33,7 @@ runcmd:
   - systemctl enable mongod
   - systemctl start mongod
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - bash pip3 install ansi2txt
   - bash /tmp/mongodb-init-rs.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-rs-${shard_number}' --environment='prod' --service-name=${name} --enable-all-collectors
@@ -52,31 +55,46 @@ write_files:
     permissions: "0644"
     content: |
       {
-        "service": {
-          "id": "${name}",
-          "name": "mongo",
-          "tags": ["mongo-${replica_set_name}", "mongo-rs-${shard_number}", "${name}"],
-          "address": "",
-          "port": 27019,
-          "checks": [
-            {
-              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
+        "services": [
+          {
+            "name": "mongo-60-${replica_set_name}",
+            "tags": ["mongo-60-rs-${shard_number}", "${name}"],
+            "address": "",
+            "port": 27019,
+            "checks": [
+              {
+                "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
+                "interval": "10s"
+              }
+            ]
+          },
+          {
+            "name": "mongo-60-rs-${shard_number}-primary",
+            "checks": [{
+              "args": ["/usr/local/bin/mongo_is_primary.sh"],
               "interval": "10s"
-            }
-          ]
-        }
+            }]
+          }        ]
       }
 
   - path: /usr/local/bin/mongo_is_primary.sh
     permissions: "0700"
     content: |
-      #!/bin/bash
-      ISMASTER=$(NO_COLOR=1 /usr/bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'db.isMaster().ismaster')
-      if [[ "$ISMASTER" =~ "true" ]]; then
-        exit 0
-      else
-        exit 2
-      fi
+        #!/bin/bash
+        masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)' | /usr/local/bin/ansi2txt)
+        primary=$(echo $masterstat | cut -d# -f2)
+        primary=${primary:0:-1}
+        ismaster=$(echo $masterstat | cut -d# -f1)
+        echo "$primary is primary"
+        if [[ "${ismaster:1}" =~ "true" ]]; then
+          exit 0
+        else
+          exit 2
+        fi
+
+  - path: /etc/mongosh.conf
+    content: |
+      enableTelemetry: false
 
   - path: /etc/mongod.conf
     content: |
@@ -197,22 +215,13 @@ write_files:
       echo "-- Waiting for all 3 members..."
       
       for (( i=1 ; i<=100 ; i++ )); do
-        let s=0
-        for j in 0 1 2; do
-          h="mongo-60-rs-${shard_number}-$${j}"
-          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
-          if [ $? -eq 0 ]; then
-            echo "-- Mongod $${h} appears alive"
-            ((s++))
-          fi
-        done
-        
-        if [ $s -eq 3 ]; then
+        num=$(curl -s http://pmm-server:8500/v1/health/checks/mongo-60-rs-${shard_number} | jq -r '[.[]|select(.Status=="passing")]|length')
+        if [ $num -eq 3 ]; then
           echo "-- Looks like all 3 members are online"
           break
         fi
         
-        echo "-- Only $${s} members responding to ping; retry $${i}/100"
+        echo "-- Only $${num} members in consul; retry $${i}/100"
         sleep 2
       done
       
