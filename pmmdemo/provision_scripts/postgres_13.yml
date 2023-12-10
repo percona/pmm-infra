@@ -28,6 +28,7 @@ runcmd:
   - echo "shared_preload_libraries = 'pg_stat_monitor'" >> /data/postgresql.conf
   - echo "pg_stat_monitor.pgsm_query_max_len = 2048" >> /data/postgresql.conf
   - echo "pg_stat_monitor.pgsm_enable_query_plan = 1" >> /data/postgresql.conf
+  - echo "max_connections = 75" >> /data/postgresql.conf
   - systemctl start postgresql-13
   - chmod +x /tmp/init-postgres.sh
   - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
