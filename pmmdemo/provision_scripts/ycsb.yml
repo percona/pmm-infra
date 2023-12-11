@@ -5,6 +5,10 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
+packages:
+  - curl
+  - jq
+
 runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
@@ -49,21 +53,13 @@ write_files:
       #!/bin/bash
       
       # Wait for mongos
-      echo "-- Waiting for all 3 mongos..."
+      echo "-- Waiting for all 9 mongo servers..."
       
       for (( i=1 ; i<=100 ; i++ )); do
-        let s=0
-        for j in 0 1 2; do
-          h="mongo-60-mongos-$${j}"
-          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
-          if [ $? -eq 0 ]; then
-            echo "-- Mongos $${h} appears alive"
-            ((s++))
-          fi
-        done
+        s=$(curl -s --get http://pmm-server:8500/v1/catalog/service/mongo | jq 'length')
         
-        if [ $s -eq 3 ]; then
-          echo "-- Looks like all 3 mongos are online"
+        if [ $s -eq 9 ]; then
+          echo "-- Looks like all 9 mongos are online"
           break
         fi
         
@@ -71,7 +67,7 @@ write_files:
         sleep 2
       done
       
-      # All 3 mongos online, connect to mongos-0 and configure sharding
+      # All 9 mongos online, connect to mongos-0 and configure sharding
       mongosh --port 27019 --host mongo-60-mongos-0 -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
       sleep 2
       
