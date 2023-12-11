@@ -320,7 +320,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh postgres13.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pxc80.cnf
 
       [Install]
       WantedBy=multi-user.target

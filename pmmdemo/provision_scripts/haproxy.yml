@@ -11,7 +11,7 @@ packages:
 runcmd:
   - systemctl enable --now docker
   - usermod -a -G docker ec2-user
-  - docker run --net host -d --name haproxy -v /etc/haproxy:/usr/local/etc/haproxy:ro haproxy:2.6
+  - docker run --net host --restart=unless-stopped -d --name haproxy -v /etc/haproxy:/usr/local/etc/haproxy:ro haproxy:2.6
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
@@ -38,6 +38,9 @@ write_files:
         timeout client      50000
         timeout connect      5000
         timeout server      50000
+
+      resolvers mynameservers
+        parse-resolv-conf
 
       listen mysql-cluster
         balance roundrobin
