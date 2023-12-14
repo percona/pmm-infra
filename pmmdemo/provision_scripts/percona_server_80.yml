@@ -46,6 +46,7 @@ write_files:
       {
         "history.autoSave": "true"
       }
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -71,12 +72,13 @@ write_files:
           "port": 3306,
           "checks": [
             {
-        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${mysql_sysbench_password}"],
+              "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${mysql_sysbench_password}"],
               "interval": "10s"
             }
           ]
         }
       }
+
   - path: /root/.my.cnf
     content: |
       [client]
@@ -92,7 +94,6 @@ write_files:
       report_host = ${fqdn}
       report_port = 3306
       server_id   = 1${index}
-
 
       # Generic
       #
@@ -111,10 +112,11 @@ write_files:
       binlog_space_limit=10G
 
       # Configure slow logs
+      #
       slow_query_log=ON
       slow_query_log_always_write_time=1
       slow_query_log_use_global_control=all
-      log_slow_rate_limit=1
+      log_slow_rate_limit=2       # Log every other slow query
       log_slow_rate_type='query'
       log_slow_admin_statements=ON
       log_slow_replica_statements=ON
@@ -122,6 +124,12 @@ write_files:
       long_query_time=0
       #max_slowlog_size=3G
       #max_slowlog_files=3
+
+      # InnoDB
+      #
+      innodb_buffer_pool_size=1G
+      innodb_flush_method=O_DIRECT
+      innodb_adaptive_hash_index=OFF
 
       # Configure statistics
       #
