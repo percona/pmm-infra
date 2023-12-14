@@ -37,7 +37,7 @@ runcmd:
   - percona-release setup -y ps-80
   - yum -y install percona-server-client
   - docker pull percona/pmm-server:2
-  - docker volume create pmm-data || true
+  - docker create -v /srv --name pmm-data percona/pmm-server:2 /bin/true
   - docker run -d -p 443:443 -p 80:80 -v pmm-data:/srv --name pmm-server --restart always percona/pmm-server:2
   - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
