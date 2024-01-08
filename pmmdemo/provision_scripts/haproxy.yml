@@ -47,9 +47,9 @@ write_files:
         bind 0.0.0.0:3306 accept-proxy
         mode tcp
         option mysql-check user haproxy_check
-        server db01 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
-        server db02 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
-        server db03 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
 
       frontend stats
         bind *:8404
