@@ -23,9 +23,6 @@ module "percona_server_81" {
 
 resource "random_password" "mysql81_root_password" {
   length      = 8
-  special     = false
-  upper       = true
-  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -34,9 +31,6 @@ resource "random_password" "mysql81_root_password" {
 
 resource "random_password" "mysql81_replica_password" {
   length      = 8
-  special     = false
-  upper       = true
-  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -45,12 +39,10 @@ resource "random_password" "mysql81_replica_password" {
 
 resource "random_password" "mysql81_sysbench_password" {
   length      = 8
-  special     = false
-  upper       = true
-  numeric     = true
   min_lower   = 1
   min_numeric = 1
   min_upper   = 1
+  min_special = 1
 }
 
 data "template_file" "percona_server_81_user_data" {
