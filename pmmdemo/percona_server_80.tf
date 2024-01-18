@@ -22,10 +22,7 @@ module "percona_server_80" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
+  length      = 8
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -33,10 +30,7 @@ resource "random_password" "mysql80_root_password" {
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
+  length      = 8
   min_lower   = 1
   min_numeric = 1
   min_special = 1
@@ -44,12 +38,10 @@ resource "random_password" "mysql80_replica_password" {
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
+  length      = 8
   min_lower   = 1
   min_numeric = 1
+  min_special = 1
   min_upper   = 1
 }
 
