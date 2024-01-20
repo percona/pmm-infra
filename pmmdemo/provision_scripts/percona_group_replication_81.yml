@@ -63,7 +63,7 @@ write_files:
           "port": 3306,
           "checks": [
             {
-        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysqlpercona-gr", "--password=${mysql_sysbench_password}"],
+        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"],
               "interval": "10s"
             }
           ]
@@ -174,15 +174,12 @@ write_files:
         fi      
         mysql --defaults-file=/root/.my.cnf -Bse "SET GLOBAL validate_password.special_char_count = 0;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'localhost' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'localhost'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'replica-native'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO 'replica-native'@'%'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'replica-native'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO 'replica-native'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
