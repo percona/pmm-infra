@@ -34,10 +34,14 @@ runcmd:
   - systemctl start mysqld.service
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - timeout 60 bash -c 'until true ; do sleep 3; done'
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-81-cluster' --replication-set='ps-81-cluster' --environment='prod' --query-source=slowlog --service-name=${name}
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
   - path: /root/.mysqlsh/options.json
@@ -101,7 +105,8 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
-      proxy_protocol_networks=10.0.0.0/16
+      #proxy_protocol_networks=10.0.0.0/16
+      loose-validate_password.policy = 0
 
       # Configure binary logs
       #

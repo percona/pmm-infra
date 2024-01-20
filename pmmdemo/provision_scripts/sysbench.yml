@@ -12,10 +12,11 @@ runcmd:
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release enable-only ps-80
+  - yum -y install percona-server-client
   - percona-release enable tools release
   - yum -y install pmm2-client sysbench
   - percona-release enable mysql-shell
-  - percona-release enable ps-80
   - yum -y install percona-mysql-shell
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
@@ -35,9 +36,13 @@ runcmd:
   - systemctl start sysbench.proxysql_pxc80
   - systemctl start sysbench.haproxy.pxc80
   - systemctl start sysbench.postgres13
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
   - path: /root/.mysqlsh/options.json
@@ -50,6 +55,8 @@ write_files:
     content: |
       [client]
       user=root
+      # ProxySQL 
+      password="${proxysql_monitor_password}"
       # Percona Server for MySQL 8.0
       password="${mysql80_sysbench_password}"
       # Percona Server for MySQL 8.1 
@@ -80,6 +87,13 @@ write_files:
           exit 1;
       fi;
 
+      check_failure() {
+          if [ $? -ne 0 ]; then
+            echo "Seems to be a problem with the endpoint. Sleeping so we don't spam the annotations!";
+            sleep 60;
+          fi
+      }  
+
       OLTP_AVAILABLE=(oltp_delete.lua oltp_insert.lua oltp_point_select.lua oltp_read_only.lua oltp_read_write.lua oltp_update_index.lua oltp_update_non_index.lua oltp_write_only.lua)
       OLTP_PATH='/usr/share/sysbench'
       for (( ; ; )); do
@@ -89,9 +103,13 @@ write_files:
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
           pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}";
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
+          check_failure;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
+          check_failure;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
+          check_failure;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
+          check_failure;
       done;
 
   - path: /etc/sysbench/ps80.cnf
@@ -249,7 +267,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-     
   - path: /usr/lib/systemd/system/sysbench.proxysql_ps80.service
     content: |
       [Unit]
