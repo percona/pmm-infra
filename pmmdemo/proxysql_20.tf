@@ -23,6 +23,7 @@ module "proxysql" {
     percona_server_81_password            = random_password.mysql81_sysbench_password.result
     percona_xtradb_cluster_80_password    = random_password.percona_xtradb_cluster_80_sysbench_password.result
     environment_name                      = local.environment_name
+    percona_group_replication_81_password = random_password.percona_group_replication_81_sysbench_password.result
   })
 
   depends_on = [
@@ -30,19 +31,22 @@ module "proxysql" {
     module.percona_server_80,
     module.percona_server_81,
     module.percona_xtradb_cluster_80,
+    module.percona_group_replication_81
   ]
 }
 
 resource "random_password" "proxysql_monitor" {
   length      = 8
-  min_lower   = 1
-  min_numeric = 1
-  min_upper   = 1
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 resource "random_password" "proxysql_admin" {
   length      = 8
-  min_lower   = 1
-  min_numeric = 1
-  min_upper   = 1
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }

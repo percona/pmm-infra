@@ -23,18 +23,24 @@ runcmd:
   - systemctl enable sysbench.ps80
   - systemctl enable sysbench.ps81
   - systemctl enable sysbench.pxc80
+  - systemctl enable sysbench.pgr81
   - systemctl enable sysbench.proxysql_ps80
   - systemctl enable sysbench.proxysql_ps81
   - systemctl enable sysbench.proxysql_pxc80
+  - systemctl enable sysbench.proxysql_pgr81
   - systemctl enable sysbench.haproxy.pxc80
+  #- systemctl enable sysbench.haproxy.pgr81
   - systemctl enable sysbench.postgres13
   - systemctl start sysbench.ps80
   - systemctl start sysbench.ps81
   - systemctl start sysbench.pxc80
+  - systemctl start sysbench.pgr81
   - systemctl start sysbench.proxysql_ps80
   - systemctl start sysbench.proxysql_ps81
   - systemctl start sysbench.proxysql_pxc80
+  - systemctl start sysbench.proxysql_pgr81
   - systemctl start sysbench.haproxy.pxc80
+  #- systemctl start sysbench.haproxy.pgr81
   - systemctl start sysbench.postgres13
   - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
@@ -63,6 +69,8 @@ write_files:
       password="${mysql81_sysbench_password}"
       # PXC 8
       password="${percona_xtradb_cluster_80_password}"
+      # Percona Group Replication 8.1
+      password="${percona_group_replication_81_password}"
       
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
@@ -111,6 +119,19 @@ write_files:
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
       done;
+
+  - path: /etc/sysbench/pgr81.cnf
+    content: |
+      mysql-db=sbtest_direct_gr
+      mysql-host=percona-group-replication-1
+      mysql-port=3306
+      mysql-user=sysbench-direct-percona-gr
+      mysql-password=${percona_group_replication_81_password}
+      rate=0
+      report-interval=10
+      table-size=1000000
+      tables=20
+      verbosity=0
 
   - path: /etc/sysbench/ps80.cnf
     content: |
@@ -163,6 +184,21 @@ write_files:
       report-interval=10
       verbosity=0
 
+  - path: /etc/sysbench/proxysql_pgr81.cnf
+    content: |
+      mysql-db=sbtest_proxysql_gr
+      mysql-host=proxysql
+      mysql-port=3306
+      mysql-user="sysbench-proxysql-percona-gr"
+      mysql-password=${percona_group_replication_81_password}
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
+
   - path: /etc/sysbench/proxysql_ps80.cnf
     content: |
       mysql-db=sbtest_proxysql
@@ -208,6 +244,21 @@ write_files:
       time=0
       threads=5
 
+  - path: /etc/sysbench/haproxy_pgr81.cnf
+    content: |
+      mysql-db=sbtest_haproxy_gr
+      mysql-host=haproxy
+      mysql-port=3306
+      mysql-user=sysbench-haproxy-percona-gr
+      mysql-password=$(percona_group_replication_81_password)
+      events=0
+      rand-type=pareto
+      rate=0
+      report-interval=10
+      table_size=1000000
+      time=0
+      threads=5
+
   - path: /etc/sysbench/haproxy_pxc80.cnf
     content: |
       mysql-db=sbtest_haproxy
@@ -222,6 +273,21 @@ write_files:
       table_size=1000000
       time=0
       threads=5
+
+  - path: /usr/lib/systemd/system/sysbench.pgr81.service
+    content: |
+      [Unit]
+      Description=Sysbench for Percona Group Replication 8.1
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh pgr81.cnf
+
+      [Install]
+      WantedBy=multi-user.target
 
   - path: /usr/lib/systemd/system/sysbench.ps80.service
     content: |
@@ -267,6 +333,22 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.proxysql_pgr81.service
+    content: |
+      [Unit]
+      Description=Sysbench for ProxySQL against Percona Group Replication 81.
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pgr81.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
   - path: /usr/lib/systemd/system/sysbench.proxysql_ps80.service
     content: |
       [Unit]
@@ -323,6 +405,21 @@ write_files:
       Restart=on-failure
       RestartSec=600
       ExecStart=/etc/sysbench/exec_sysbench.sh postgres13.cnf
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/lib/systemd/system/sysbench.haproxy.pgr81.service
+    content: |
+      [Unit]
+      Description=Sysbench for Percona Group Replication 8.1 behind HAProxy
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pgr81.cnf
 
       [Install]
       WantedBy=multi-user.target

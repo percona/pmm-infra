@@ -24,5 +24,6 @@ module "sysbench" {
     postgres_sysbench_password            = random_password.postgres_sysbench_password.result
     proxysql_monitor_password             = random_password.proxysql_monitor.result
     environment_name                      = local.environment_name
+    percona_group_replication_81_password = random_password.percona_group_replication_81_sysbench_password.result
   })
 }
