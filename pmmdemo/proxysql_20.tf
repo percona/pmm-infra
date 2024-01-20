@@ -32,15 +32,17 @@ module "proxysql" {
 }
 
 resource "random_password" "proxysql_monitor" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 resource "random_password" "proxysql_admin" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }

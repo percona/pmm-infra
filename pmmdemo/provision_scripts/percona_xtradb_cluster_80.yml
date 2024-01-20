@@ -90,8 +90,8 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
-      proxy_protocol_networks=10.0.0.0/16
-
+      #proxy_protocol_networks=10.0.0.0/16
+      loose-validate_password.policy = 0
 
       # Config binary and slow_query logs
       #
