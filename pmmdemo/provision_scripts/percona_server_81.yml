@@ -34,10 +34,14 @@ runcmd:
   - systemctl start mysqld.service
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - timeout 60 bash -c 'until true ; do sleep 3; done'
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-81-cluster' --replication-set='ps-81-cluster' --environment='prod' --query-source=slowlog --service-name=${name}
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
   - path: /root/.mysqlsh/options.json
@@ -46,6 +50,7 @@ write_files:
       {
         "history.autoSave": "true"
       }
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -59,6 +64,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /etc/consul.d/ps-service.json
     permissions: "0644"
     content: |
@@ -71,12 +77,13 @@ write_files:
           "port": 3306,
           "checks": [
             {
-        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps81", "--password=${mysql_sysbench_password}"],
+              "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps81", "--password=${mysql_sysbench_password}"],
               "interval": "10s"
             }
           ]
         }
       }
+
   - path: /root/.my.cnf
     content: |
       [client]
@@ -104,6 +111,7 @@ write_files:
       #proxy_protocol_networks=10.0.0.0/16
       loose-validate_password.policy = 0
       
+
       # Configure binary logs
       #
       log-bin
@@ -112,6 +120,7 @@ write_files:
       binlog_space_limit=10G
 
       # Configure slow logs
+      #
       slow_query_log=ON
       slow_query_log_always_write_time=1
       slow_query_log_use_global_control=all
@@ -123,6 +132,11 @@ write_files:
       long_query_time=0
       #max_slowlog_size=3G
       #max_slowlog_files=3
+
+      # InnoDB
+      #
+      innodb_buffer_pool_size=1G
+      innodb_flush_method=O_DIRECT
 
       # Configure statistics
       #

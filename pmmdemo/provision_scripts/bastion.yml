@@ -18,9 +18,13 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - systemctl enable docker
   - service docker start
-  - usermod  -a -G docker ec2-user
+  - usermod -a -G docker ec2-user
   - chmod +x /tmp/cert.sh
   - bash /tmp/cert.sh
   - rm /tmp/cert.sh
@@ -31,8 +35,25 @@ runcmd:
   - docker exec nginx certbot --nginx --non-interactive --agree-tos --test-cert -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/pmm-admin_password
   - chmod 400 /root/pmm-admin_password
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+      ui_config{
+        enabled = true
+      }
   - path: /root/.ssh/config
     content: |
       Host *

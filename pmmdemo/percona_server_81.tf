@@ -58,6 +58,7 @@ data "template_file" "percona_server_81_user_data" {
     mysql_sysbench_password   = random_password.mysql81_sysbench_password.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
+    environment_name          = local.environment_name
   }
 }
 
