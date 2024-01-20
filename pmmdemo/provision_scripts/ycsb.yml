@@ -15,10 +15,12 @@ runcmd:
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y psmdb-60
-  - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - percona-release setup -y psmdb-60
+  - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
   - mkdir -p /data
   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
   - tar xfz ycsb-0.17.0.tar.gz && rm ycsb-0.17.0.tar.gz
@@ -26,8 +28,10 @@ runcmd:
   - /bin/bash /etc/ycsb/initial_load.sh
   - systemctl enable ycsb.mongodb60
   - systemctl start ycsb.mongodb60
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
 
