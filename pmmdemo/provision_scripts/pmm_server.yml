@@ -37,7 +37,7 @@ runcmd:
   - percona-release setup -y ps-80
   - yum -y install percona-server-client
   - docker pull percona/pmm-server:2
-  - docker volume create pmm-data || true
+  - docker create -v /srv --name pmm-data percona/pmm-server:2 /bin/true
   - docker run -d -p 443:443 -p 80:80 -v pmm-data:/srv --name pmm-server --restart always percona/pmm-server:2
   - sleep 20s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
@@ -47,6 +47,10 @@ runcmd:
   - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
   - bash /root/add-rds-to-pmm.sh
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
 

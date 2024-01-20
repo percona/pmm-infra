@@ -20,6 +20,7 @@ module "bastion" {
     email            = var.owner_email,
     pmm_admin_pass   = random_password.pmm_admin_pass.result,
     fqdn             = "${local.bastion_name}.${aws_route53_zone.demo_local.name}",
+    environment_name = local.environment_name
   })
 }
 

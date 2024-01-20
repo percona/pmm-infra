@@ -28,6 +28,7 @@ module "pmm_server" {
       oauth_scopes               = var.oauth_scopes
       oauth_role_attribute_path  = var.oauth_role_attribute_path
       oauth_signout_redirect_url = var.oauth_signout_redirect_url
+      environment_name           = local.environment_name
     }
   )
 }
@@ -40,8 +41,10 @@ module "pmm_server_disk" {
 }
 
 resource "random_password" "pmm_admin_pass" {
-  length  = 20
+  length  = 8
   special = false
+  lower   = false
+  numeric = false
 }
 
 data "aws_iam_user" "rds_user" {

@@ -9,6 +9,10 @@ packages:
   - docker
 
 runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
   - systemctl enable --now docker
   - usermod -a -G docker ec2-user
   - docker run --net host --restart=unless-stopped -d --name haproxy -v /etc/haproxy:/usr/local/etc/haproxy:ro haproxy:2.6
@@ -17,8 +21,25 @@ runcmd:
   - yum install -y pmm2-client
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      server = false
+      ui_config{
+        enabled = true
+      }
   - path: /etc/haproxy/haproxy.cfg
     content: |
       global
@@ -47,9 +68,9 @@ write_files:
         bind 0.0.0.0:3306 accept-proxy
         mode tcp
         option mysql-check user haproxy_check
-        server db01 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
-        server db02 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
-        server db03 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
 
       frontend stats
         bind *:8404

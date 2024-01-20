@@ -22,35 +22,15 @@ module "percona_server_80" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 1
-  min_upper   = 1
+  length      = 8
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 1
-  min_upper   = 1
+  length      = 8
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_upper   = 1
+  length      = 8
 }
 
 data "template_file" "percona_server_80_user_data" {
@@ -66,6 +46,7 @@ data "template_file" "percona_server_80_user_data" {
     mysql_sysbench_password   = random_password.mysql80_sysbench_password.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
+    environment_name          = local.environment_name
   }
 }
 

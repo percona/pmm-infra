@@ -82,10 +82,10 @@ write_files:
         #!/bin/bash
         masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)' | /usr/local/bin/ansi2txt)
         primary=$(echo $masterstat | cut -d# -f2)
-        primary=${primary:0:-1}
+        primary=$${primary:0:-1}
         ismaster=$(echo $masterstat | cut -d# -f1)
         echo "$primary is primary"
-        if [[ "${ismaster:1}" =~ "true" ]]; then
+        if [[ "$${ismaster:1}" =~ "true" ]]; then
           exit 0
         else
           exit 2
