@@ -12,13 +12,13 @@ resource "aws_instance" "ec2" {
     volume_type = var.root_disk_type
     volume_size = var.root_disk_size
     tags = {
-      "Name"      = "pmmdemo-${var.server_name}",
+      "Name"      = "${local.environment_name}-${var.server_name}",
       "terraform" = "yes",
     }
   }
 
   tags = {
-    "Name" = "pmmdemo-${var.server_name}",
+    "Name" = "${local.environment_name}-${var.server_name}",
   }
 
     lifecycle {
@@ -34,4 +34,8 @@ resource "aws_route53_record" "hostname" {
   type    = "A"
   ttl     = "300"
   records = [aws_instance.ec2.private_ip]
+}
+
+locals {
+  environment_name = terraform.workspace
 }
