@@ -110,6 +110,7 @@ write_files:
       log_error_verbosity=3
       #proxy_protocol_networks=10.0.0.0/16
       loose-validate_password.policy = 0
+      
 
       # Configure binary logs
       #
