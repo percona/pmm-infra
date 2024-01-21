@@ -72,6 +72,7 @@ write_files:
       node_name="${name}"
       retry_join = ["pmm-server", "sysbench", "proxysql"]
       server = true
+      enable_syslog = true
       ui_config{
         enabled = true
       }
@@ -112,7 +113,7 @@ write_files:
           ]
         }
       }
-  - path: /etc/consul.d/pmm-readyz-check.json
+  - path: /etc/consul.d/pmm-readyz-check.json-BROKEN
     permissions: "0644"
     content: |
       {

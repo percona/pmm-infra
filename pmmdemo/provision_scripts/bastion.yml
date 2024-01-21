@@ -36,6 +36,11 @@ runcmd:
   - docker exec nginx certbot --nginx --non-interactive --agree-tos --test-cert -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/pmm-admin_password
   - chmod 400 /root/pmm-admin_password
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm2-client
+  - yum install -y pmm2-client
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
   - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
@@ -95,7 +100,7 @@ write_files:
       enable_local_script_checks = true
       node_name="${name}"
       retry_join = ["pmm-server", "sysbench", "proxysql"]
-      server = false
+      server = true
       ui_config{
         enabled = true
       }
@@ -105,6 +110,58 @@ write_files:
       #!/bin/bash
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
+
+  - path: /etc/consul.d/pmm-readyz-1.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "PMMreadyz_1",
+          "name": "PMMreadyz-1-${name}",
+          "checks": [
+            {
+              "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
+            "interval": "10s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/pmm-readyz-2.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "PMMreadyz_2",
+          "name": "PMMreadyz-2-${name}",
+          "checks": [
+            {
+            "ID": "PMMreadyz_check_http",
+            "Name": "Check for PMM readyz http",
+            "ServiceID": "pmmreadyz_2",
+            "HTTP": "https://pmm-server/v1/readyz",
+            "Method": "GET",
+            "Interval": "10s",
+            "TLSSkipVerify": true,
+            "Timeout": "1s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/pmm-readyz-check.json-BROKEN
+    permissions: "0644"
+    content: |
+      {
+        "check": {
+          "ID": "PMMreadyz_check_http",
+          "Name": "Check for PMM readyz http",
+          "ServiceID": "pmmreadyz_1",
+          "HTTP": "https://pmm-server/v1/readyz",
+          "Method": "GET",
+          "Interval": "10s",
+          "TLSSkipVerify": true,
+          "Timeout": "1s"
+        }
+      }
   - path: /root/.ssh/config
     content: |
       Host *

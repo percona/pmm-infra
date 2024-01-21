@@ -44,7 +44,61 @@ write_files:
       enable_local_script_checks = true
       node_name="${name}"
       retry_join = ["pmm-server", "sysbench", "proxysql"]
-      server = false
+      server = true
+      ui_config{
+        enabled = true
+      }
+  - path: /etc/consul.d/pmm-readyz-1.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "PMMreadyz_1",
+          "name": "PMMreadyz-1-${name}",
+          "checks": [
+            {
+              "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
+            "interval": "10s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/pmm-readyz-2.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "PMMreadyz_2",
+          "name": "PMMreadyz-2-${name}",
+          "checks": [
+            {
+            "ID": "PMMreadyz_check_http",
+            "Name": "Check for PMM readyz http",
+            "ServiceID": "pmmreadyz_2",
+            "HTTP": "https://pmm-server/v1/readyz",
+            "Method": "GET",
+            "Interval": "10s",
+            "TLSSkipVerify": true,
+            "Timeout": "1s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/pmm-readyz-check.json-BROKEN
+    permissions: "0644"
+    content: |
+      {
+        "check": {
+          "ID": "PMMreadyz_check_http",
+          "Name": "Check for PMM readyz http",
+          "ServiceID": "pmmreadyz_1",
+          "HTTP": "https://pmm-server/v1/readyz",
+          "Method": "GET",
+          "Interval": "10s",
+          "TLSSkipVerify": true,
+          "Timeout": "1s"
+        }
+      }
 
   - path: /etc/ycsb/shard.js
     content: |
