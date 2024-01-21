@@ -106,6 +106,13 @@ write_files:
       socket=/data/mysql.sock
       loose-validate_password.policy = 0
       #proxy_protocol_networks=10.0.0.0/16
+      #slave_preserve_commit_order=on
+      slave_parallel_type=LOGICAL_CLOCK
+      slave_parallel_workers=8
+      #sync_relay_log_info=0
+      #sync_master_info=0
+      #sync_relay_log=0
+      #binlog_row_image=full
 
       # Config binary and slow_query logs
       #
