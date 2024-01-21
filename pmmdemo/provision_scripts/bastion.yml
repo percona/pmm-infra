@@ -22,6 +22,7 @@ runcmd:
   - yum -y install consul
   - systemctl enable consul
   - systemctl start consul
+  - bash /root/consul-advertise-addr.sh
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
@@ -98,6 +99,12 @@ write_files:
       ui_config{
         enabled = true
       }
+  - path: /root/consul-advertise-addr.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
+      echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
   - path: /root/.ssh/config
     content: |
       Host *
