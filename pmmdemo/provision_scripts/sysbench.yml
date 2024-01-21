@@ -29,7 +29,7 @@ runcmd:
   - systemctl enable sysbench.proxysql_pxc80
   - systemctl enable sysbench.proxysql_pgr81
   - systemctl enable sysbench.haproxy.pxc80
-  #- systemctl enable sysbench.haproxy.pgr81
+  - systemctl enable sysbench.haproxy.pgr81
   - systemctl enable sysbench.postgres13
   - systemctl start sysbench.ps80
   - systemctl start sysbench.ps81
@@ -40,7 +40,7 @@ runcmd:
   - systemctl start sysbench.proxysql_pxc80
   - systemctl start sysbench.proxysql_pgr81
   - systemctl start sysbench.haproxy.pxc80
-  #- systemctl start sysbench.haproxy.pgr81
+  - systemctl start sysbench.haproxy.pgr81
   - systemctl start sysbench.postgres13
   - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
@@ -248,7 +248,7 @@ write_files:
     content: |
       mysql-db=sbtest_haproxy_gr
       mysql-host=haproxy
-      mysql-port=3306
+      mysql-port=33061
       mysql-user=sysbench-haproxy-percona-gr
       mysql-password=$(percona_group_replication_81_password)
       events=0

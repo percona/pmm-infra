@@ -19,8 +19,8 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
+  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
   - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
@@ -63,15 +63,24 @@ write_files:
       resolvers mynameservers
         parse-resolv-conf
 
-      listen mysql-cluster
+      listen percona-xtradb-cluster
         balance roundrobin
-        bind 0.0.0.0:3306 accept-proxy
+        bind 0.0.0.0:3306
         mode tcp
         option mysql-check user haproxy_check
-        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
-        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
-        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3
+        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3
+        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3
 
+      listen percona-group-replication-cluster
+        balance roundrobin
+        bind 0.0.0.0:33061
+        mode tcp
+        option mysql-check user haproxy_check
+        server percona-group-replication-1 percona-group-replication-1:3306 rise 3 fall 3
+        server percona-group-replication-2 percona-group-replication-2:3306 rise 3 fall 3
+        server percona-group-replication-3 percona-group-replication-3:3306 rise 3 fall 3
+        
       frontend stats
         bind *:8404
         http-request use-service prometheus-exporter if { path /metrics }
