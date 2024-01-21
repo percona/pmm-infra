@@ -38,6 +38,29 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 write_files:
+  - path: /root/consul-check-mysql.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      # Set MySQL server credentials
+      MYSQL_USER="consul-health-check"
+      MYSQL_PASSWORD="${mysql_root_password}"
+      MYSQL_SOCKET="/data/mysql.sock"
+
+      # Attempt to connect using MySQL Shell with a 2-second timeout
+      mysqlsh --socket="$MYSQL_SOCKET" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 << EOF
+
+      SELECT 1;
+
+      EOF
+
+      # Check the exit status of mysqlsh to determine connection success
+      if [[ $? -ne 0 ]]; then
+      echo "Error: Failed to connect to MySQL server." >&2
+      exit 1
+      fi
+
+      echo "Connection to MySQL server successful."
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
