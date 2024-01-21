@@ -117,7 +117,7 @@ write_files:
       {
         "service": {
           "id": "PMMreadyz_1",
-          "name": "PMMreadyz-1-${name}",
+          "name": "PMMreadyz-1",
           "checks": [
             {
               "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
@@ -132,7 +132,7 @@ write_files:
       {
         "service": {
           "id": "PMMreadyz_2",
-          "name": "PMMreadyz-2-${name}",
+          "name": "PMMreadyz-2",
           "checks": [
             {
             "ID": "PMMreadyz_check_http",
