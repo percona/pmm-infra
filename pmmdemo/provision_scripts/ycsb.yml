@@ -17,7 +17,7 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - bash /tmp/pmm-server-waiter.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - percona-release setup -y psmdb-60
   - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
