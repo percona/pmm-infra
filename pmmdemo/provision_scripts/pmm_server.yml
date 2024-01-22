@@ -77,57 +77,54 @@ write_files:
         enabled = true
       }
 
-  - path: /etc/consul.d/pmm-readyz-1.json
+  - path: /etc/consul.d/pmmreadyz-check-script.json
     permissions: "0644"
     content: |
       {
         "service": {
-          "id": "PMMreadyz_1",
-          "name": "PMMreadyz-1",
+          "id": "PMMreadyz",
+          "name": "PMMreadyz",
+          "Tags": [ "readyz" ],
           "checks": [
             {
-              "args": ["curl", "--silent", "--insecure", "https://pmm-server/v1/readyz"],
-            "interval": "10s"
+            "id": "PMMreadyz_check_script",
+            "ServiceID": "pmmreadyz_script",
+            "notes": "Health Check using a script for PMM Server availability for client registrations to begin",
+            "interval": "1s",
+            "timeout": "1s",
+            "args": [
+              "/bin/bash",
+              "/tmp/pmmreadyz-check.sh"
+            ]
             }
           ]
         }
       }
-  - path: /etc/consul.d/pmm-readyz-2.json
-    permissions: "0644"
+  - path: /tmp/pmmreadyz-check.sh
+    permissions: "0755"
     content: |
-      {
-        "service": {
-          "id": "PMMreadyz_2",
-          "name": "PMMreadyz-2",
-          "checks": [
-            {
-            "ID": "PMMreadyz_check_http",
-            "Name": "Check for PMM readyz http",
-            "ServiceID": "pmmreadyz_2",
-            "HTTP": "https://pmm-server/v1/readyz",
-            "Method": "GET",
-            "Interval": "10s",
-            "TLSSkipVerify": true,
-            "Timeout": "1s"
-            }
-          ]
-        }
-      }
-  - path: /etc/consul.d/pmm-readyz-check.json-BROKEN
-    permissions: "0644"
-    content: |
-      {
-        "check": {
-          "ID": "PMMreadyz_check_http",
-          "Name": "Check for PMM readyz http",
-          "ServiceID": "pmmreadyz_1",
-          "HTTP": "https://pmm-server/v1/readyz",
-          "Method": "GET",
-          "Interval": "10s",
-          "TLSSkipVerify": true,
-          "Timeout": "1s"
-        }
-      }
+      #!/bin/bash
+
+      # Set the endpoint to check
+      endpoint="https://${pmm_server_endpoint}/v1/readyz"
+
+      # Send a HEAD request ignoring SSL certificate warnings
+      response=$(curl --silent --insecure -I "$endpoint")
+
+      # Extract the HTTP status code
+      status_code=$(echo "$response" | head -n 1 | awk '{print $2}')
+
+      # Check the status code and exit accordingly
+      if [[ $status_code =~ ^2 ]]; then
+        echo "Server ready (2XX response)."
+        exit 0
+      elif [[ $status_code == 501 ]]; then
+        echo "Server not ready (501 response)."
+        exit 2
+      else
+        echo "Unexpected response code: $status_code"
+        exit 1
+      fi
   - path: /root/consul-advertise-addr.sh
     permissions: "0700"
     content: |
