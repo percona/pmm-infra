@@ -71,6 +71,27 @@ write_files:
           ]
         }
       }
+  - path: /etc/consul.d/pmmreadyz-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "PMMreadyz",
+          "name": "PMMreadyz",
+          "checks": [
+            {
+            "ID": "PMMreadyz_check_http",
+            "Name": "Check for PMM readyz http",
+            "ServiceID": "pmmreadyz_check_http",
+            "HTTP": "https://admin:${pmm_admin_password}@${pmm_server_endpoint}/v1/readyz",
+            "Method": "GET",
+            "Interval": "10s",
+            "TLSSkipVerify": true,
+            "Timeout": "1s"
+            }
+          ]
+        }
+      }
   - path: /tmp/pmmreadyz-check.sh
     permissions: "0755"
     content: |
