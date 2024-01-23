@@ -80,7 +80,7 @@ write_files:
           "name": "PMMreadyz",
           "checks": [
             {
-            "HTTP": "https://admin:${pmm_admin_pass}@${pmm_server_endpoint}/v1/readyz",
+            "HTTP": "https://admin:${pmm_admin_pass}@pmm-server/v1/readyz",
             "ID": "PMMreadyz_check_http",
             "Interval": "1s",
             "Method": "GET",
