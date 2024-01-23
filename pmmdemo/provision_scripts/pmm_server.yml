@@ -89,14 +89,15 @@ write_files:
           "name": "PMMreadyz",
           "checks": [
             {
-            "ID": "PMMreadyz_check_http",
-            "Name": "Check for PMM readyz http",
-            "ServiceID": "pmmreadyz_check_http",
             "HTTP": "https://admin:${pmm_admin_pass}@${pmm_server_endpoint}/v1/readyz",
-            "Method": "GET",
+            "ID": "PMMreadyz_check_http",
             "Interval": "1s",
-            "TLSSkipVerify": true,
+            "Method": "GET",
+            "Name": "Check for PMM readyz using HTTP",
+            "Notes": "Check for PMM readyz using HTTP. Client registrations can begin after this service is available.",
+            "ServiceID": "pmmreadyz_check_http",
             "Timeout": "1s"
+            "TLSSkipVerify": true,
             }
           ]
         }
