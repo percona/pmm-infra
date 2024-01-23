@@ -72,10 +72,10 @@ write_files:
       client_addr = "0.0.0.0"
       data_dir = "/opt/consul"
       enable_local_script_checks = true
-      node_name="${name}"
-      retry_join = ["pmm-server", "sysbench", "proxysql"]
-      server = true
       enable_syslog = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "bastion"]
+      server = true
       ui_config{
         enabled = true
       }

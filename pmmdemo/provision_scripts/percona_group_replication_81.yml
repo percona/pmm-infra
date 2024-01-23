@@ -75,7 +75,7 @@ write_files:
       data_dir = "/opt/consul"
       enable_local_script_checks = true
       node_name="${name}"
-      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      retry_join = ["pmm-server", "sysbench", "bastion"]
       server = false
       ui_config{
         enabled = true
