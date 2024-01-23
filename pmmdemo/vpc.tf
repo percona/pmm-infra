@@ -143,7 +143,7 @@ resource "aws_route53_zone" "demo_local" {
 }
 
 resource "aws_vpc_dhcp_options" "additional_domain" {
-  domain_name         = "ec2.internal ${aws_route53_zone.demo_local.name}"
+  domain_name         = "${aws_route53_zone.demo_local.name}"
   domain_name_servers = ["127.0.0.1", "10.0.0.2"]
   tags = {
     "Name" = "${local.environment_name}-dhcp-options",
