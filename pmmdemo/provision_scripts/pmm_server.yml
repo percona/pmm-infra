@@ -64,7 +64,6 @@ write_files:
       #!/bin/bash
       echo "placeholder"
       exit 0
-
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -79,28 +78,6 @@ write_files:
       enable_syslog = true
       ui_config{
         enabled = true
-      }
-  - path: /etc/consul.d/pmmreadyz-check-http.json
-    permissions: "0644"
-    content: |
-      {
-        "service": {
-          "id": "PMMreadyz",
-          "name": "PMMreadyz",
-          "checks": [
-            {
-            "HTTP": "https://admin:${pmm_admin_pass}@${pmm_server_endpoint}/v1/readyz",
-            "ID": "PMMreadyz_check_http",
-            "Interval": "1s",
-            "Method": "GET",
-            "Name": "Check for PMM readyz using HTTP",
-            "Notes": "Check for PMM readyz using HTTP. Client registrations can begin after this service is available.",
-            "ServiceID": "pmmreadyz_check_http",
-            "Timeout": "1s"
-            "TLSSkipVerify": true,
-            }
-          ]
-        }
       }
   - path: /tmp/pmm-server-waiter.sh
     permissions: "0755"
