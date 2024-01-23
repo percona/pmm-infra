@@ -32,6 +32,7 @@ runcmd:
   - systemctl enable mysql
   - systemctl start mysql
   - bash /root/init-mysql.sh
+  - bash /tmp/pmm-server-waiter.sh
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='percona-group-replication-81' --replication-set='percona-group-replication-81' --environment='Prod' --query-source=slowlog --service-name=${name}
   - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm

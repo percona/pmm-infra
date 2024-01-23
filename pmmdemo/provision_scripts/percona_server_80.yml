@@ -34,7 +34,7 @@ runcmd:
   - systemctl start mysqld.service
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - timeout 600 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
+  - bash /tmp/pmm-server-waiter.sh
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - timeout 60 bash -c 'until true ; do sleep 3; done'
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=slowlog --service-name=${name}
