@@ -73,6 +73,28 @@ write_files:
           ]
         }
       }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "1s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 0,
+            "Timeout": "1s"
+            }
+          ]
+        }
+      }
   - path: /tmp/pmm-server-waiter.sh
     permissions: "0755"
     content: |

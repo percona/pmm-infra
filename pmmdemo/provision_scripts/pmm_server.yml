@@ -47,6 +47,7 @@ runcmd:
   - docker exec pmm-server ansible-playbook -v /root/ansible.yml
   - docker exec pmm-server supervisorctl restart grafana
   - bash /root/add-rds-to-pmm.sh
+  - echo date > /tmp/pmm-server-up
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
   - bash /tmp/pmm-server-waiter.sh
@@ -54,6 +55,7 @@ runcmd:
   - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
+  - sleep 3
   - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
@@ -84,6 +86,28 @@ write_files:
       server = true
       ui_config{
         enabled = true
+      }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "1s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 0,
+            "Timeout": "1s"
+            }
+          ]
+        }
       }
   - path: /tmp/pmm-server-waiter.sh
     permissions: "0755"
