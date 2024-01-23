@@ -38,15 +38,16 @@ data "template_file" "percona_xtradb_cluster_80_user_data" {
   count    = local.percona_xtradb_cluster_80_count
   template = file("provision_scripts/percona_xtradb_cluster_80.yml")
   vars = {
-    name                      = "${local.percona_xtradb_cluster_80_name}-${count.index}"
+    environment_name          = local.environment_name
     fqdn                      = "${local.percona_xtradb_cluster_80_name}-${count.index}.${aws_route53_zone.demo_local.name}"
     index                     = "${count.index}"
-    pmm_password              = random_password.pmm_admin_pass.result
+    local_domain              = "${local.environment_name}.local"
     mysql_root_password       = random_password.percona_xtradb_cluster_80_root_password.result
     mysql_sysbench_password   = random_password.percona_xtradb_cluster_80_sysbench_password.result
+    name                      = "${local.percona_xtradb_cluster_80_name}-${count.index}"
+    pmm_password              = random_password.pmm_admin_pass.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
-    environment_name          = local.environment_name
   }
 }
 

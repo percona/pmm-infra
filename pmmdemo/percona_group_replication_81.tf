@@ -16,17 +16,18 @@ data "template_file" "percona_group_replication_81_user_data" {
   count    = local.percona_group_replication_81_count
   template = file("provision_scripts/percona_group_replication_81.yml")
   vars = {
-    name                            = "${local.percona_group_replication_81_name}-${count.index + 1}"
+    environment_name                = local.environment_name
     fqdn                            = "${local.percona_group_replication_81_name}-${count.index + 1}.${aws_route53_zone.demo_local.name}"
     index                           = "${count.index + 1}"
-    pmm_password                    = random_password.pmm_admin_pass.result
-    mysql_root_password             = random_password.percona_group_replication_81_root_password.result
+    local_domain                    = "${local.environment_name}.local"
     mysql_replica_password          = random_password.mysql81_replica_password.result
+    mysql_root_password             = random_password.percona_group_replication_81_root_password.result
     mysql_sysbench_password         = random_password.percona_group_replication_81_sysbench_password.result
+    name                            = "${local.percona_group_replication_81_name}-${count.index + 1}"
+    percona_group_replication_uuid  = random_uuid.percona_group_replication_81_uuid.result
+    pmm_password                    = random_password.pmm_admin_pass.result
     pmm_server_endpoint             = local.pmm_server_endpoint
     proxysql_monitor_password       = random_password.proxysql_monitor.result
-    percona_group_replication_uuid  = random_uuid.percona_group_replication_81_uuid.result
-    environment_name                = local.environment_name
   }
 }
 
