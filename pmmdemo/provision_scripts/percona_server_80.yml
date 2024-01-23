@@ -89,9 +89,9 @@ write_files:
 
       while true; do
       # Get the status of the PMMreadyz_check_http check
-      status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV  | grep pmm-server | awk '/A/ {print $1}')
+      status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV  | grep bastion | awk '/A/ {print $1}')
       
-      if [[ $status == "pmm-server.node.dc1.consul." ]]; then
+      if [[ $status == "bastion.node.dc1.consul." ]]; then
         echo "PMMreadyz_check_http check is passing."
         exit 0
       fi
