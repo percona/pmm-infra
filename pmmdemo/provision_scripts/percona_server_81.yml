@@ -90,10 +90,9 @@ write_files:
 
       while true; do
       # Get the status of the PMMreadyz_check_http check
-      status=$(curl -s 127.1:8500/v1/agent/checks --get | jq -r .PMMreadyz_check_http.Status)
-
-      # Check the status and exit if it's "passing"
-      if [[ $status == "passing" ]]; then
+      status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV  | grep pmm-server | awk '/A/ {print $1}')
+      
+      if [[ $status == "pmm-server.node.dc1.consul." ]]; then
         echo "PMMreadyz_check_http check is passing."
         exit 0
       fi
