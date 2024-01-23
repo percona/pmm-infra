@@ -76,7 +76,6 @@ write_files:
       ui_config{
         enabled = true
       }
-
   - path: /etc/consul.d/pmmreadyz-check-http.json
     permissions: "0644"
     content: |

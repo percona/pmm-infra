@@ -78,28 +78,6 @@ write_files:
       #!/bin/bash
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
-
-  - path: /etc/consul.d/pmmreadyz-check-http.json
-    permissions: "0644"
-    content: |
-      {
-        "service": {
-          "id": "PMMreadyz",
-          "name": "PMMreadyz",
-          "checks": [
-            {
-            "ID": "PMMreadyz_check_http",
-            "Name": "Check for PMM readyz http",
-            "ServiceID": "pmmreadyz_check_http",
-            "HTTP": "https://admin:${pmm_admin_pass}@${pmm_server_endpoint}/v1/readyz",
-            "Method": "GET",
-            "Interval": "1s",
-            "TLSSkipVerify": true,
-            "Timeout": "1s"
-            }
-          ]
-        }
-      }
   - path: /tmp/pmm-server-waiter.sh
     permissions: "0755"
     content: |
