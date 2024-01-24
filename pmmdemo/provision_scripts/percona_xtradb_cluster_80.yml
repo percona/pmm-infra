@@ -77,7 +77,7 @@ write_files:
             "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
             "ServiceID": "percona-xtradb-cluster_check_mysqladmin",
             "Success_before_passing": 3,
-            "Timeout": "2s"
+            "Timeout": "2s",
             "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"],
             "interval": "3s"
             }
