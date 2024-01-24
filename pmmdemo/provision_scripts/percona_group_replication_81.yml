@@ -108,8 +108,7 @@ write_files:
             "ServiceID": "percona-group-replication_check_mysqladmin",
             "Success_before_passing": 3,
             "Timeout": "2s",
-            "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"],
-            "interval": "3s"
+            "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"]
             }
           ]
         }
