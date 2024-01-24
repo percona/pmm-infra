@@ -66,8 +66,11 @@ write_files:
     permissions: "0755"
     content: |
       #!/bin/bash
-      curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /root/import-dashboard-grafana-cloud.sh
-      curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /root/cleanup-dash.py
+      echo "Downloading scripts"
+      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /root/import-dashboard-grafana-cloud.sh)
+      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /root/cleanup-dash.py)
+      file /root/import-dashboard-grafana-cloud.sh
+      file /root/cleanup-dash.py
       chmod a+x /root/import-dashboard-grafana-cloud.sh
       chmod a+x /root/cleanup-dash.py
       sed -i 's/:admin/:${pmm_admin_pass}/' /root/import-dashboard-grafana-cloud.sh
