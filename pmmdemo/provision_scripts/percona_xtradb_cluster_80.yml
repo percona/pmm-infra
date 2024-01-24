@@ -152,7 +152,17 @@ write_files:
 
           if [[ $status == "pmmreadyz.service.consul." ]]; then
             echo "PMMreadyz_check_http check is passing."
-            exit 0
+
+            # Check for DNS :facepalm:
+            dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+            if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+              echo "PMMreadyz_check_http DNS check is passing."
+              exit 0
+            else
+              echo "PMMreadyz_check_http DNS check is not passing."
+            fi
+
           fi
 
           # If the check is not passing, wait for a short interval and try again
