@@ -62,7 +62,7 @@ write_files:
     content: |
       {
         "service": {
-          "address": "",
+          "address": "${fqdn}",
           "id": "proxysql",
           "name": "proxysql",
           "port": 3306,
@@ -74,7 +74,7 @@ write_files:
             "Name": "Check for ProxySQL service on 3306 running using mysqladmin.",
             "Notes": "Check for ProxySQL service on 3306 running using mysqladmin. Availability of ProxySQL service throughput is reflective of this check.",
             "ServiceID": "proxysql_3306_check_mysqladmin",
-            "Success_before_passing": 2,
+            "Success_before_passing": 3,
             "Timeout": "1s"
             },
             {
@@ -83,7 +83,7 @@ write_files:
             "Name": "Check for ProxySQL Admin service on 6032 running using mysqladmin.",
             "Notes": "Check for ProxySQL Admin service on 6032 running using mysqladmin. Monitoring of ProxySQL Admin is enabled with this service.",
             "ServiceID": "proxysql_6032_check_mysqladmin",
-            "Success_before_passing": 2,
+            "Success_before_passing": 3,
             "Timeout": "1s"
             }
           ]
@@ -94,19 +94,22 @@ write_files:
     content: |
       {
         "service": {
+          "address": "${fqdn}",
           "id": "process-exporter",
           "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
           "checks": [
             {
             "HTTP": "http://${fqdn}:9256/metrics",
             "ID": "process-exporter_check_http",
-            "Interval": "1s",
+            "Interval": "3s",
             "Method": "GET",
             "Name": "Check for process-exporter using HTTP",
             "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
             "ServiceID": "process-exporter_check_http",
-            "Success_before_passing": 0,
-            "Timeout": "1s"
+            "Success_before_passing": 3,
+            "Timeout": "2s"
             }
           ]
         }

@@ -70,8 +70,8 @@ write_files:
 
       # Check the exit status of mysqlsh to determine connection success
       if [[ $? -ne 0 ]]; then
-      echo "Error: Failed to connect to MySQL server." >&2
-      exit 1
+        echo "Error: Failed to connect to MySQL server." >&2
+        exit 1
       fi
 
       echo "Connection to MySQL server successful."
@@ -93,15 +93,22 @@ write_files:
     content: |
       {
         "service": {
+          "address": "${fqdn}",
           "id": "percona-group-replication",
           "name": "percona-group-replication",
-          "tags": ["${name}"],
-          "address": "",
           "port": 3306,
+          "tags": ["${name}"],
           "checks": [
             {
-        "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"],
-              "interval": "10s"
+            "ID": "percona-group-replication_check_mysqladmin",
+            "Interval": "3s",
+            "Name": "Check for MySQL running on ${name}.",
+            "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
+            "ServiceID": "percona-group-replication_check_mysqladmin",
+            "Success_before_passing": 3,
+            "Timeout": "2s"
+            "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"],
+            "interval": "3s"
             }
           ]
         }
@@ -111,19 +118,22 @@ write_files:
     content: |
       {
         "service": {
+          "address": "${fqdn}",
           "id": "process-exporter",
           "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
           "checks": [
             {
             "HTTP": "http://${fqdn}:9256/metrics",
             "ID": "process-exporter_check_http",
-            "Interval": "1s",
+            "Interval": "3s",
             "Method": "GET",
             "Name": "Check for process-exporter using HTTP",
             "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
             "ServiceID": "process-exporter_check_http",
-            "Success_before_passing": 0,
-            "Timeout": "1s"
+            "Success_before_passing": 3,
+            "Timeout": "2s"
             }
           ]
         }
@@ -249,8 +259,8 @@ write_files:
           echo "Error: Initial root password not found in /data/mysqld.log"
           #exit 1
         fi      
-        mysql --defaults-file=/root/.my.cnf -Bse "SET GLOBAL validate_password.special_char_count = 0;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
