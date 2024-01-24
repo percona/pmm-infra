@@ -178,7 +178,7 @@ write_files:
         # PMM readyz
         while true; do
           # Get the status of the PMMreadyz_check_http check
-          status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion."${environment_name}".local.$/ {print $1}')
+          status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
 
           if [[ $status == "pmmreadyz.service.consul." ]]; then
             echo "PMMreadyz_check_http check is passing."
