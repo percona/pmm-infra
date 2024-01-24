@@ -51,12 +51,12 @@ runcmd:
   - echo date > /tmp/pmm-server-up
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - bash /tmp/pmm-server-waiter.sh
+  - bash /tmp/waiter.sh readyz
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_pass}@${pmm_server_endpoint}' ${fqdn} generic "${name}-host"
   - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
-  - sleep 3
+  - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
   - curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /root/import-dashboard-grafana-cloud.sh
   - curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /root/cleanup-dash.py
@@ -121,24 +121,58 @@ write_files:
           ]
         }
       }
-  - path: /tmp/pmm-server-waiter.sh
+  - path: /tmp/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
 
-      while true; do
-      # Get the status of the PMMreadyz_check_http check
-      status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV  | grep bastion | awk '/A/ {print $1}')
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
 
-      if [[ $status == "bastion.node.dc1.consul." ]]; then
-        echo "PMMreadyz_check_http check is passing."
-        exit 0
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      elif [[ $service == "proxysql" ]]; then
+        # proxysql
+        while true; do
+          # Get the status of the Proxysql check
+          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.node.dc1.consul.$/ {print $1}')
+
+          if [[ $status == "proxysql.service.consul." ]]; then
+            echo "ProxySQL check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "ProxySQL check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Get the status of the PMMreadyz_check_http check
+          status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.node.dc1.consul.$/ {print $1}')
+
+          if [[ $status == "pmmreadyz.service.consul." ]]; then
+            echo "PMMreadyz_check_http check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
       fi
-
-      # If the check is not passing, wait for a short interval and try again
-      echo "PMMreadyz_check_http check is not passing. Will retry in 5 seconds..."
-      sleep 5
-      done
   - path: /root/consul-advertise-addr.sh
     permissions: "0700"
     content: |
