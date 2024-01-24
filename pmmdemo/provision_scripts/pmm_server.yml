@@ -59,7 +59,7 @@ runcmd:
   - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
   - bash /tmp/dashboard-importer.sh
-  - bash /root/import-dashboard-grafana-cloud.sh && touch /root/dashboards_imported
+  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
 write_files:
   - path: /tmp/dashboard-importer.sh
@@ -67,15 +67,15 @@ write_files:
     content: |
       #!/bin/bash
       echo "Downloading scripts"
-      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /root/import-dashboard-grafana-cloud.sh)
-      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /root/cleanup-dash.py)
-      file /root/import-dashboard-grafana-cloud.sh
-      file /root/cleanup-dash.py
-      chmod a+x /root/import-dashboard-grafana-cloud.sh
-      chmod a+x /root/cleanup-dash.py
-      sed -i 's/:admin/:${pmm_admin_pass}/' /root/import-dashboard-grafana-cloud.sh
-      sed -i 's/172\.17\.0\.2/${fqdn}/' /root/import-dashboard-grafana-cloud.sh
-      sed -i 's/13266 12630 12470/13266 12630 12470 14239 14636 19676 6033/' /root/import-dashboard-grafana-cloud.sh
+      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /tmp/import-dashboard-grafana-cloud.sh)
+      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /tmp/cleanup-dash.py)
+      file /tmp/import-dashboard-grafana-cloud.sh
+      file /tmp/cleanup-dash.py
+      chmod a+x /tmp/import-dashboard-grafana-cloud.sh
+      chmod a+x /tmp/cleanup-dash.py
+      sed -i 's/:admin/:${pmm_admin_pass}/' /tmp/import-dashboard-grafana-cloud.sh
+      sed -i 's/172\.17\.0\.2/${fqdn}/' /tmp/import-dashboard-grafana-cloud.sh
+      sed -i 's/13266 12630 12470/13266 12630 12470 14239 14636 19676 6033/' /tmp/import-dashboard-grafana-cloud.sh
   - path: /etc/resolv.conf
     permissions: "0644"
     content: |
