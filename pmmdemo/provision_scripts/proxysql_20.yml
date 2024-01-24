@@ -140,6 +140,7 @@ write_files:
       
       if [[ $status == "proxysql.node.dc1.consul." ]]; then
         echo "Proxysql check is passing."
+        sleep 5
         exit 0
       fi
 
