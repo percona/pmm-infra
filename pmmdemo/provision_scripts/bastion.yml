@@ -98,7 +98,7 @@ write_files:
             "Name": "Check for PMM readyz using HTTP",
             "Notes": "Check for PMM readyz using HTTP. Client registrations can begin after this service is available.",
             "ServiceID": "pmmreadyz_check_http",
-            "Success_before_passing": 20,
+            "Success_before_passing": 30,
             "Timeout": "1s",
             "TLSSkipVerify": true
             }
