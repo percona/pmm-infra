@@ -88,7 +88,7 @@ write_files:
           "id": "PMMreadyz",
           "name": "PMMreadyz",
           "port": 443,
-          "tags": ["${name}"]",
+          "tags": ["${name}"],
           "checks": [
             {
             "HTTP": "https://admin:${pmm_admin_pass}@pmm-server/v1/readyz",
