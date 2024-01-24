@@ -114,8 +114,8 @@ write_files:
           fi
 
           # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 1 second..."
-          sleep 1
+          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
+          sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
         # PMM readyz
