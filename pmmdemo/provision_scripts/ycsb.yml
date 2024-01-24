@@ -20,6 +20,11 @@ runcmd:
   - yum -y install pmm2-client
   - bash /tmp/waiter.sh readyz
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - bash /tmp/waiter.sh process-exporter
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
   - percona-release setup -y psmdb-60
   - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
   - mkdir -p /data
@@ -29,11 +34,6 @@ runcmd:
   - /bin/bash /etc/ycsb/initial_load.sh
   - systemctl enable ycsb.mongodb60
   - systemctl start ycsb.mongodb60
-  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
-  - service process-exporter start
-  - bash /tmp/waiter.sh process-exporter
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
 
 write_files:
   - path: /etc/resolv.conf
