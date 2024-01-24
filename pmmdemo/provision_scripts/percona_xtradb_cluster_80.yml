@@ -1,8 +1,9 @@
 #cloud-config
-preserve_hostname: false
-hostname: ${name}
 fqdn: ${fqdn}
+hostname: ${name}
 manage_etc_hosts: true
+prefer_fqdn_over_hostname: true
+preserve_hostname: false
 repo_upgrade: all
 
 bootcmd:
