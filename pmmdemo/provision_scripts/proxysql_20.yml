@@ -26,13 +26,13 @@ runcmd:
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
   - bash /tmp/waiter.sh process-exporter
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster=processes
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y ps-80
   - yum install -y proxysql2 percona-server-client
   - systemctl start proxysql
   - systemctl enable proxysql
   - bash /tmp/waiter.sh proxysql
-  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}'
+  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster
 
 # TODO replace to admin-stats_credentials user
 
