@@ -43,7 +43,7 @@ runcmd:
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - bash /tmp/waiter.sh process-exporter
   - service process-exporter start
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster=processes
 
 write_files:
   - path: /etc/consul.d/consul.hcl

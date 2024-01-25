@@ -34,7 +34,7 @@ runcmd:
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
   - bash /tmp/waiter.sh process-exporter
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster=processes
 
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
