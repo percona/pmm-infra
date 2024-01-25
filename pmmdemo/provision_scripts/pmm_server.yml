@@ -67,8 +67,8 @@ write_files:
     content: |
       #!/bin/bash
       echo "Downloading scripts"
-      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/import-dashboard-grafana-cloud.sh --output /tmp/import-dashboard-grafana-cloud.sh)
-      $(curl -LJOs https://github.com/Percona-Lab/pmm-dashboards/raw/main/misc/cleanup-dash.py --output /tmp/cleanup-dash.py)
+      wget https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh -O /tmp/import-dashboard-grafana-cloud.sh
+      wget https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py -O /tmp/cleanup-dash.py
       file /tmp/import-dashboard-grafana-cloud.sh
       file /tmp/cleanup-dash.py
       chmod a+x /tmp/import-dashboard-grafana-cloud.sh
