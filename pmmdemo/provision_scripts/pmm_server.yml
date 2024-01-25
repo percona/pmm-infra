@@ -59,7 +59,7 @@ runcmd:
   - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
   - bash /tmp/dashboard-importer.sh
-  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
+#  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
 write_files:
   - path: /tmp/dashboard-importer.sh
