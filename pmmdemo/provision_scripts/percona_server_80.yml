@@ -304,6 +304,8 @@ write_files:
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
                 # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
+                mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+                mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
                 mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-80-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
                 mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
                 break;
