@@ -20,10 +20,18 @@ module "percona_xtradb_cluster_80" {
 
 resource "random_password" "percona_xtradb_cluster_80_root_password" {
   length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 resource "random_password" "percona_xtradb_cluster_80_sysbench_password" {
   length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 data "template_file" "percona_xtradb_cluster_80_user_data" {
