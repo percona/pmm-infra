@@ -13,6 +13,7 @@ runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul
+  - bash /root/consul-advertise-addr.sh
   - systemctl start consul
   - systemctl enable --now docker
   - usermod -a -G docker ec2-user
@@ -44,6 +45,12 @@ write_files:
       ui_config{
         enabled = true
       }
+  - path: /root/consul-advertise-addr.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
+      echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
   - path: /etc/consul.d/haproxy-exporter-check-http.json
     permissions: "0644"
     content: |

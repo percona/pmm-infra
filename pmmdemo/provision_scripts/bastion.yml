@@ -24,8 +24,8 @@ runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul
-  - systemctl start consul
   - bash /root/consul-advertise-addr.sh
+  - systemctl start consul
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user
