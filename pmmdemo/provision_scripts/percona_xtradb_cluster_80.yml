@@ -104,7 +104,7 @@ write_files:
             "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
             "ServiceID": "process-exporter_check_http",
             "Success_before_passing": 3,
-            "Timeout": "2s"
+            "Timeout": "5s"
             }
           ]
         }
