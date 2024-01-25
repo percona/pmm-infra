@@ -1,8 +1,9 @@
 #cloud-config
-preserve_hostname: false
-hostname: ${name}
 fqdn: ${fqdn}
+hostname: ${name}
 manage_etc_hosts: true
+prefer_fqdn_over_hostname: true
+preserve_hostname: false
 repo_upgrade: all
 
 packages:
@@ -12,6 +13,7 @@ runcmd:
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul
+  - bash /root/consul-advertise-addr.sh
   - systemctl start consul
   - systemctl enable --now docker
   - usermod -a -G docker ec2-user
@@ -19,12 +21,15 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum install -y pmm2-client
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics
-  - wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - bash /tmp/waiter.sh readyz
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - bash /tmp/waiter.sh haproxy
+  - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics --environment="${environment_name}" --cluster="haproxy" --replication-set="haproxy"
+  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes"
+  - bash /tmp/waiter.sh process-exporter
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster="processes-cluster"
 
 write_files:
   - path: /etc/consul.d/consul.hcl
@@ -35,11 +40,127 @@ write_files:
       data_dir = "/opt/consul"
       enable_local_script_checks = true
       node_name="${name}"
-      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      retry_join = ["pmm-server", "sysbench", "bastion"]
       server = false
       ui_config{
         enabled = true
       }
+  - path: /root/consul-advertise-addr.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
+      echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
+  - path: /etc/consul.d/haproxy-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "haproxy-exporter",
+          "name": "haproxy-exporter",
+          "port": 8404,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:8404/metrics",
+            "ID": "haproxy-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for haproxy-exporter using HTTP",
+            "Notes": "Check for haproxy-exporter using HTTP. Monitoring of haproxy metrics are enabled with this service.",
+            "ServiceID": "haproxy-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+  - path: /tmp/waiter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
+
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
+            fi
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      elif [[ $service == "haproxy-exporter" ]]; then
+        # haproxy-exporter
+        while true; do
+          # Get the status of the haproxy-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.haproxy-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+
+          if [[ $status == "${name}.haproxy-exporter.service.consul." ]]; then
+            echo "haproxy-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "haproxy-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      fi
   - path: /etc/haproxy/haproxy.cfg
     content: |
       global
@@ -63,15 +184,24 @@ write_files:
       resolvers mynameservers
         parse-resolv-conf
 
-      listen mysql-cluster
+      listen percona-xtradb-cluster
         balance roundrobin
-        bind 0.0.0.0:3306 accept-proxy
+        bind 0.0.0.0:3306
         mode tcp
         option mysql-check user haproxy_check
-        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3 send-proxy
-        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3 send-proxy
-        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3 send-proxy
+        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3
+        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3
+        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3
 
+      listen percona-group-replication-cluster
+        balance roundrobin
+        bind 0.0.0.0:33061
+        mode tcp
+        option mysql-check user haproxy_check
+        server percona-group-replication-1 percona-group-replication-1:3306 rise 3 fall 3
+        server percona-group-replication-2 percona-group-replication-2:3306 rise 3 fall 3
+        server percona-group-replication-3 percona-group-replication-3:3306 rise 3 fall 3
+        
       frontend stats
         bind *:8404
         http-request use-service prometheus-exporter if { path /metrics }

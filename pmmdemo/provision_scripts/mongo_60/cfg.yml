@@ -35,7 +35,7 @@ runcmd:
   - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
   - bash pip3 install ansi2txt
   - bash /tmp/mongodb-init-rs.sh
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
@@ -48,7 +48,7 @@ write_files:
       data_dir = "/opt/consul"
       enable_local_script_checks = true
       node_name="${name}"
-      retry_join = ["pmm-server", "sysbench", "proxysql"]
+      retry_join = ["pmm-server", "sysbench", "bastion"]
       server = false
 
   - path: /etc/consul.d/mongod-service.json

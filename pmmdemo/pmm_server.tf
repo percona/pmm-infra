@@ -14,21 +14,24 @@ module "pmm_server" {
   ]
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
-      pmm_admin_pass             = random_password.pmm_admin_pass.result
-      name                       = local.pmm_server_name
+      environment_name           = local.environment_name
       fqdn                       = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}"
       full_domain                = var.pmm_domain
       google_analytics_id        = var.google_analytics_id
-      oauth_enable               = var.oauth_enable
-      oauth_client_id            = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTID"]
-      oauth_secret               = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTSECRET"]
-      oauth_url                  = var.oauth_url
-      oauth_token_url            = var.oauth_token_url
+      local_domain               = "${local.environment_name}.local"
+      name                       = local.pmm_server_name
       oauth_api_url              = var.oauth_api_url
-      oauth_scopes               = var.oauth_scopes
+      oauth_client_id            = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTID"]
+      oauth_enable               = var.oauth_enable
       oauth_role_attribute_path  = var.oauth_role_attribute_path
+      oauth_scopes               = var.oauth_scopes
+      oauth_secret               = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTSECRET"]
       oauth_signout_redirect_url = var.oauth_signout_redirect_url
-      environment_name           = local.environment_name
+      oauth_token_url            = var.oauth_token_url
+      oauth_url                  = var.oauth_url
+      pmm_admin_pass             = random_password.pmm_admin_pass.result
+      pmm_server_endpoint        = local.pmm_server_endpoint
+
     }
   )
 }
