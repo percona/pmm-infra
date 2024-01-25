@@ -37,8 +37,8 @@ runcmd:
   - bash /root/init-mysql.sh
   - bash /tmp/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - sleep 10 && bash /tmp/waiter.sh mysql
-  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=slowlog --service-name=${name}
+  - bash /tmp/waiter.sh mysql
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
   - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
@@ -59,7 +59,33 @@ write_files:
       {
         "history.autoSave": "true"
       }
+  - path: /tmp/consul-check-mysql.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Set MySQL server credentials
+      MYSQL_USER="consul-health-check"
+      MYSQL_PASSWORD="${mysql_root_password}"
+      MYSQL_SOCKET="/var/lib/mysql/mysql.sock"
+      while true ; do
+        # Attempt to connect using MySQL Shell with a 2-second timeout
+        mysql --socket="$MYSQL_SOCKET" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 << EOF
 
+        SELECT 1;
+
+      EOF
+
+        # Check the exit status of mysqlsh to determine connection success
+        if [[ $? -eq 0 ]]; then
+          echo "Successfully connected to MySQL service."
+          exit 0
+        else
+          echo -n "Connection attempt to MySQL service failed. Sleeping 1 second... "
+          date
+          sleep 1
+        fi
+
+      done
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -85,14 +111,14 @@ write_files:
           "tags": ["${name}"],
           "checks": [
             {
-            "ID": "percona-server-80_check_mysqladmin",
+            "ID": "percona-server-80_check_script",
             "Interval": "3s",
-            "Name": "Check for MySQL running on ${name}.",
+            "Name": "Check for MySQL running on ${name}",
             "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
-            "ServiceID": "percona-server-80_check_mysqladmin",
+            "ServiceID": "percona-server-80_check_script",
             "Success_before_passing": 3,
-            "Timeout": "2s",
-            "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"]
+            "Timeout": "3s",
+            "args": [ "bash", "/tmp/consul-check-mysql.sh" ]
             }
           ]
         }
@@ -143,19 +169,19 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "proxysql" ]]; then
-        # proxysql
+      elif [[ $service == "mysql" ]]; then
+        # mysql
         while true; do
-          # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
+          # Get the status of the mysql_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.percona-server-80.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
 
-          if [[ $status == "proxysql.service.consul." ]]; then
-            echo "ProxySQL check is passing."
+          if [[ $status == "${name}.percona-server-80.service.consul." ]]; then
+            echo "mysql check is passing."
             exit 0
           fi
 
           # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
+          echo "mysql check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
@@ -306,6 +332,8 @@ write_files:
                 # https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html
                 mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
                 mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+                mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
+                mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
                 mysql --defaults-file=/root/.my.cnf -Be "CHANGE REPLICATION SOURCE TO SOURCE_HOST='percona-server-80-0', SOURCE_PORT=3306, SOURCE_USER='replica', SOURCE_PASSWORD='${mysql_replica_password}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;";
                 mysql --defaults-file=/root/.my.cnf -Be "START REPLICA;";
                 break;

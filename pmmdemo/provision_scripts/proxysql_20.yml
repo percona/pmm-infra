@@ -72,7 +72,7 @@ write_files:
             {
             "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user=sysbench-proxysql-ps", "--password=${percona_server_80_password}"],
             "interval": "3s",
-            "Name": "Check for ProxySQL service on 3306 running using mysqladmin.",
+            "Name": "Check for ProxySQL service on 3306 running using mysqladmin",
             "Notes": "Check for ProxySQL service on 3306 running using mysqladmin. Availability of ProxySQL service throughput is reflective of this check.",
             "ServiceID": "proxysql_3306_check_mysqladmin",
             "Success_before_passing": 3,
@@ -81,7 +81,7 @@ write_files:
             {
             "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=6032", "--user=admin", "--password=${proxysql_admin_password}"],
             "interval": "3s",
-            "Name": "Check for ProxySQL Admin service on 6032 running using mysqladmin.",
+            "Name": "Check for ProxySQL Admin service on 6032 running using mysqladmin",
             "Notes": "Check for ProxySQL Admin service on 6032 running using mysqladmin. Monitoring of ProxySQL Admin is enabled with this service.",
             "ServiceID": "proxysql_6032_check_mysqladmin",
             "Success_before_passing": 3,
@@ -90,7 +90,7 @@ write_files:
             {
             "args": [ "bash", "/tmp/proxysql-admin-script.sh"],
             "interval": "3s",
-            "Name": "Check for ProxySQL Admin service on 6032 running a script.",
+            "Name": "Check for ProxySQL Admin service on 6032 running a script",
             "Notes": "Check for ProxySQL Admin service on 6032 running a script. Monitoring of ProxySQL Admin is enabled with this service.",
             "ServiceID": "proxysql_6032_check_script",
             "Success_before_passing": 3,
