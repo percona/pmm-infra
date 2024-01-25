@@ -32,7 +32,7 @@ runcmd:
   - systemctl start proxysql
   - systemctl enable proxysql
   - bash /tmp/waiter.sh proxysql
-  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster
+  - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster "${name}" "127.0.0.1:6032"
 
 # TODO replace to admin-stats_credentials user
 
