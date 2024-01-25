@@ -147,7 +147,7 @@ write_files:
         # proxysql
         while true; do
           # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.node.dc1.consul.$/ {print $1}')
+          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
 
           if [[ $status == "proxysql.service.consul." ]]; then
             echo "ProxySQL check is passing."
