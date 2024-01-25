@@ -86,10 +86,46 @@ write_files:
             "ServiceID": "proxysql_6032_check_mysqladmin",
             "Success_before_passing": 3,
             "Timeout": "1s"
+            },
+            {
+            "args": [ "bash", "/tmp/proxysql-admin-script.sh"],
+            "interval": "3s",
+            "Name": "Check for ProxySQL Admin service on 6032 running a script.",
+            "Notes": "Check for ProxySQL Admin service on 6032 running a script. Monitoring of ProxySQL Admin is enabled with this service.",
+            "ServiceID": "proxysql_6032_check_script",
+            "Success_before_passing": 3,
+            "Timeout": "1s"
             }
           ]
         }
       }
+  - path: /tmp/proxysql-admin-script.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # Set MySQL server credentials
+      MYSQL_USER="admin"
+      MYSQL_PASSWORD="${proxysql_admin_password}"
+      MYSQL_SOCK="/tmp/proxysql_admin.sock"
+      while true ; do
+        # Attempt to connect using MySQL Shell with a 2-second timeout
+        mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --socket="$MYSQL_SOCK" --connect-timeout=2 << EOF
+
+        # Verify connection by executing a simple query
+        SELECT * FROM runtime_mysql_servers;
+
+      EOF
+
+        # Check the exit status of mysql to determine connection success
+        if [[ $? -ne 0 ]]; then
+          echo "Error: Failed to connect to MySQL server."
+          sleep 1
+        fi
+        date
+      done
+
+      exit 0
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
