@@ -61,7 +61,7 @@ write_files:
 
         SELECT 1;
 
-        EOF
+      EOF
 
         # Check the exit status of mysqlsh to determine connection success
         if [[ $? -eq 0 ]]; then
