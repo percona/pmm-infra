@@ -289,7 +289,7 @@ write_files:
     permissions: "0500"
     content: |
       #!/bin/bash
-      set -x
+
       # This need not be run on the replicas because replication will propagate them everywhere
       provision_users() {
         INITIAL_ROOT_PASSWORD=$(grep "root@localhost:" /data/mysqld.log | tail -n1 | awk '{print $NF}')
