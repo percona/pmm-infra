@@ -101,7 +101,7 @@ write_files:
             {
             "ID": "percona-xtradb-cluster_check_script",
             "Interval": "3s",
-            "Name": "Check for MySQL running on ${name}.",
+            "Name": "Check for MySQL running on ${name}",
             "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
             "ServiceID": "percona-xtradb-cluster_check_script",
             "Success_before_passing": 3,
