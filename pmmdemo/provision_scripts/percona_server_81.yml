@@ -66,7 +66,7 @@ write_files:
       # Set MySQL server credentials
       MYSQL_USER="consul-health-check"
       MYSQL_PASSWORD="${mysql_root_password}"
-      MYSQL_SOCKET="/data/mysql.sock"
+      MYSQL_SOCKET="/var/lib/mysql/mysql.sock"
       while true ; do
         # Attempt to connect using MySQL Shell with a 2-second timeout
         mysql --socket="$MYSQL_SOCKET" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 << EOF
