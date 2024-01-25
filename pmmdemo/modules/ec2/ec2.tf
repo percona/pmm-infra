@@ -1,6 +1,6 @@
 resource "aws_instance" "ec2" {
   instance_type               = var.instance_type
-  ami                         = data.aws_ami.amazon_linux_2.id
+  ami                         = data.aws_ami.amazon_linux_2023.id
   associate_public_ip_address = var.has_public_ip
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = var.security_groups
