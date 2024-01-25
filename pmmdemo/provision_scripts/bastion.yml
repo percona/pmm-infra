@@ -169,24 +169,22 @@ write_files:
       elif [[ $service == "readyz" ]] ; then
         # PMM readyz
         while true; do
-          # Get the status of the PMMreadyz_check_http check
-          status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
 
-          if [[ $status == "pmmreadyz.service.consul." ]]; then
-            echo "PMMreadyz_check_http check is passing."
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
 
-            # Check for DNS :facepalm:
-            dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
-
-            if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
-              echo "PMMreadyz_check_http DNS check is passing."
-              exit 0
-            else
-              echo "PMMreadyz_check_http DNS check is not passing."
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
             fi
-
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
           fi
-
           # If the check is not passing, wait for a short interval and try again
           echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
           sleep 1
