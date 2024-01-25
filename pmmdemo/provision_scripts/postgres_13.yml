@@ -23,7 +23,7 @@ runcmd:
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
   - bash /tmp/waiter.sh readyz
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - percona-release setup -y ppg-13
   - yum -y install percona-postgresql13-server percona-pg-stat-monitor13
   - chown postgres:postgres /data
