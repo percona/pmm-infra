@@ -118,7 +118,7 @@ write_files:
       EOF
         
         # Check the exit status of mysql to determine connection success
-        if [[ $? -e 0 ]]; then
+        if [[ $? -eq 0 ]]; then
           echo "Sucessfully connected to ProxySQL Admin service."
           exit 0
         else
