@@ -111,16 +111,6 @@ write_files:
           "tags": ["${name}"],
           "checks": [
             {
-            "ID": "percona-server-81_check_mysqladmin",
-            "Interval": "3s",
-            "Name": "Check for MySQL running on ${name}.",
-            "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
-            "ServiceID": "percona-server-81_check_mysqladmin",
-            "Success_before_passing": 3,
-            "Timeout": "2s",
-            "args": ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306", "--user='consul-health-check'", "--password=${mysql_root_password}"]
-            },
-            {
             "ID": "percona-server-81_check_script",
             "Interval": "3s",
             "Name": "Check for MySQL running on ${name}.",
