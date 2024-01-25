@@ -116,16 +116,17 @@ write_files:
         SELECT * FROM runtime_mysql_servers;
 
       EOF
-
+        
         # Check the exit status of mysql to determine connection success
-        if [[ $? -ne 0 ]]; then
-          echo "Error: Failed to connect to MySQL server."
+        if [[ $? -e 0 ]]; then
+          echo "Sucessfully connected to ProxySQL Admin service."
+          exit 0
+        else
+          echo "Connection attempt failed.  Sleeping..."
           sleep 1
         fi
-        date
-      done
 
-      exit 0
+      done
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
