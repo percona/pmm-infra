@@ -146,21 +146,6 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "proxysql" ]]; then
-        # proxysql
-        while true; do
-          # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
-
-          if [[ $status == "proxysql.service.consul." ]]; then
-            echo "ProxySQL check is passing."
-            exit 0
-          fi
-
-          # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
-          sleep 3
-        done
       elif [[ $service == "readyz" ]] ; then
         # PMM readyz
         while true; do
