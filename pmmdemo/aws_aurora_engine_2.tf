@@ -1,16 +1,20 @@
-resource "aws_rds_cluster" "pmmdemo_aurora_57" {
-  cluster_identifier  = "pmmdemo-aurora-cluster"
-  engine              = "aurora-mysql"
-  engine_version      = "5.7.mysql_aurora.2.11.3"
-  database_name       = "pmmdemo"
-  master_username     = "pmmdemo"
-  master_password     = random_password.pmmdemo_aurora_57_password.result
-  db_subnet_group_name = "${local.environment_name}-db-subnet"
-  skip_final_snapshot = true
-  apply_immediately   = true
+locals {
+  rds_aurora_mysql_57_name = "rds_aurora_mysql_57"
 }
 
-resource "random_password" "pmmdemo_aurora_57_password" {
+resource "aws_rds_cluster" "pmmdemo_aurora_57" {
+  apply_immediately    = true
+  cluster_identifier   = local.rds_aurora_mysql_57_name
+  database_name        = "pmmdemo"
+  db_subnet_group_name = "${local.environment_name}-${local.rds_aurora_mysql_57_name}-db-subnet"
+  engine               = "aurora-mysql"
+  engine_version       = "5.7.mysql_aurora.2.11.3"
+  master_password      = random_password.rds_aurora_mysql_57_password.result
+  master_username      = "pmmdemo"
+  skip_final_snapshot  = true
+}
+
+resource "random_password" "rds_aurora_mysql_57_password" {
   length  = 30
   special = false
   upper   = true
