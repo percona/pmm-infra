@@ -13,11 +13,8 @@ bootcmd:
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
-packages:
-  - curl
-  - jq
-
 runcmd:
+  - yum -y install jq nc nmap-ncat
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - usermod -d /opt/consul consul

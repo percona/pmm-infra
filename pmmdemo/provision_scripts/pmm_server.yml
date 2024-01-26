@@ -6,17 +6,6 @@ prefer_fqdn_over_hostname: true
 preserve_hostname: false
 repo_upgrade: all
 
-packages:
-  - curl
-  - lsof
-  - nmap
-  - htop
-  - mc
-  - jq
-  - docker
-  - git
-  - yum-utils
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -26,6 +15,7 @@ mounts:
   - ["/dev/nvme1n1", "/var/lib/docker/", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
+  - yum -y install docker git htop jq mc nc nmap-ncat
   - systemctl enable docker
   - service docker start
   - usermod -a -G docker ec2-user

@@ -15,6 +15,7 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
+  - yum -y install jq nc nmap-ncat
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul

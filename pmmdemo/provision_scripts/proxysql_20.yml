@@ -6,12 +6,8 @@ prefer_fqdn_over_hostname: true
 preserve_hostname: false
 repo_upgrade: all
 
-packages:
-  - nmap-ncat
-  - jq
-  - curl
-
 runcmd:
+  - yum -y install jq nc nmap-ncat
   - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul

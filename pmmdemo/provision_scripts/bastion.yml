@@ -6,12 +6,6 @@ prefer_fqdn_over_hostname: true
 preserve_hostname: false
 repo_upgrade: all
 
-packages:
-  - docker
-  - nmap-ncat
-  - jq
-  - curl
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -21,6 +15,7 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
+  - yum -y install docker jq nc nmap-ncat
   - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - yum -y install consul
   - systemctl enable consul
