@@ -55,7 +55,7 @@ runcmd:
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
   - bash /tmp/waiter.sh process-exporter
-  - pmm-admin add external --group=processes --listen-port=9256 --environment="${environment_name}" --service-name="${name}-processes" --cluster="processes-cluster"
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
 write_files:
   - path: /etc/resolv.conf
