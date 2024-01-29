@@ -2,7 +2,7 @@ locals {
   rds_postgresql_13_name = "rds_postgresql_13"
 }
 
-resource "aws_db_instance" "pmmdemo_postgres_13" {
+resource "aws_db_instance" "rds_postgresql_13" {
   allocated_storage    = 10
   apply_immediately    = true
   db_name              = "pmmdemo"
