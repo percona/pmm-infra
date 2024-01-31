@@ -1,11 +1,10 @@
 locals {
-  rds_postgresql_13_name = "rds_postgresql_13"
+  rds_postgresql_13_name = "rds-postgresql-13"
 }
 
 resource "aws_db_instance" "rds_postgresql_13" {
   allocated_storage    = 10
   apply_immediately    = true
-  db_name              = "pmmdemo"
   db_subnet_group_name = "${local.environment_name}-${local.rds_postgresql_13_name}-db-subnet"
   engine               = "postgres"
   engine_version       = "13.10"
