@@ -21,6 +21,7 @@ module "postgres_13" {
     pmm_server_host            = local.pmm_server_host
     postgres_pmm_password      = random_password.postgres_pmm_password.result,
     postgres_sysbench_password = random_password.postgres_sysbench_password.result,
+    environment_name           = local.environment_name
   })
 
   depends_on = [

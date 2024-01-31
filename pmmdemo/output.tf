@@ -22,6 +22,11 @@ output "percona_server_80_password" {
   sensitive = true
 }
 
+output "percona_server_81_password" {
+  value     = random_password.mysql81_sysbench_password.result
+  sensitive = true
+}
+
 output "percona_xtradb_cluster_80_root_password" {
   value     = random_password.percona_xtradb_cluster_80_root_password.result
   sensitive = true
