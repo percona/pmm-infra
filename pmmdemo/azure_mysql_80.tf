@@ -1,6 +1,6 @@
 locals {
   azure_region        = "East US"
-  azure_mysql_80_name = "azure_mysql_80"
+  azure_mysql_80_name = "azure-mysql-80"
 }
 
 # Import the resource group, as there can only be one and it should not

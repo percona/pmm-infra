@@ -1,8 +1,8 @@
 locals {
-  rds_aurora_mysql_57_name = "rds_aurora_mysql_57"
+  rds_aurora_mysql_57_name = "rds-aurora-mysql-57"
 }
 
-resource "aws_rds_cluster" "pmmdemo_aurora_57" {
+resource "aws_rds_cluster" "rds_aurora_mysql_57" {
   apply_immediately    = true
   cluster_identifier   = local.rds_aurora_mysql_57_name
   database_name        = "pmmdemo"
