@@ -1,11 +1,11 @@
 locals {
-  rds_mysql_80_name = "rds_mysql_80"
+  rds_mysql_80_name = "rds-mysql-80"
 }
 
-resource "aws_db_instance" "pmmdemo_aws_mysql_engine_80" {
+resource "aws_db_instance" "rds_mysql_80" {
   allocated_storage    = 10
   availability_zone    = "us-east-1f"
-  db_name              = "pmmdemo"
+  db_name              = "${local.rds_mysql_80_name}"
   db_subnet_group_name = "${local.environment_name}-${local.rds_mysql_80_name}-db-subnet"
   engine               = "mysql"
   engine_version       = "8.0.35"
