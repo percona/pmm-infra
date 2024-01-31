@@ -44,8 +44,46 @@ runcmd:
   - service process-exporter start
   - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+  - yum -y install gcc
+  - gpg2 --keyserver keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  - curl -sSL https://get.rvm.io | bash -s stable
+  - source /etc/profile.d/rvm.sh
+  - rvm get head
+  - rvm install 3.3.0
+  - rvm use 3.3.0 --default
+  - gem install innodb_ruby
 
 write_files:
+  - path: /tmp/innodb-ruby.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      rootdir="/data"
+      types="sbtest_proxysql sbtest_direct"
+      tbl="sbtest1"
+      finaloutput="/usr/local/percona/pmm2/collectors/textfile-collector/low-resolution/innodb_ruby.prom"
+      tempoutput="/tmp/innodb_ruby.prom"
+      if [[ -n "$tempoutput" ]] ; then
+        rm -v $tempoutput
+      fi
+
+      for type in $types; do
+        path="$rootdir/$type/$tbl.ibd"
+        typetbl="${type}_${tbl}"
+        space_indexes=$(innodb_space -f $path space-indexes)
+        while IFS=' ' read -r id root fseg fseg_id used allocated fill_factor; do
+          # Skip header row if present
+          if [[ "$id" == "id" ]]; then continue; fi
+          # Process extracted values
+          # ... (code to calculate total_used_space, etc.)
+          labels="{root=\"$root\",fseg=\"$fseg\",fseg_id=\"$fseg_id\"}"
+          echo "innodb_ruby_${typetbl}_${id}_used${labels} $used" >> $tempoutput
+          echo "innodb_ruby_${typetbl}_${id}_allocated${labels} $allocated" >> $tempoutput
+          echo "innodb_ruby_${typetbl}_${id}_fill_factor${labels} $fill_factor" >> $tempoutput
+        done <<< "$space_indexes"
+      done
+
+      mv -v $tempoutput $finaloutput
   - path: /etc/resolv.conf
     permissions: "0644"
     content: |
