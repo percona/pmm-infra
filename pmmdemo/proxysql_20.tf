@@ -23,6 +23,7 @@ module "proxysql" {
     percona_xtradb_cluster_80_password    = random_password.percona_xtradb_cluster_80_sysbench_password.result
     pmm_admin_password                    = random_password.pmm_admin_pass.result
     pmm_server_endpoint                   = local.pmm_server_endpoint
+    pmm_server_host                       = local.pmm_server_host
     proxysql_admin_password               = random_password.proxysql_admin.result
     proxysql_monitor_password             = random_password.proxysql_monitor.result
   })
