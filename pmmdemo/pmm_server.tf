@@ -31,6 +31,7 @@ module "pmm_server" {
       oauth_url                  = var.oauth_url
       pmm_admin_pass             = random_password.pmm_admin_pass.result
       pmm_server_endpoint        = local.pmm_server_endpoint
+      pmm_server_host            = local.pmm_server_host
     }
   )
 }
