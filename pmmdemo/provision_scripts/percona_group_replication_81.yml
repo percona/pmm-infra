@@ -232,7 +232,8 @@ write_files:
       #
       bind_address = 0.0.0.0
       datadir=/data
-      log_error_verbosity=0
+      log_error_verbosity=3
+      log_error_suppression_list='MY-013360'
       log-error=/data/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       secure_log_path = /data
