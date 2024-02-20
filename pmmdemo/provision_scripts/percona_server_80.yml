@@ -275,13 +275,13 @@ write_files:
   - path: /tmp/replica-config.cnf
     content: |
       [mysqld]
-      innodb_flush_log_at_trx_commit=1
+      innodb_flush_log_at_trx_commit=0
       innodb_flush_method=O_DIRECT
       innodb_flush_neighbors=0
       read_only=1
-      replica_parallel_workers=2
+      replica_parallel_workers=6
       replica_preserve_commit_order=1
-      sync_binlog=1
+      sync_binlog=0
 
   - path: /root/init-mysql.sh
     permissions: "0555"
