@@ -231,6 +231,7 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
+      log_error_suppression_list='MY-013360'
       #proxy_protocol_networks=10.0.0.0/16
       loose-validate_password.policy = 0
 
