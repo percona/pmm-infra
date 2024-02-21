@@ -191,7 +191,7 @@ write_files:
       for (( ; ; )); do
           RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
           RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
-          RND_EXEC_TIME="$(( $${RANDOM} % 300 + 600 ))";    # 600..900
+          RND_EXEC_TIME="$(( $${RANDOM} % 14400 + 14400 ))";    # 4 hours and up to 8 hours
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
           pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}";
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
