@@ -256,10 +256,10 @@ write_files:
       table_size=1000000
       tables=20
 
-  - path: /etc/sysbench/postgres13.cnf
+  - path: /etc/sysbench/postgresql13.cnf
     content: |
       db-driver=pgsql
-      pgsql-host=postgres-13
+      pgsql-host=postgresql-13
       pgsql-port=5432
       pgsql-user=sysbench
       pgsql-password=${postgres_sysbench_password}
