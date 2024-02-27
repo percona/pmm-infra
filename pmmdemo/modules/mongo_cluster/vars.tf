@@ -1,8 +1,9 @@
 locals {
+  environment_name        = terraform.workspace == "default" ? var.project_name : terraform.workspace
   mongo_cluster_name      = "mongo-60"
-  provision_script_shard  = "provision_scripts/mongo_60/shard.yml"
   provision_script_cfg    = "provision_scripts/mongo_60/cfg.yml"
   provision_script_mongos = "provision_scripts/mongo_60/mongos.yml"
+  provision_script_shard  = "provision_scripts/mongo_60/shard.yml"
 }
 
 
@@ -79,4 +80,10 @@ variable "mongo_config_disk_size" {
   type        = string
   description = "Size of config instance of Mongo cluster"
   default     = 16
+}
+
+variable "project_name" {
+  type        = string
+  description = "Do not use 'default' namespace"
+  default     = "mypmmdemo123"
 }
