@@ -24,22 +24,85 @@ runcmd:
   - systemctl enable consul
   - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y psmdb-60
-  - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - bash /tmp/waiter.sh readyz
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - bash /tmp/waiter.sh process-exporter
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+  - percona-release setup -y psmdb-60
+  - yum -y install percona-server-mongodb
   - chown mongod:mongod /data/ /etc/mongo-key
   - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - bash pip3 install ansi2txt
+  - pip3 install ansi2txt
   - bash /tmp/mongodb-init-rs.sh
-  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - bash /tmp/waiter.sh mongodb
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-rs-${shard_number}' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
+  - path: /tmp/waiter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
 
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "mongodb" ]]; then
+        # mongodb
+        while true; do
+          # Get the status of the mongodb check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-rs-${shard_number}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.mongo-60-rs-${shard_number}.service.consul." ]]; then
+            echo "mongodb check is passing."
+            exit 0
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "mongodb check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
+
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
+            fi
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      fi
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -57,9 +120,11 @@ write_files:
       {
         "services": [
           {
-            "name": "mongo-60-${replica_set_name}",
-            "tags": ["mongo-60-rs-${shard_number}", "${name}"],
+            "address": "${fqdn}",
+            "id": "mongo-60-rs-${replica_set_name}",            
+            "name": "mongo-60-rs-${replica_set_name}",
             "port": 27019,
+            "tags": ["${name}"],
             "checks": [
               {
                 "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
@@ -68,16 +133,43 @@ write_files:
             ]
           },
           {
+            "address": "${fqdn}",
+            "id": "mongo-60-rs-${shard_number}-primary",            
             "name": "mongo-60-rs-${shard_number}-primary",
+            "tags": ["${name}"],
             "checks": [{
               "args": ["/usr/local/bin/mongo_is_primary.sh"],
               "interval": "10s"
             }]
           }        ]
       }
-
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
   - path: /usr/local/bin/mongo_is_primary.sh
-    permissions: "0700"
+    permissions: "0755"
     content: |
         #!/bin/bash
         masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)' | /usr/local/bin/ansi2txt)
