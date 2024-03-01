@@ -17,6 +17,7 @@ module "proxysql" {
     fqdn                                  = "${local.proxysql_name}.${aws_route53_zone.demo_local.name}"
     local_domain                          = "${local.environment_name}.local"
     name                                  = local.proxysql_name
+    oracle_mysql_83_password              = random_password.oracle_mysql_83_sysbench_password.result
     percona_group_replication_81_password = random_password.percona_group_replication_81_sysbench_password.result
     percona_server_80_password            = random_password.mysql80_sysbench_password.result
     percona_server_81_password            = random_password.mysql81_sysbench_password.result
@@ -32,7 +33,8 @@ module "proxysql" {
     module.percona_server_80,
     module.percona_server_81,
     module.percona_xtradb_cluster_80,
-    module.percona_group_replication_81
+    module.percona_group_replication_81,
+    module.oracle_mysql_83
   ]
 }
 
