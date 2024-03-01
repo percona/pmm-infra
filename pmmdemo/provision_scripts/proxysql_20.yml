@@ -306,16 +306,16 @@ write_files:
 
       mysql_query_rules:
       (
-        { username = "sysbench-proxysql-percona-gr",rule_id = 70,  destination_hostgroup = 10000, active = 1, match_digest = "^SELECT.*FOR UPDATE", apply = 1},
-        { username = "sysbench-proxysql-percona-gr",rule_id = 80,  destination_hostgroup = 20000, active = 1, match_digest = "^SELECT", apply = 1},
-        { username = "sysbench-proxysql-ps", rule_id = 10, destination_hostgroup = 10, active = 1, match_digest = "^SELECT.*FOR UPDATE", apply = 1},
-        { username = "sysbench-proxysql-ps", rule_id = 20, destination_hostgroup = 20, active = 1, match_digest = "^SELECT", apply = 1},
-        { username = "sysbench-proxysql-ps81", rule_id = 30, destination_hostgroup = 30, active = 1, match_digest = "^SELECT.*FOR UPDATE", apply = 1},
-        { username = "sysbench-proxysql-ps81", rule_id = 40, destination_hostgroup = 40, active = 1, match_digest = "^SELECT", apply = 1},
-        { username = "sysbench-proxysql-pxc", rule_id = 100,destination_hostgroup = 2000, active = 1, match_digest = "^SELECT", apply = 1},
-        { username = "sysbench-proxysql-pxc", rule_id = 90, destination_hostgroup = 1000, active = 1, match_digest = "^SELECT.*FOR UPDATE", apply = 1},
-        { username = "sysbench-prx-oracle-mysql-83",rule_id = 50,  destination_hostgroup = 50, active = 1, match_digest = "^SELECT.*FOR UPDATE", apply = 1},
-        { username = "sysbench-prx-oracle-mysql-83",rule_id = 60,  destination_hostgroup = 60, active = 1, match_digest = "^SELECT", apply = 1},
+        { rule_id =  10, destination_hostgroup = 10,    username = "sysbench-proxysql-ps",          match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
+        { rule_id =  20, destination_hostgroup = 20,    username = "sysbench-proxysql-ps",          match_digest = "^SELECT", active = 1, apply = 1 },
+        { rule_id =  30, destination_hostgroup = 30,    username = "sysbench-proxysql-ps81",        match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
+        { rule_id =  40, destination_hostgroup = 40,    username = "sysbench-proxysql-ps81",        match_digest = "^SELECT", active = 1, apply = 1 },
+        { rule_id =  50, destination_hostgroup = 50,    username = "sysbench-prx-oracle-mysql-83",  match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
+        { rule_id =  60, destination_hostgroup = 60,    username = "sysbench-prx-oracle-mysql-83",  match_digest = "^SELECT", active = 1, apply = 1 },
+        { rule_id =  70, destination_hostgroup = 10000, username = "sysbench-proxysql-percona-gr",  match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
+        { rule_id =  80, destination_hostgroup = 20000, username = "sysbench-proxysql-percona-gr",  match_digest = "^SELECT", active = 1, apply = 1 },
+        { rule_id =  90, destination_hostgroup = 1000,  username = "sysbench-proxysql-pxc",         match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
+        { rule_id = 100, destination_hostgroup = 2000,  username = "sysbench-proxysql-pxc",         match_digest = "^SELECT", active = 1, apply = 1 },
       )
 
       scheduler=
