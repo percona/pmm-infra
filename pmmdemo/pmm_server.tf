@@ -71,6 +71,7 @@ data "aws_secretsmanager_secret_version" "sso_creds" {
 }
 
 resource "aws_iam_access_key" "rds_user_access_key" {
+  count = var.DBAAS > 0 ? 1 : 0
   user = data.aws_iam_user.rds_user.user_name
 }
 
