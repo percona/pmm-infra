@@ -45,7 +45,7 @@ runcmd:
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
   - bash /tmp/waiter.sh mysql
-  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='mysql-81-cluster' --replication-set='mysql-81-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='oracle-mysql-83-cluster' --replication-set='oracle-mysql-83-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
 
 write_files:
   - path: /etc/resolv.conf
