@@ -37,7 +37,7 @@ runcmd:
   - sleep 15s
   - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
   - bash /tmp/waiter.sh mongodb
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --environment='prod' --enable-all-collectors
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
   - path: /tmp/waiter.sh
