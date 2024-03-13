@@ -243,7 +243,7 @@ write_files:
 
       # Config binary and slow_query logs
       #
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
       log_slow_admin_statements=ON
       log_slow_rate_limit=1

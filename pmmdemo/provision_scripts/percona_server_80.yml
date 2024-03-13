@@ -239,7 +239,7 @@ write_files:
       #
       log-bin
       binlog_format=ROW
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
 
       # Configure slow logs
