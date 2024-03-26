@@ -5,6 +5,7 @@ locals {
 resource "aws_db_instance" "rds_postgresql_13" {
   allocated_storage    = 10
   apply_immediately    = true
+  count                = var.DBAAS > 0 ? 1 : 0
   db_subnet_group_name = "${local.environment_name}-${local.rds_postgresql_13_name}-db-subnet"
   engine               = "postgres"
   engine_version       = "13.10"

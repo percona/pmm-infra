@@ -17,6 +17,12 @@ variable "project_name" {
   default     = "mypmmdemo123"
 }
 
+variable "DBAAS" {
+    default     = 1
+    description = "Control whether to deploy the RDS cluster (0 = no, 1 = yes)"
+    type        = number
+}
+
 variable "google_analytics_id" {
   type        = string
   description = "Google Analytics tracking code"

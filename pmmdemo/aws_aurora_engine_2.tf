@@ -5,6 +5,7 @@ locals {
 resource "aws_rds_cluster" "rds_aurora_mysql_57" {
   apply_immediately    = true
   cluster_identifier   = local.rds_aurora_mysql_57_name
+  count                = var.DBAAS > 0 ? 1 : 0
   database_name        = "pmmdemo"
   db_subnet_group_name = "${local.environment_name}-${local.rds_aurora_mysql_57_name}-db-subnet"
   engine               = "aurora-mysql"

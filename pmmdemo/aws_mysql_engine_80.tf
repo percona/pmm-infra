@@ -5,6 +5,7 @@ locals {
 resource "aws_db_instance" "rds_mysql_80" {
   allocated_storage    = 10
   availability_zone    = "us-east-1f"
+  count                = var.DBAAS > 0 ? 1 : 0
   db_name              = "${local.rds_mysql_80_name}"
   db_subnet_group_name = "${local.environment_name}-${local.rds_mysql_80_name}-db-subnet"
   engine               = "mysql"

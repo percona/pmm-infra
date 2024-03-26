@@ -14,6 +14,7 @@ data "azurerm_resource_group" "pmmdemo" {
 resource "azurerm_mysql_server" "pmmdemo" {
   name     = local.azure_mysql_80_name
   provider = azurerm.demo
+  count    = var.DBAAS > 0 ? 1 : 0
 
   location            = local.azure_region
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
@@ -43,10 +44,11 @@ resource "azurerm_mysql_server" "pmmdemo" {
 # Create an empty MySQL database for sysbench queries
 #
 resource "azurerm_mysql_database" "pmmdemo_sysbench" {
+  count               = var.DBAAS > 0 ? 1 : 0
   name                = "sbtest"
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
-  server_name         = azurerm_mysql_server.pmmdemo.name
+  server_name         = azurerm_mysql_server.pmmdemo[count.index]
   charset             = "utf8mb4"
   collation           = "utf8mb4_general_ci"
 }
@@ -54,10 +56,11 @@ resource "azurerm_mysql_database" "pmmdemo_sysbench" {
 # Allow access from PMMDemo-server
 #
 resource "azurerm_mysql_firewall_rule" "allow_pmmdemo_server" {
+  count               = var.DBAAS > 0 ? 1 : 0
   name                = "allow_pmmdemo_server"
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
-  server_name         = azurerm_mysql_server.pmmdemo.name
+  server_name         = azurerm_mysql_server.pmmdemo[count.index]
   start_ip_address    = aws_eip.external_ip.public_ip
   end_ip_address      = aws_eip.external_ip.public_ip
 }
