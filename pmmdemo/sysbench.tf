@@ -18,6 +18,7 @@ module "sysbench" {
     local_domain                          = "${local.environment_name}.local"
     mysql80_sysbench_password             = random_password.mysql80_sysbench_password.result
     mysql81_sysbench_password             = random_password.mysql81_sysbench_password.result
+    oracle_mysql_83_sysbench_password     = random_password.oracle_mysql_83_sysbench_password.result
     name                                  = local.sysbench_name
     percona_group_replication_81_password = random_password.percona_group_replication_81_sysbench_password.result
     percona_xtradb_cluster_80_password    = random_password.percona_xtradb_cluster_80_sysbench_password.result

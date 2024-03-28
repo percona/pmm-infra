@@ -30,6 +30,7 @@ runcmd:
   - systemctl enable sysbench.ps81
   - systemctl enable sysbench.pxc80
   - systemctl enable sysbench.pgr81
+  - systemctl enable sysbench.oracle_mysql83
   - systemctl enable sysbench.proxysql_ps80
   - systemctl enable sysbench.proxysql_ps81
   - systemctl enable sysbench.proxysql_pxc80
@@ -45,6 +46,7 @@ runcmd:
   - systemctl start sysbench.proxysql_ps81
   - systemctl start sysbench.proxysql_pxc80
   - systemctl start sysbench.proxysql_pgr81
+  - systemctl start sysbench.oracle_mysql83
   - systemctl start sysbench.haproxy.pxc80
   - systemctl start sysbench.haproxy.pgr81
   - systemctl start sysbench.postgres13
@@ -82,17 +84,6 @@ write_files:
     content: |
       [client]
       user=root
-      # ProxySQL 
-      password="${proxysql_monitor_password}"
-      # Percona Server for MySQL 8.0
-      password="${mysql80_sysbench_password}"
-      # Percona Server for MySQL 8.1 
-      password="${mysql81_sysbench_password}"
-      # PXC 8
-      password="${percona_xtradb_cluster_80_password}"
-      # Percona Group Replication 8.1
-      password="${percona_group_replication_81_password}"
-      
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -154,17 +145,11 @@ write_files:
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
-        # PMM readyz
         while true; do
-          # Check for DNS :facepalm:
           dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
-
           if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
             echo "PMMreadyz_check_http DNS check is passing."
-
-            # Get the status of the PMMreadyz_check_http check
             status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
-        
             if [[ $status == "pmmreadyz.service.consul." ]]; then
               echo "PMMreadyz_check_http check is passing."
               exit 0  
@@ -172,7 +157,6 @@ write_files:
           else
             echo "PMMreadyz_check_http DNS check is not passing."
           fi
-          # If the check is not passing, wait for a short interval and try again
           echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
           sleep 1
         done
@@ -180,25 +164,22 @@ write_files:
   - path: /etc/sysbench/exec_sysbench.sh
     content: |
       #!/bin/bash
-
       SYSBENCH_CFG="$${1}";
       if [[ "$${SYSBENCH_CFG}" == "" ]]; then
           exit 1;
       fi;
-
       check_failure() {
           if [ $? -ne 0 ]; then
             echo "Seems to be a problem with the endpoint. Sleeping so we don't spam the annotations!";
             sleep 60;
           fi
       }  
-
       OLTP_AVAILABLE=(oltp_delete.lua oltp_insert.lua oltp_point_select.lua oltp_read_only.lua oltp_read_write.lua oltp_update_index.lua oltp_update_non_index.lua oltp_write_only.lua)
       OLTP_PATH='/usr/share/sysbench'
       for (( ; ; )); do
           RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
           RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
-          RND_EXEC_TIME="$(( $${RANDOM} % 300 + 600 ))";    # 600..900
+          RND_EXEC_TIME="$(( $${RANDOM} % 14400 + 14400 ))";    # 4 hours and up to 8 hours
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
           pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}";
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
@@ -210,7 +191,6 @@ write_files:
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
       done;
-
   - path: /etc/sysbench/pgr81.cnf
     content: |
       mysql-db=sbtest_direct_gr
@@ -223,7 +203,6 @@ write_files:
       table-size=1000000
       tables=20
       verbosity=0
-
   - path: /etc/sysbench/ps80.cnf
     content: |
       mysql-db=sbtest_direct
@@ -236,7 +215,6 @@ write_files:
       table-size=1000000
       tables=20
       verbosity=0
-
   - path: /etc/sysbench/ps81.cnf
     content: |
       mysql-db=sbtest_direct
@@ -249,7 +227,18 @@ write_files:
       table-size=1000000
       tables=20
       verbosity=0
-
+  - path: /etc/sysbench/oracle_mysql_83.cnf
+    content: |
+      mysql-db=sbtest_direct
+      mysql-host=oracle-mysql-83-0
+      mysql-port=3306
+      mysql-user=sysbench-direct-oracle-mysql-83
+      mysql-password=${oracle_mysql_83_sysbench_password}
+      rate=0
+      report-interval=10
+      table-size=1000000
+      tables=20
+      verbosity=0
   - path: /etc/sysbench/pxc80.cnf
     content: |
       mysql-db=sbtest_direct
@@ -262,11 +251,10 @@ write_files:
       report-interval=10
       table_size=1000000
       tables=20
-
-  - path: /etc/sysbench/postgres13.cnf
+  - path: /etc/sysbench/postgresql13.cnf
     content: |
       db-driver=pgsql
-      pgsql-host=postgres-13
+      pgsql-host=postgresql-13
       pgsql-port=5432
       pgsql-user=sysbench
       pgsql-password=${postgres_sysbench_password}
@@ -274,7 +262,6 @@ write_files:
       rate=0
       report-interval=10
       verbosity=0
-
   - path: /etc/sysbench/proxysql_pgr81.cnf
     content: |
       mysql-db=sbtest_proxysql_gr
@@ -289,7 +276,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-
   - path: /etc/sysbench/proxysql_ps80.cnf
     content: |
       mysql-db=sbtest_proxysql
@@ -304,7 +290,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-
   - path: /etc/sysbench/proxysql_ps81.cnf
     content: |
       mysql-db=sbtest_proxysql
@@ -319,7 +304,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-  
   - path: /etc/sysbench/proxysql_pxc80.cnf
     content: |
       mysql-db=sbtest_proxysql
@@ -334,7 +318,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-
   - path: /etc/sysbench/haproxy_pgr81.cnf
     content: |
       mysql-db=sbtest_haproxy_gr
@@ -349,7 +332,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-
   - path: /etc/sysbench/haproxy_pxc80.cnf
     content: |
       mysql-db=sbtest_haproxy
@@ -364,7 +346,6 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-
   - path: /usr/lib/systemd/system/sysbench.pgr81.service
     content: |
       [Unit]
@@ -379,7 +360,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.ps80.service
     content: |
       [Unit]
@@ -394,7 +374,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.ps81.service
     content: |
       [Unit]
@@ -409,7 +388,20 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
+  - path: /usr/lib/systemd/system/sysbench.oracle_mysql83.service
+    content: |
+      [Unit]
+      Description=Sysbench for Oracle MySQL 8.3
+      After=network.target
 
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=600
+      ExecStart=/etc/sysbench/exec_sysbench.sh oracle_mysql_83.cnf
+
+      [Install]
+      WantedBy=multi-user.target
   - path: /usr/lib/systemd/system/sysbench.pxc80.service
     content: |
       [Unit]
@@ -424,7 +416,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.proxysql_pgr81.service
     content: |
       [Unit]
@@ -439,7 +430,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.proxysql_ps80.service
     content: |
       [Unit]
@@ -454,7 +444,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.proxysql_ps81.service
     content: |
       [Unit]
@@ -469,7 +458,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
     content: |
       [Unit]
@@ -484,7 +472,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.postgres13.service
     content: |
       [Unit]
@@ -499,7 +486,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.haproxy.pgr81.service
     content: |
       [Unit]
@@ -514,7 +500,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
   - path: /usr/lib/systemd/system/sysbench.haproxy.pxc80.service
     content: |
       [Unit]

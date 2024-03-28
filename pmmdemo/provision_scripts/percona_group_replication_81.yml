@@ -232,7 +232,8 @@ write_files:
       #
       bind_address = 0.0.0.0
       datadir=/data
-      log_error_verbosity=0
+      log_error_verbosity=3
+      log_error_suppression_list='MY-013360'
       log-error=/data/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       secure_log_path = /data
@@ -242,7 +243,7 @@ write_files:
 
       # Config binary and slow_query logs
       #
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
       log_slow_admin_statements=ON
       log_slow_rate_limit=1

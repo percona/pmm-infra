@@ -232,6 +232,7 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
+      log_error_suppression_list='MY-013360'
       #proxy_protocol_networks=10.0.0.0/16
       loose-validate_password.policy = 0
       
@@ -240,7 +241,7 @@ write_files:
       #
       log-bin
       binlog_format=ROW
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
 
       # Configure slow logs
@@ -280,7 +281,7 @@ write_files:
       innodb_flush_method=O_DIRECT
       innodb_flush_neighbors=0
       read_only=1
-      replica_parallel_workers=2
+      replica_parallel_workers=6
       replica_preserve_commit_order=1
       sync_binlog=0
 
@@ -303,18 +304,18 @@ write_files:
       if [ "${name}" == "percona-server-81-0" ]; then
         for (( i=1 ; i<=300 ; i++ )); do
             if $(mysql --defaults-file=/root/.my.cnf -Be "show variables where variable_name = 'version';" >/dev/null); then
-              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Be "GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Bse "GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED WITH mysql_native_password BY '${mysql_root_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest_direct;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE DATABASE IF NOT EXISTS sbtest_proxysql;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'sysbench-direct-ps81'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest_direct.* TO 'sysbench-direct-ps81'@'%'; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'sysbench-proxysql-ps81'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-              mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_proxysql.* TO 'sysbench-proxysql-ps81'@'%'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "CREATE USER 'sysbench-proxysql-ps81'@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
+              mysql --defaults-file=/root/.my.cnf -Be "GRANT ALL PRIVILEGES ON sbtest_proxysql.* TO 'sysbench-proxysql-ps81'@'%'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER replica@'%' IDENTIFIED WITH mysql_native_password BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
               mysql --defaults-file=/root/.my.cnf -Be "CREATE USER proxysql@'%' IDENTIFIED WITH mysql_native_password BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";

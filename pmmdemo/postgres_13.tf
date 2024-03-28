@@ -1,5 +1,5 @@
 locals {
-  postgresql_13_name = "rds-postgresql-13"
+  postgresql_13_name = "postgresql-13"
 }
 
 

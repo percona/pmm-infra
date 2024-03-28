@@ -229,6 +229,7 @@ write_files:
       log-error=/var/log/mysqld.log
       pid-file=/var/run/mysqld/mysqld.pid
       log_error_verbosity=3
+      log_error_suppression_list='MY-013360'
       #proxy_protocol_networks=10.0.0.0/16
       loose-validate_password.policy = 0
 
@@ -237,7 +238,7 @@ write_files:
       #
       log-bin=percona-xtradb-cluster-{index}-bin
       binlog_format=ROW
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
 
       slow_query_log=ON
