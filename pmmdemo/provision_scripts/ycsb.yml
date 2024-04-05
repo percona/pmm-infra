@@ -38,6 +38,7 @@ runcmd:
   - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - yum -y install http://yum.puppet.com/puppet8-release-el-7.noarch.rpm
   - yum -y install puppet-agent
+  - source /etc/profile.d/puppet-agent.sh ; puppet config set certname ${name} --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet config set server ${pmm_server_host} --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet config set fact_value_length_soft_limit 16384 --section main
   - source /etc/profile.d/puppet-agent.sh ; puppet ssl bootstrap
