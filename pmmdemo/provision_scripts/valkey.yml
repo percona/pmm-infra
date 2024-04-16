@@ -30,6 +30,9 @@ runcmd:
   - systemctl enable redis
   - systemctl start redis
   - mkdir -p /data
+  - bash /tmp/install-valkey-exporter.sh
+  - bash /tmp/waiter.sh valkey-exporter
+  - pmm-admin add external --group=valkey --listen-port=9121 --environment="prod" --service-name="valkey-valkey" --cluster="valkey-cluster"
 
 write_files:
   - path: /etc/resolv.conf
@@ -77,6 +80,41 @@ write_files:
           ]
         }
       }
+  - path: /etc/consul.d/valkey-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "valkey-exporter",
+          "name": "valkey-exporter",
+          "port": 9121,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9121/metrics",
+            "ID": "valkey-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for valkey-exporter using HTTP",
+            "Notes": "Check for valkey-exporter using HTTP. Monitoring of Valkey metrics are enabled with this service.",
+            "ServiceID": "valkey-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+  - path: /tmp/install-valkey-exporter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to install Valkey
+      cd /tmp
+      wget https://github.com/oliver006/redis_exporter/releases/download/v1.58.0/redis_exporter-v1.58.0.linux-amd64.tar.gz
+      tar zxvf redis_exporter-v1.58.0.linux-amd64.tar.gz 
+      cd redis_exporter-v1.58.0.linux-amd64/
+      screen -S valkey-exporter -d -m ./redis_exporter
   - path: /tmp/waiter.sh
     permissions: "0755"
     content: |
@@ -98,19 +136,19 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "proxysql" ]]; then
-        # proxysql
+      elif [[ $service == "valkey-exporter" ]]; then
+        # valkey-exporter
         while true; do
-          # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
+          # Get the status of the valkey-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.valkey-exporter.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
 
-          if [[ $status == "proxysql.service.consul." ]]; then
-            echo "ProxySQL check is passing."
+          if [[ $status == "${name}.valkey-exporter.service.consul." ]]; then
+            echo "valkey-exporter check is passing."
             exit 0
           fi
 
           # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
+          echo "valkey-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
