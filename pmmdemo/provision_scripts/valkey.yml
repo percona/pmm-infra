@@ -140,7 +140,7 @@ write_files:
         # valkey-exporter
         while true; do
           # Get the status of the valkey-exporter_check_http check
-          status=$(dig @127.0.0.1 -p 8600 ${name}.valkey-exporter.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
+          status=$(dig @127.0.0.1 -p 8600 ${name}.valkey-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
 
           if [[ $status == "${name}.valkey-exporter.service.consul." ]]; then
             echo "valkey-exporter check is passing."
