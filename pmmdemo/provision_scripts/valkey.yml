@@ -25,10 +25,10 @@ runcmd:
   - service process-exporter start
   - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-  - amazon-linux-extras install epel
-  - amazon-linux-extras install redis6
-  - systemctl enable redis
-  - systemctl start redis
+  - percona-release enable valkey experimental
+  - yum -y install valkey
+  - systemctl enable valkey
+  - systemctl start valkey
   - mkdir -p /data
   - bash /tmp/install-valkey-exporter.sh
   - bash /tmp/waiter.sh valkey-exporter
