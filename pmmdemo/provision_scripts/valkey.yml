@@ -26,15 +26,39 @@ runcmd:
   - bash /tmp/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - amazon-linux-extras install epel
-  - amazon-linux-extras install redis6
-  - systemctl enable redis
-  - systemctl start redis
-  - mkdir -p /data
+  - yum -y install valkey
+  - bash /tmp/valkey-init.sh
+  - systemctl enable valkey && systemctl restart valkey
+  - bash /tmp/build-memtier-benchmark.sh
   - bash /tmp/install-valkey-exporter.sh
   - bash /tmp/waiter.sh valkey-exporter
   - pmm-admin add external --group=valkey --listen-port=9121 --environment="prod" --service-name="valkey-valkey" --cluster="valkey-cluster"
 
 write_files:
+  - path: /tmp/valkey-init.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      echo "maxmemory 768mb" >>/etc/valkey/valkey.conf
+      echo "maxmemory-policy allkeys-lfu" >>/etc/valkey/valkey.conf
+      echo "appendonly yes" >>/etc/valkey/valkey.conf
+
+  - path: /tmp/build-memtier-benchmark.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to install Valkey benchmark tool
+      cd /tmp
+      yum -y install autoconf automake make gcc-c++ pcre-devel zlib-devel libmemcached-devel libevent-devel openssl-devel
+      wget https://github.com/RedisLabs/memtier_benchmark/archive/refs/tags/2.1.0.tar.gz
+      tar -xvzf 2.1.0.tar.gz
+      cd /tmp/memtier_benchmark-2.1.0/
+      autoreconf -ivf
+      ./configure
+      make && make install
+      systemctl enable memtier-benchmark.service
+      systemctl start memtier-benchmark.service
+
   - path: /etc/resolv.conf
     permissions: "0644"
     content: |
@@ -42,6 +66,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -55,6 +80,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
@@ -80,6 +106,7 @@ write_files:
           ]
         }
       }
+
   - path: /etc/consul.d/valkey-exporter-check-http.json
     permissions: "0644"
     content: |
@@ -105,16 +132,18 @@ write_files:
           ]
         }
       }
+
   - path: /tmp/install-valkey-exporter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
-      # Script to install Valkey
+      # Script to install Valkey exporter
       cd /tmp
       wget https://github.com/oliver006/redis_exporter/releases/download/v1.58.0/redis_exporter-v1.58.0.linux-amd64.tar.gz
       tar zxvf redis_exporter-v1.58.0.linux-amd64.tar.gz 
       cd redis_exporter-v1.58.0.linux-amd64/
       screen -S valkey-exporter -d -m ./redis_exporter
+
   - path: /tmp/waiter.sh
     permissions: "0755"
     content: |
@@ -175,3 +204,30 @@ write_files:
           sleep 1
         done
       fi
+
+  - path: /etc/valkey/memtier-run.sh
+    permissions: "0744"
+    content: |
+      #!/bin/bash
+      
+      while true; do
+        # 'insert only'
+        /usr/local/bin/memtier_benchmark --run-count=5 --hide-histogram --rate-limiting=200 --test-time=60 --ratio=1:0 --randomize --expiry-range=1-180 --data-size-range=100-1024
+        # 'read write'
+        /usr/local/bin/memtier_benchmark --run-count=5 --hide-histogram --rate-limiting=200 --test-time=60 --ratio=1:4 --randomize --expiry-range=1-180 --data-size-range=100-1024
+      done
+
+  - path: /usr/lib/systemd/system/memtier-benchmark.service
+    content: |
+      [Unit]
+      Description=memtier benchmark for valkey
+      After=network.target
+
+      [Service]
+      Type=simple
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/etc/valkey/memtier-run.sh
+
+      [Install]
+      WantedBy=multi-user.target
