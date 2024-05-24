@@ -48,7 +48,7 @@ resource "azurerm_mysql_database" "pmmdemo_sysbench" {
   name                = "sbtest"
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
-  server_name         = azurerm_mysql_server.pmmdemo[count.index]
+  server_name         = local.azure_mysql_80_name
   charset             = "utf8mb4"
   collation           = "utf8mb4_general_ci"
 }
@@ -60,7 +60,7 @@ resource "azurerm_mysql_firewall_rule" "allow_pmmdemo_server" {
   name                = "allow_pmmdemo_server"
   provider            = azurerm.demo
   resource_group_name = data.azurerm_resource_group.pmmdemo.name
-  server_name         = azurerm_mysql_server.pmmdemo[count.index]
+  server_name         = local.azure_mysql_80_name
   start_ip_address    = aws_eip.external_ip.public_ip
   end_ip_address      = aws_eip.external_ip.public_ip
 }
