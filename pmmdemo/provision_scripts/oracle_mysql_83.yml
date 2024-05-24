@@ -216,7 +216,7 @@ write_files:
       user=root
       password="${mysql_root_password}"
 
-  - path: /etc/my.cnf.d/oracle_mysql_81.cnf
+  - path: /etc/my.cnf.d/oracle_mysql_83.cnf
     content: |
       [mysqld]
 
@@ -241,7 +241,7 @@ write_files:
       #
       log-bin
       binlog_format=ROW
-      binlog_expire_logs_seconds=604800
+      binlog_expire_logs_seconds=86400
 
       # Configure slow logs
       #
