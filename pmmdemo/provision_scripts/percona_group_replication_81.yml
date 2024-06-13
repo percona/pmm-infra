@@ -26,19 +26,19 @@ runcmd:
   - yum -y install percona-mysql-shell
   - percona-release enable tools release
   - yum install -y pmm2-client
-  - bash /tmp/waiter.sh readyz
+  - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - percona-release enable-only pdps-8x-innovation
   - yum -y install percona-server-server
   - systemctl enable mysql
   - systemctl start mysql
   - bash /root/init-mysql.sh
-  - bash /tmp/waiter.sh mysql
+  - bash /usr/local/bin/waiter.sh mysql
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='percona-group-replication-cluster' --replication-set='percona-group-replication-cluster' --environment=prod --query-source=slowlog --service-name="${name}-mysql"
   - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
-  - bash /tmp/waiter.sh process-exporter
+  - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
 
@@ -53,7 +53,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
-  - path: /tmp/consul-check-mysql.sh
+  - path: /usr/local/bin/consul-check-mysql.sh
     permissions: "0755"
     content: |
       #!/bin/bash
@@ -112,7 +112,7 @@ write_files:
             "ServiceID": "percona-group-replication_check_script",
             "Success_before_passing": 3,
             "Timeout": "3s",
-            "args": [ "bash", "/tmp/consul-check-mysql.sh" ]
+            "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh" ]
             }
           ]
         }
@@ -142,7 +142,7 @@ write_files:
           ]
         }
       }
-  - path: /tmp/waiter.sh
+  - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
