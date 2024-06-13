@@ -20,18 +20,18 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - bash /tmp/waiter.sh readyz
+  - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
-  - bash /tmp/waiter.sh process-exporter
+  - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y ps-80
   - yum install -y proxysql2 percona-server-client
   - systemctl start proxysql
   - systemctl enable proxysql
-  - bash /tmp/waiter.sh proxysql
+  - bash /usr/local/bin/waiter.sh proxysql
   - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster "${name}" "127.0.0.1:6032"
 
 # TODO replace to admin-stats_credentials user
@@ -152,7 +152,7 @@ write_files:
           ]
         }
       }
-  - path: /tmp/waiter.sh
+  - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash

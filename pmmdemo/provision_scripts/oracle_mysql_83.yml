@@ -24,12 +24,12 @@ runcmd:
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - bash /tmp/waiter.sh readyz
+  - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
   - yum -y install process-exporter_0.7.10_linux_386.rpm
   - service process-exporter start
-  - bash /tmp/waiter.sh process-exporter
+  - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - yum install -y https://dev.mysql.com/get/mysql80-community-release-el7-11.noarch.rpm
   - yum-config-manager --disable mysql80-community
@@ -44,7 +44,7 @@ runcmd:
   - systemctl start mysqld.service
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - bash /tmp/waiter.sh mysql
+  - bash /usr/local/bin/waiter.sh mysql
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='oracle-mysql-83-cluster' --replication-set='oracle-mysql-83-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
 
 write_files:
@@ -61,7 +61,7 @@ write_files:
       {
         "history.autoSave": "true"
       }
-  - path: /tmp/consul-check-mysql.sh
+  - path: /usr/local/bin/consul-check-mysql.sh
     permissions: "0755"
     content: |
       #!/bin/bash
@@ -120,7 +120,7 @@ write_files:
             "ServiceID": "oracle-mysql-83_check_script",
             "Success_before_passing": 3,
             "Timeout": "3s",
-            "args": [ "bash", "/tmp/consul-check-mysql.sh" ]
+            "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh" ]
             }
           ]
         }
@@ -150,7 +150,7 @@ write_files:
           ]
         }
       }
-  - path: /tmp/waiter.sh
+  - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
