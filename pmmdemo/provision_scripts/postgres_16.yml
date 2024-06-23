@@ -1,0 +1,140 @@
+#cloud-config
+fqdn: ${fqdn}
+hostname: ${name}
+manage_etc_hosts: true
+prefer_fqdn_over_hostname: true
+preserve_hostname: false
+repo_upgrade: all
+
+bootcmd:
+  - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
+  - mkfs.xfs -L data /dev/nvme1n1
+  - mkdir -p /data
+
+mounts:
+  - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
+
+runcmd:
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - systemctl enable consul
+  - systemctl start consul
+  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm2-client
+  - yum -y install pmm2-client
+  - bash /usr/local/bin/waiter.sh readyz
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - percona-release setup -y ppg-16
+  - yum -y install percona-ppg-server-16
+  - chown postgres:postgres /data
+  - sed -i 's/\/var\/lib\/pgsql\/16\/data\//\/data/g' /usr/lib/systemd/system/postgresql-16.service
+  - systemctl daemon-reload
+  - /usr/pgsql-16/bin/postgresql-16-setup initdb
+  - echo 'host    all             all             10.0.2.0/24             password' >> /data/pg_hba.conf
+  - echo "listen_addresses = '*'" >> /data/postgresql.conf
+  - echo "shared_preload_libraries = 'pg_stat_monitor'" >> /data/postgresql.conf
+  - echo "pg_stat_monitor.pgsm_query_max_len = 2048" >> /data/postgresql.conf
+  - echo "pg_stat_monitor.pgsm_enable_query_plan = 1" >> /data/postgresql.conf
+  - systemctl start postgresql-16
+  - chmod +x /tmp/init-postgres.sh
+  - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
+  - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --query-source="pgstatmonitor" --environment="prod" --service-name=${name}-postgresql --cluster="postgresql-cluster" --replication-set="${environment_name}"
+  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - bash /usr/local/bin/waiter.sh process-exporter
+  - service process-exporter start
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+
+write_files:
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "bastion"]
+      server = false
+      ui_config{
+        enabled = true
+      }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+  - path: /usr/local/bin/waiter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
+
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
+            fi
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      fi
+  - path: /tmp/init-postgres.sh
+    content: |
+      #!/bin/bash
+      psql -c "CREATE ROLE pmm WITH SUPERUSER LOGIN CONNECTION LIMIT 10 ENCRYPTED PASSWORD '${postgres_16_pmm_password}'"
+      psql -c "CREATE ROLE sysbench WITH LOGIN CONNECTION LIMIT 100 ENCRYPTED PASSWORD '${postgres_16_sysbench_password}'"
+      psql -c "CREATE DATABASE sbtest"
+      psql -c "GRANT ALL PRIVILEGES ON sbtest TO sysbench"
+      psql -c "CREATE EXTENSION pg_stat_monitor"
+      psql -c "select pg_reload_conf()"
