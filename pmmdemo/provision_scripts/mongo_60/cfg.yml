@@ -70,8 +70,8 @@ write_files:
         # mongodb
         while true; do
           # Get the status of the mongodb check
-          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-          if [[ $status == "${name}.mongo-60-${replica_set_name}.service.consul." ]]; then
+          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}-primary.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.mongo-60-${replica_set_name}-primary.service.consul." ]]; then
             echo "mongodb check is passing."
             exit 0
           fi
