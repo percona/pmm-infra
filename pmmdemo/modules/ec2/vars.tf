@@ -51,7 +51,7 @@ variable "user_data" {
 }
 
 variable "cpu_credits_mode" {
-  type        = bool
+  type        = string
   default     = "standard"
   description = "EC2 burstable credits - standard or unlimited"
 }
