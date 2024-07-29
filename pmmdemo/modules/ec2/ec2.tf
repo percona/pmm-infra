@@ -5,7 +5,6 @@ resource "aws_instance" "ec2" {
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = var.security_groups
   user_data                   = var.user_data
-  cpu_credits                 = var.cpu_credits_mode
 
   key_name = data.aws_key_pair.pmm-demo.key_name
 
@@ -16,6 +15,10 @@ resource "aws_instance" "ec2" {
       "Name"      = "${local.environment_name}-${var.server_name}",
       "terraform" = "yes",
     }
+  
+  credit_specification {
+    cpu_credits = var.cpu_credits_mode
+  }
   }
 
   tags = {
