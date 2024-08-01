@@ -13,7 +13,6 @@ data "aws_ami" "amazon_linux_2" {
 
   owners = ["amazon"]
 }
-
 data "aws_key_pair" "pmm-demo" {
   key_name = "pmm-demo"
 }

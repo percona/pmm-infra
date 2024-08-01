@@ -12,12 +12,14 @@ module "ycsb" {
     aws_security_group.default_access.id,
   ]
   user_data = templatefile("provision_scripts/ycsb.yml", {
-    name                  = local.ycsb_name
     domain                = var.pmm_domain
-    pmm_admin_password    = random_password.pmm_admin_pass.result
-    mongodb_ycsb_password = random_password.mongodb_ycsb_password.result
-    pmm_server_endpoint   = local.pmm_server_endpoint
+    environment_name      = local.environment_name
     fqdn                  = "${local.ycsb_name}.${aws_route53_zone.demo_local.name}"
+    local_domain          = "${local.environment_name}.local"
+    mongodb_ycsb_password = random_password.mongodb_ycsb_password.result
+    name                  = local.ycsb_name
+    pmm_admin_password    = random_password.pmm_admin_pass.result
+    pmm_server_endpoint   = local.pmm_server_endpoint
   })
 }
 

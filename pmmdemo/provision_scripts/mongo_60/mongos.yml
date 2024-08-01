@@ -5,36 +5,160 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
+packages:
+  - curl
+  - jq
+
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - usermod -d /opt/consul consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y psmdb-60
-  - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
-  - mkdir /var/run/mongo/
+  - bash /usr/local/bin/waiter.sh readyz
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - bash /usr/local/bin/waiter.sh process-exporter
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+  - percona-release setup -y psmdb-60
+  - yum -y install percona-server-mongodb
+  - mkdir -p /var/run/mongo/
   - chown mongod:mongod /etc/mongo-key /var/run/mongo/
   - chmod 600 /etc/mongo-key
   - systemctl enable mongos
   - systemctl start mongos
-  - systemctl status mongos
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - sleep 10s
-  - mongosh /tmp/init.js
   - sleep 5s
-  - mongosh -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --enable-all-collectors
+  - mongosh --port 27019 /tmp/init.js
+  - sleep 15s
+  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
+  - bash /usr/local/bin/waiter.sh mongodb
+  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
+  - path: /usr/local/bin/waiter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "mongodb" ]]; then
+        # mongodb
+        while true; do
+          # Get the status of the mongodb check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.mongos.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.mongos.service.consul." ]]; then
+            echo "mongodb check is passing."
+            exit 0
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "mongodb check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
+
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
+            fi
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      fi
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "bastion"]
+      server = false
+
+  - path: /etc/consul.d/mongod-service.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "mongos",            
+          "name": "mongos",
+          "port": 27019,
+          "tags": ["${name}", "mongos"],
+          "checks": [
+            {
+              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
+              "interval": "10s"
+            }
+          ]
+        }
+      }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
   - path: /etc/mongos.conf
     content: |
       sharding:
         configDB: ${replica_set_name}/mongo-60-cfg-0.${route53_name}:27019,mongo-60-cfg-1.${route53_name}:27019,mongo-60-cfg-2.${route53_name}:27019
 
       net:
+        port:	27019
         bindIp: 0.0.0.0
 
       systemLog:
@@ -58,13 +182,14 @@ write_files:
       sh.addShard("shard-0/mongo-60-rs-0-0.${route53_name}:27019,mongo-60-rs-0-1.${route53_name}:27019,mongo-60-rs-0-2.${route53_name}:27019")
       sh.addShard("shard-1/mongo-60-rs-1-0.${route53_name}:27019,mongo-60-rs-1-1.${route53_name}:27019,mongo-60-rs-1-2.${route53_name}:27019")
       admin = db.getSiblingDB("admin")
-      admin.createUser(
-        {
-          user: "pmm-admin",
-          pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-        }
-      )
+      admin.createUser({
+        user: "pmm-admin",
+        pwd: "${mongodb_60_pmm_admin_password}",
+        roles: [
+            { role: "userAdminAnyDatabase", db: "admin" },
+            { role: "clusterAdmin", db: "admin" }
+        ]
+      })
 
   - path: /usr/lib/systemd/system/mongos.service
     content: |
@@ -76,7 +201,7 @@ write_files:
       User=mongod
       Group=mongod
       Type=forking
-      ExecStart=/bin/mongos --config /etc/mongos.conf --fork
+      ExecStart=/bin/mongos --config /etc/mongos.conf
       PIDFile=/var/run/mongo/mongos.pid
       LimitFSIZE=infinity
       LimitCPU=infinity
@@ -90,29 +215,25 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
-  - path: /root/.bashrc
-    append: true
-    content: |
-      alias mng='mongo --nodb'
-
-  - path: /tmp/user.js
+  - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
           privileges: [{
-              resource: {
-                  db: "",
-                  collection: "system.profile"
-                  },
-              actions: [
-                  "listIndexes",
-                  "listCollections",
-                  "dbStats",
-                  "dbHash",
-                  "collStats",
-                  "find"
-                  ]
-              }],
+            resource: { db: '', collection: '' },
+            actions: [
+              'collStats',
+              'dbHash',
+              'dbStats',
+              'find',
+              'listCollections',
+              'listIndexes'
+            ]
+          },
+          {
+            resource: { db: '', collection: 'system.profile' },
+            actions: [ 'collStats', 'dbStats', 'indexStats' ]
+          }],
           roles:[]
       })
       db.getSiblingDB("admin").createUser({
@@ -129,6 +250,7 @@ write_files:
         pwd: "${mongodb_ycsb_password}",
         roles: [
             { role: "readWriteAnyDatabase", db: "admin" },
-            { role: "clusterManager", db: "admin" }
+            { role: "clusterManager", db: "admin" },
+            { role: "enableSharding", db: "ycsb" }
         ]
       })

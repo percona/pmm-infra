@@ -4,16 +4,21 @@ resource "aws_ebs_volume" "data_disk" {
   type              = var.disk_type
 
   lifecycle {
-    prevent_destroy = true
+    create_before_destroy = true
   }
 
   tags = {
-    "Name" = "pmmdemo-${var.disk_name}",
+    "Name" = "${local.environment_name}-${var.disk_name}",
   }
 }
 
-resource "aws_volume_attachment" "pmm_server_data_disk_attach" {
-  device_name = var.device_name
-  volume_id   = aws_ebs_volume.data_disk.id
-  instance_id = var.instance_id
+resource "aws_volume_attachment" "data_disk_attach" {
+  device_name  = var.device_name
+  volume_id    = aws_ebs_volume.data_disk.id
+  instance_id  = var.instance_id
+  force_detach = true
+}
+
+locals {
+  environment_name = terraform.workspace
 }

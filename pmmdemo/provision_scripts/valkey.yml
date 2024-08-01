@@ -25,17 +25,40 @@ runcmd:
   - service process-exporter start
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-  - percona-release setup -y psmdb-60
-  - yum -y install python2 java-1.8.0-openjdk percona-server-mongodb
-  - mkdir -p /data
-  - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
-  - tar xfz ycsb-0.17.0.tar.gz && rm ycsb-0.17.0.tar.gz
-  - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
-  - /bin/bash /etc/ycsb/initial_load.sh
-  - systemctl enable ycsb.mongodb60
-  - systemctl start ycsb.mongodb60
+  - amazon-linux-extras install epel
+  - yum -y install valkey
+  - bash /tmp/valkey-init.sh
+  - systemctl enable valkey && systemctl restart valkey
+  - bash /tmp/build-memtier-benchmark.sh
+  - bash /tmp/install-valkey-exporter.sh
+  - bash /usr/local/bin/waiter.sh valkey-exporter
+  - pmm-admin add external --group=valkey --listen-port=9121 --environment="prod" --service-name="valkey-valkey" --cluster="valkey-cluster"
 
 write_files:
+  - path: /tmp/valkey-init.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      echo "maxmemory 768mb" >>/etc/valkey/valkey.conf
+      echo "maxmemory-policy allkeys-lfu" >>/etc/valkey/valkey.conf
+      echo "appendonly yes" >>/etc/valkey/valkey.conf
+
+  - path: /tmp/build-memtier-benchmark.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to install Valkey benchmark tool
+      cd /tmp
+      yum -y install autoconf automake make gcc-c++ pcre-devel zlib-devel libmemcached-devel libevent-devel openssl-devel
+      wget https://github.com/RedisLabs/memtier_benchmark/archive/refs/tags/2.1.0.tar.gz
+      tar -xvzf 2.1.0.tar.gz
+      cd /tmp/memtier_benchmark-2.1.0/
+      autoreconf -ivf
+      ./configure
+      make && make install
+      systemctl enable memtier-benchmark.service
+      systemctl start memtier-benchmark.service
+
   - path: /etc/resolv.conf
     permissions: "0644"
     content: |
@@ -43,6 +66,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -56,6 +80,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
@@ -81,6 +106,44 @@ write_files:
           ]
         }
       }
+
+  - path: /etc/consul.d/valkey-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "valkey-exporter",
+          "name": "valkey-exporter",
+          "port": 9121,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9121/metrics",
+            "ID": "valkey-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for valkey-exporter using HTTP",
+            "Notes": "Check for valkey-exporter using HTTP. Monitoring of Valkey metrics are enabled with this service.",
+            "ServiceID": "valkey-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+
+  - path: /tmp/install-valkey-exporter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to install Valkey exporter
+      cd /tmp
+      wget https://github.com/oliver006/redis_exporter/releases/download/v1.58.0/redis_exporter-v1.58.0.linux-amd64.tar.gz
+      tar zxvf redis_exporter-v1.58.0.linux-amd64.tar.gz 
+      cd redis_exporter-v1.58.0.linux-amd64/
+      screen -S valkey-exporter -d -m ./redis_exporter
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
@@ -102,19 +165,19 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "proxysql" ]]; then
-        # proxysql
+      elif [[ $service == "valkey-exporter" ]]; then
+        # valkey-exporter
         while true; do
-          # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
+          # Get the status of the valkey-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.valkey-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
 
-          if [[ $status == "proxysql.service.consul." ]]; then
-            echo "ProxySQL check is passing."
+          if [[ $status == "${name}.valkey-exporter.service.consul." ]]; then
+            echo "valkey-exporter check is passing."
             exit 0
           fi
 
           # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
+          echo "valkey-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
@@ -141,67 +204,30 @@ write_files:
           sleep 1
         done
       fi
-  - path: /etc/ycsb/shard.js
-    content: |
-      sh.enableSharding('ycsb');
-      sh.shardCollection('ycsb.usertable', { "_id" : "hashed" }, false, { numInitialChunks : 20 });
 
-  - path: /etc/ycsb/initial_load.sh
+  - path: /etc/valkey/memtier-run.sh
     permissions: "0744"
     content: |
       #!/bin/bash
       
-      # Wait for mongos
-      echo "-- Waiting for all 9 mongo servers..."
-      
-      for (( i=1 ; i<=100 ; i++ )); do
-        s=$(curl -s --get http://pmm-server:8500/v1/catalog/service/mongo | jq 'length')
-        
-        if [ $s -eq 9 ]; then
-          echo "-- Looks like all 9 mongos are online"
-          break
-        fi
-        
-        echo "-- Only $${s} mongos responding to ping; retry $${i}/100"
-        sleep 2
-      done
-      
-      # All 9 mongos online, connect to mongos-0 and configure sharding
-      mongosh --port 27019 --host mongo-60-mongos-0 -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
-      sleep 2
-      
-      # Prepare the benchmarking dataset
-      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-
-  - path: /etc/ycsb/exec_ycsb.sh
-    permissions: "0744"
-    content: |
-      #!/bin/bash
-
       while true; do
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloada -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadc -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloade -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadf -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
+        # 'insert only'
+        /usr/local/bin/memtier_benchmark --run-count=5 --hide-histogram --rate-limiting=200 --test-time=60 --ratio=1:0 --randomize --expiry-range=1-180 --data-size-range=100-1024
+        # 'read write'
+        /usr/local/bin/memtier_benchmark --run-count=5 --hide-histogram --rate-limiting=200 --test-time=60 --ratio=1:4 --randomize --expiry-range=1-180 --data-size-range=100-1024
       done
 
-  - path: /usr/lib/systemd/system/ycsb.mongodb60.service
+  - path: /usr/lib/systemd/system/memtier-benchmark.service
     content: |
       [Unit]
-      Description=YCSB for MongoDB 6.0
+      Description=memtier benchmark for valkey
       After=network.target
 
       [Service]
       Type=simple
       Restart=on-failure
       RestartSec=10
-      ExecStart=/etc/ycsb/exec_ycsb.sh
+      ExecStart=/etc/valkey/memtier-run.sh
 
       [Install]
       WantedBy=multi-user.target

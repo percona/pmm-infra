@@ -1,18 +1,22 @@
-resource "aws_db_instance" "pmmdemo_postgres_13" {
-  identifier           = "pmmdemo-postgres"
-  engine               = "postgres"
-  engine_version       = "13.10"
-  instance_class       = "db.m5.large"
-  allocated_storage    = 10
-  db_name              = "pmmdemo"
-  username             = "pmmdemo"
-  password             = random_password.pmmdemo_postgres_13_password.result
-  skip_final_snapshot  = true
-  apply_immediately    = true
-  db_subnet_group_name = aws_db_subnet_group.database_subnet.name
+locals {
+  rds_postgresql_13_name = "rds-postgresql-13"
 }
 
-resource "random_password" "pmmdemo_postgres_13_password" {
+resource "aws_db_instance" "rds_postgresql_13" {
+  allocated_storage    = 10
+  apply_immediately    = true
+  count                = var.DBAAS > 0 ? 1 : 0
+  db_subnet_group_name = "${local.environment_name}-${local.rds_postgresql_13_name}-db-subnet"
+  engine               = "postgres"
+  engine_version       = "13.10"
+  identifier           = local.rds_postgresql_13_name
+  instance_class       = "db.m5.large"
+  password             = random_password.rds_postgresql_13_password.result
+  skip_final_snapshot  = true
+  username             = "pmmdemo"
+}
+
+resource "random_password" "rds_postgresql_13_password" {
   length  = 30
   special = false
   upper   = true

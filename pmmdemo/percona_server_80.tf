@@ -22,48 +22,42 @@ module "percona_server_80" {
 }
 
 resource "random_password" "mysql80_root_password" {
-  length      = 30
-  special     = true
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 1
-  min_upper   = 1
+  length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 resource "random_password" "mysql80_replica_password" {
-  length      = 30
-  special     = true
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 1
-  min_upper   = 1
+  length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 resource "random_password" "mysql80_sysbench_password" {
-  length      = 30
-  special     = false
-  upper       = true
-  numeric     = true
-  min_lower   = 1
-  min_numeric = 1
-  min_upper   = 1
+  length      = 8
+  min_lower   = 0
+  min_numeric = 0
+  min_special = 0
+  min_upper   = 8
 }
 
 data "template_file" "percona_server_80_user_data" {
   count    = local.count
   template = file("provision_scripts/percona_server_80.yml")
   vars = {
-    name                      = "${local.percona_server_80_name}-${count.index}"
+    environment_name          = local.environment_name
     fqdn                      = "${local.percona_server_80_name}-${count.index}.${aws_route53_zone.demo_local.name}"
     index                     = "${count.index}"
-    pmm_password              = random_password.pmm_admin_pass.result
-    mysql_root_password       = random_password.mysql80_root_password.result
+    local_domain              = "${local.environment_name}.local"
     mysql_replica_password    = random_password.mysql80_replica_password.result
+    mysql_root_password       = random_password.mysql80_root_password.result
     mysql_sysbench_password   = random_password.mysql80_sysbench_password.result
+    name                      = "${local.percona_server_80_name}-${count.index}"
+    pmm_password              = random_password.pmm_admin_pass.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
   }

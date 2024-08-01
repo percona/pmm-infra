@@ -12,6 +12,7 @@ module "mongo_60_rs_0" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-rs-0-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
+    environment_name              = "${local.environment_name}",
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "shard-0",
     shard_number                  = 0,
@@ -19,6 +20,7 @@ module "mongo_60_rs_0" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
+    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
   })
 }
 
@@ -45,6 +47,7 @@ module "mongo_60_rs_1" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-rs-1-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-rs-1-${count.index}.${var.route53_name}",
+    environment_name              = "${local.environment_name}"
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "shard-1",
     shard_number                  = 1,
@@ -52,6 +55,7 @@ module "mongo_60_rs_1" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
+    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
   })
 }
 
@@ -77,12 +81,14 @@ module "mongo_60_cfg" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-cfg-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
+    environment_name          = "${local.environment_name}"
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "cfg",
     route53_name                  = var.route53_name,
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
+    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
   })
 }
 
@@ -108,13 +114,14 @@ module "mongo_60_mongos" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-mongos-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
+    environment_name              = "${local.environment_name}",
     pmm_server_endpoint           = var.pmm_server_endpoint,
     route53_name                  = var.route53_name,
     replica_set_name              = "cfg",
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_admin_password = random_password.mongodb_60_pmm_admin_password.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
-    mongodb_ycsb_password         = var.mongodb_ycsb_password,
+    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
   })
 }
 
@@ -126,6 +133,13 @@ resource "random_password" "mongodb_60_pmm_user_password" {
 }
 
 resource "random_password" "mongodb_60_pmm_admin_password" {
+  length  = 30
+  special = false
+  upper   = true
+  numeric = true
+}
+
+resource "random_password" "mongodb_ycsb_password" {
   length  = 30
   special = false
   upper   = true
@@ -147,5 +161,10 @@ output "mongodb_60_pmm_user_password" {
 
 output "mongodb_60_pmm_admin_password" {
   value     = random_password.mongodb_60_pmm_admin_password.result
+  sensitive = true
+}
+
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password.result
   sensitive = true
 }

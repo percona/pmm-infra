@@ -5,9 +5,6 @@ fqdn: ${fqdn}
 manage_etc_hosts: true
 repo_upgrade: all
 
-packages:
-  - docker
-
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -16,29 +13,182 @@ bootcmd:
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
+packages:
+  - curl
+  - jq
+
 runcmd:
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker ec2-user
+  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - yum -y install consul
+  - usermod -d /opt/consul consul
+  - systemctl enable consul
+  - systemctl start consul
   - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y psmdb-60
-  - yum -y install percona-server-mongodb
   - percona-release setup -y pmm2-client
   - yum -y install pmm2-client
+  - bash /usr/local/bin/waiter.sh readyz
+  - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
+  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - service process-exporter start
+  - bash /usr/local/bin/waiter.sh process-exporter
+  - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+  - percona-release setup -y psmdb-60
+  - yum -y install percona-server-mongodb
   - chown mongod:mongod /data/ /etc/mongo-key
   - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
-  - systemctl status mongod
-  - timeout 120 bash -c 'until curl --request 'GET' --insecure https://${pmm_server_endpoint}/v1/readyz ; do sleep 3; done'
-  - mongosh --port 27019 /tmp/init.js || true
-  - sleep 5s
-  - mongosh --port 27019 /tmp/admin.js || true
-  - mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/user.js || true
-  - pmm-admin config --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --cluster='mdb60-cluster' --replication-set='mdb60-cluster' --environment='demo' --service-name=${name} --enable-all-collectors
+  - pip3 install ansi2txt
+  - bash /tmp/mongodb-init-rs.sh
+  - bash /usr/local/bin/waiter.sh mongodb
+  - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
+  - path: /usr/local/bin/waiter.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      service="$1"
+      if [[ $service == "process-exporter" ]]; then
+        # process-exporter
+        while true; do
+          # Get the status of the process-exporter_check_http check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+
+          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
+            echo "process-exporter check is passing."
+            exit 0
+          fi
+
+          # If the check is not passing, wait for a short interval and try again
+          echo "process-exporter check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "mongodb" ]]; then
+        # mongodb
+        while true; do
+          # Get the status of the mongodb check
+          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.mongo-60-${replica_set_name}.service.consul." ]]; then
+            echo "mongodb check is passing."
+            exit 0
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "mongodb check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "readyz" ]] ; then
+        # PMM readyz
+        while true; do
+          # Check for DNS :facepalm:
+          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
+
+          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
+            echo "PMMreadyz_check_http DNS check is passing."
+
+            # Get the status of the PMMreadyz_check_http check
+            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
+        
+            if [[ $status == "pmmreadyz.service.consul." ]]; then
+              echo "PMMreadyz_check_http check is passing."
+              exit 0  
+            fi
+          else
+            echo "PMMreadyz_check_http DNS check is not passing."
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
+          sleep 1
+        done
+      fi
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "bastion"]
+      server = false
+
+  - path: /etc/consul.d/mongod-service.json
+    permissions: "0644"
+    content: |
+      {
+        "services": [
+          {
+            "address": "${fqdn}",
+            "id": "mongo-60-${replica_set_name}",            
+            "name": "mongo-60-${replica_set_name}",
+            "port": 27019,
+            "tags": ["${name}"],
+            "checks": [
+              {
+                "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
+                "interval": "10s"
+              }
+            ]
+          },
+          {
+            "address": "${fqdn}",
+            "id": "mongo-60-${replica_set_name}",            
+            "name": "mongo-60-${replica_set_name}-primary",
+            "port": 27019,
+            "tags": ["${name}"],
+            "checks": [{
+              "args": ["/usr/local/bin/mongo_is_primary.sh"],
+              "interval": "10s"
+            }]
+          }
+        ]
+      }
+  - path: /etc/consul.d/process-exporter-check-http.json
+    permissions: "0644"
+    content: |
+      {
+        "service": {
+          "address": "${fqdn}",
+          "id": "process-exporter",
+          "name": "process-exporter",
+          "port": 9256,
+          "tags": ["${name}"],
+          "checks": [
+            {
+            "HTTP": "http://${fqdn}:9256/metrics",
+            "ID": "process-exporter_check_http",
+            "Interval": "3s",
+            "Method": "GET",
+            "Name": "Check for process-exporter using HTTP",
+            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
+            "ServiceID": "process-exporter_check_http",
+            "Success_before_passing": 3,
+            "Timeout": "5s"
+            }
+          ]
+        }
+      }
+  - path: /usr/local/bin/mongo_is_primary.sh
+    permissions: "0755"
+    content: |
+        #!/bin/bash
+        masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)' | /usr/local/bin/ansi2txt)
+        primary=$(echo $masterstat | cut -d# -f2)
+        primary=$${primary:0:-1}
+        ismaster=$(echo $masterstat | cut -d# -f1)
+        echo "$primary is primary"
+        if [[ "$${ismaster:1}" =~ "true" ]]; then
+          exit 0
+        else
+          exit 2
+        fi
+
+  - path: /etc/mongosh.conf
+    content: |
+      enableTelemetry: false
+
   - path: /etc/mongod.conf
     content: |
       sharding:
@@ -56,6 +206,9 @@ write_files:
         destination: file
         logAppend: true
         path: /var/log/mongo/mongod.log
+
+      setParameter:
+        logLevel: 0
 
       processManagement:
         fork: true
@@ -80,47 +233,47 @@ write_files:
   - path: /tmp/init.js
     content: |
       db.getMongo().setReadPref("primaryPreferred")
-      rs.initiate(
-        {
-          _id: "${replica_set_name}",
-          configsvr: true,
-          members: [
-            { _id : 0, host : "mongo-60-cfg-0.${route53_name}:27019" },
-            { _id : 1, host : "mongo-60-cfg-1.${route53_name}:27019" },
-            { _id : 2, host : "mongo-60-cfg-2.${route53_name}:27019" }
-          ]
-        }
-      )
+      rs.initiate({
+        _id: "${replica_set_name}",
+        configsvr: true,
+        members: [
+          { _id : 0, host : "mongo-60-cfg-0.${route53_name}:27019", priority: 2 },
+          { _id : 1, host : "mongo-60-cfg-1.${route53_name}:27019", priority: 1 },
+          { _id : 2, host : "mongo-60-cfg-2.${route53_name}:27019", priority: 1 }
+        ]
+      })
 
   - path: /tmp/admin.js
     content: |
       admin = db.getSiblingDB("admin")
-      admin.createUser(
-        {
-          user: "pmm-admin",
-          pwd: "${mongodb_60_pmm_admin_password}",
-          roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-        }
-      )
+      admin.createUser({
+        user: "pmm-admin",
+        pwd: "${mongodb_60_pmm_admin_password}",
+        roles: [
+            { role: "userAdminAnyDatabase", db: "admin" },
+            { role: "clusterAdmin", db: "admin" }
+        ]
+      })
 
-  - path: /tmp/user.js
+  - path: /tmp/users.js
     content: |
       db.getSiblingDB("admin").createRole({
           role: "explainRole",
           privileges: [{
-              resource: {
-                  db: "",
-                  collection: "system.profile"
-                  },
-              actions: [
-                  "listIndexes",
-                  "listCollections",
-                  "dbStats",
-                  "dbHash",
-                  "collStats",
-                  "find"
-                  ]
-              }],
+            resource: { db: '', collection: '' },
+            actions: [
+              'collStats',
+              'dbHash',
+              'dbStats',
+              'find',
+              'listCollections',
+              'listIndexes'
+            ]
+          },
+          {
+            resource: { db: '', collection: 'system.profile' },
+            actions: [ 'collStats', 'dbStats', 'indexStats' ]
+          }],
           roles:[]
       })
       db.getSiblingDB("admin").createUser({
@@ -133,11 +286,101 @@ write_files:
         ]
       })
 
-  - path: /root/.mongoshrc.js
+  - path: /tmp/mongodb-init-rs.sh
+    permissions: "0700"
     content: |
-      db = connect("localhost:27019/")
+      #!/bin/bash
+      
+      myhostname=$(hostname -f)
+      memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f4)
+      
+      echo "-- MongoDB RS"
+      echo "--- $${myhostname}"
+      echo "--- This is member id $${memberid}"
+      
+      # Wait for mongods
+      echo "-- Waiting for all 3 members..."
+      
+      for (( i=1 ; i<=100 ; i++ )); do
+        let s=0
+        for j in 0 1 2; do
+          h="mongo-60-cfg-$${j}"
+          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
+          if [ $? -eq 0 ]; then
+            echo "-- Mongod $${h} appears alive"
+            ((s++))
+          fi
+        done
+        
+        if [ $s -eq 3 ]; then
+          echo "-- Looks like all 3 members are online"
+          break
+        fi
+        
+        echo "-- Only $${s} members responding to ping; retry $${i}/100"
+        sleep 2
+      done
+      
+      # We pick cfg-0 to be primary. Run the init only on the primary
+      if [ "$${memberid}" == "0" ]; then
+        echo "-- We are shard 0; run init"
+        mongosh --port 27019 /tmp/init.js
+      else
+        echo "-- We are NOT shard 0; We will wait"
+      fi
+      
+      # Wait for replicaset to have 3 members
+      # Get the replicaset status. Loop through all members adding up their 'health' value (1 or 0).
+      # If all 3 servers are online, health should = 3. If it doesn't, sleep and try again
 
-  - path: /root/.bashrc
-    append: true
-    content: |
-      alias mng='mongosh --nodb'
+      for (( i=1 ; i<=100 ; i++ )); do
+        health=$(mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; var s=0; m.forEach(function(a){ s+=a.health; }); print(s);")
+        if [ $? -eq 0 ]; then
+          if [ $health -eq 3 ]; then
+            echo "-- Found 3 healthy members of replicaset"
+            sleep 2
+            break
+          fi
+        fi
+        echo "-- Waiting on replicaset members, retry $${i}/100"
+        sleep 2
+      done
+      
+      # Print report to cloud log
+      echo "-- Cfg ReplicaSet Members:"
+      mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; m.forEach(function(a){ print(a.stateStr+':'+a.name); });"
+      
+      # Determine/wait for primary
+      for (( i=1 ; i<=100 ; i++ )); do
+        primary=$(mongosh --port 27019 --eval 'rs.isMaster().primary' -quiet | cut -d: -f1)
+        if [ "$${primary:0:5}" == "mongo" ]; then
+          echo "-- $${primary} is PRIMARY, we are $${myhostname}"
+          sleep 2
+          break
+        fi
+        echo "-- Waiting on a primary, retry $${i}/100"
+        sleep 2
+      done
+      
+      # Is this host PRIMARY? If so, create the pmm-admin user and pmm user
+      if [ "$${myhostname}" == "$${primary}" ]; then
+        echo "-- We are PRIMARY!"
+        mongosh --port 27019 /tmp/admin.js
+        sleep 2
+        mongosh --port 27019 -u pmm-admin -p '${mongodb_60_pmm_admin_password}' /tmp/users.js
+      else
+        echo "-- We are NOT primary, waiting for auth"
+        # Since we are not primary, we need to wait until the primary has replicated
+        # the PMM user to us, otherwise pmm add mongo will fail
+        
+        for (( i=1 ; i<=100 ; i++ )); do
+          # This will fail until auth replicates, so we keep running the ping with auth until it no longer fails
+          ret=$(mongosh --port 27019 -quiet --eval 'db.runCommand("ping").ok' -u pmm-admin -p "${mongodb_60_pmm_admin_password}" 2>&1 >/dev/null)
+          if [ $? -eq 0 ]; then
+            echo "-- Auth is enabled"
+            break
+          fi
+          echo "-- Waiting on auth, retry $${i}/100"
+          sleep 2
+        done
+      fi

@@ -1,7 +1,7 @@
 resource "aws_vpc" "pmmdemo" {
   cidr_block = "10.0.0.0/16"
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-vpc",
   }
   enable_dns_hostnames = true
 }
@@ -15,7 +15,7 @@ resource "aws_route_table" "ig_pmmdemo" {
   }
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-route-ig",
   }
 }
 
@@ -33,7 +33,7 @@ resource "aws_subnet" "pmmdemo_public" {
   map_public_ip_on_launch = true
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-public-1f",
   }
 }
 
@@ -43,8 +43,8 @@ resource "aws_subnet" "pmmdemo_private" {
   cidr_block        = "10.0.2.0/24"
 
   tags = {
-    "Name" = local.environment_name,
-  }
+    "Name" = "${local.environment_name}-private-1f",  
+    }
 }
 
 resource "aws_subnet" "pmmdemo_private_a" {
@@ -53,7 +53,7 @@ resource "aws_subnet" "pmmdemo_private_a" {
   cidr_block        = "10.0.3.0/24"
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-private-1a",
   }
 }
 
@@ -62,7 +62,7 @@ resource "aws_internet_gateway" "pmmdemo" {
   vpc_id = aws_vpc.pmmdemo.id
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-ig",
   }
 }
 
@@ -70,7 +70,7 @@ resource "aws_default_security_group" "pmmdemo" {
   vpc_id = aws_vpc.pmmdemo.id
 
   tags = {
-    "Name" = "pmmdemo default security group",
+    "Name" = "${local.environment_name}-default-sg",
   }
 }
 
@@ -94,7 +94,9 @@ resource "aws_security_group_rule" "allow_external_connections" {
 
 
 resource "aws_eip" "external_ip" {
-  vpc = true
+  tags = {
+    "Name" = "${local.environment_name}-eip",
+  }
 }
 
 resource "aws_nat_gateway" "external_nat_gateway" {
@@ -102,7 +104,7 @@ resource "aws_nat_gateway" "external_nat_gateway" {
   subnet_id     = aws_subnet.pmmdemo_public.id
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-nat-gateway",
   }
 
   depends_on = [aws_internet_gateway.pmmdemo]
@@ -117,7 +119,7 @@ resource "aws_route_table" "nat_route_table" {
   }
 
   tags = {
-    "Name" = local.environment_name,
+    "Name" = "${local.environment_name}-nat-route-table",
   }
 }
 
@@ -143,6 +145,9 @@ resource "aws_route53_zone" "demo_local" {
 resource "aws_vpc_dhcp_options" "additional_domain" {
   domain_name         = "ec2.internal ${aws_route53_zone.demo_local.name}"
   domain_name_servers = ["127.0.0.1", "10.0.0.2"]
+  tags = {
+    "Name" = "${local.environment_name}-dhcp-options",
+  }
 }
 
 resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
@@ -151,6 +156,6 @@ resource "aws_vpc_dhcp_options_association" "vpc_dhcp_association" {
 }
 
 resource "aws_db_subnet_group" "database_subnet" {
-  name       = "${local.environment_name}-db-subnet"
+  name       = "${local.environment_name}-aws-db-subnet"
   subnet_ids = [aws_subnet.pmmdemo_private.id, aws_subnet.pmmdemo_private_a.id]
 }

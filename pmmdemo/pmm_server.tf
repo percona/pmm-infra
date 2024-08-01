@@ -14,20 +14,24 @@ module "pmm_server" {
   ]
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
-      pmm_admin_pass             = random_password.pmm_admin_pass.result
-      name                       = local.pmm_server_name
+      environment_name           = local.environment_name
       fqdn                       = "${local.pmm_server_name}.${aws_route53_zone.demo_local.name}"
       full_domain                = var.pmm_domain
       google_analytics_id        = var.google_analytics_id
-      oauth_enable               = var.oauth_enable
-      oauth_client_id            = var.oauth_client_id
-      oauth_secret               = var.oauth_secret
-      oauth_url                  = var.oauth_url
-      oauth_token_url            = var.oauth_token_url
+      local_domain               = "${local.environment_name}.local"
+      name                       = local.pmm_server_name
       oauth_api_url              = var.oauth_api_url
-      oauth_scopes               = var.oauth_scopes
+      oauth_client_id            = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTID"]
+      oauth_enable               = var.oauth_enable
       oauth_role_attribute_path  = var.oauth_role_attribute_path
+      oauth_scopes               = var.oauth_scopes
+      oauth_secret               = jsondecode(data.aws_secretsmanager_secret_version.sso_creds.secret_string)["OAUTH_CLIENTSECRET"]
       oauth_signout_redirect_url = var.oauth_signout_redirect_url
+      oauth_token_url            = var.oauth_token_url
+      oauth_url                  = var.oauth_url
+      pmm_admin_pass             = random_password.pmm_admin_pass.result
+      pmm_server_endpoint        = local.pmm_server_endpoint
+
     }
   )
 }
@@ -40,78 +44,46 @@ module "pmm_server_disk" {
 }
 
 resource "random_password" "pmm_admin_pass" {
-  length  = 20
+  length  = 8
   special = false
+  lower   = false
+  numeric = false
 }
 
-resource "aws_iam_user" "rds_user" {
-  name = "pmm-demo-rds-user"
+data "aws_iam_user" "rds_user" {
+  user_name = "pmm-demo-rds-user"
 }
 
+data "aws_iam_policy" "pmmdemo-rds-policy" {
+  name = "pmm-demo-rds-policy"
+}
 
-resource "aws_iam_policy" "pmmdemo-rds-policy" {
-  name        = "pmm-demo-rds-policy"
-  path        = "/"
-  description = "Policy for rds database discovery"
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Sid" : "Stmt1508404837000",
-        "Effect" : "Allow",
-        "Action" : [
-          "rds:DescribeDBInstances",
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics"
-        ],
-        "Resource" : ["*"]
-      },
-      {
-        "Sid" : "Stmt1508410723001",
-        "Effect" : "Allow",
-        "Action" : [
-          "logs:DescribeLogStreams",
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents"
-        ],
-        "Resource" : ["arn:aws:logs:*:*:log-group:RDSOSMetrics:*"]
-      }
-  ] })
+data "aws_iam_role" "pmmdemo_dlm_lifecycle" {
+  name = "pmmdemo-dlm-lifecycle"
+}
+
+data "aws_secretsmanager_secret" "sso_creds_mgr" {
+  name = "pmm-sso-oauth-creds"
+}
+
+data "aws_secretsmanager_secret_version" "sso_creds" {
+  secret_id = data.aws_secretsmanager_secret.sso_creds_mgr.id
 }
 
 resource "aws_iam_access_key" "rds_user_access_key" {
-  user = aws_iam_user.rds_user.name
+  count = var.DBAAS > 0 ? 1 : 0
+  user = data.aws_iam_user.rds_user.user_name
 }
 
 resource "aws_iam_policy_attachment" "rds_policy" {
   name       = "rds_policy"
-  users      = [aws_iam_user.rds_user.name]
-  policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
-}
-
-resource "aws_iam_role" "pmmdemo_dlm_lifecycle" {
-  name = "pmmdemo-dlm-lifecycle"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "dlm.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
+  users      = [data.aws_iam_user.rds_user.user_name]
+  policy_arn = data.aws_iam_policy.pmmdemo-rds-policy.arn
 }
 
 resource "aws_iam_role_policy" "pmmdemo_dlm_lifecycle" {
   name = "pmmdemo-dlm-lifecycle"
-  role = aws_iam_role.pmmdemo_dlm_lifecycle.id
+  role = data.aws_iam_role.pmmdemo_dlm_lifecycle.id
 
   policy = <<EOF
 {
@@ -143,7 +115,7 @@ EOF
 
 resource "aws_dlm_lifecycle_policy" "pmmdemo" {
   description        = "PMM Demo DLM lifecycle policy"
-  execution_role_arn = aws_iam_role.pmmdemo_dlm_lifecycle.arn
+  execution_role_arn = data.aws_iam_role.pmmdemo_dlm_lifecycle.arn
   state              = "ENABLED"
 
   policy_details {
