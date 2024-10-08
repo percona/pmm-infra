@@ -248,6 +248,7 @@ write_files:
               ssl_dhparam /ssl/cert/dhparam.pem;
               ssl_protocols TLSv1.2 TLSv1.3;
 
+              location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; }
               location / {
                   proxy_pass      http://pmm_server;
               }
