@@ -288,11 +288,11 @@ write_files:
         { address="oracle-mysql-83-0"           , port=3306 , hostgroup=50, max_replication_lag = 30 },
         { address="oracle-mysql-83-1"           , port=3306 , hostgroup=60, max_connections=200 },
         { address="percona-xtradb-cluster-0"    , port=3306 , hostgroup=1000 },
-        { address="percona-xtradb-cluster-1"    , port=3306 , hostgroup=2000 },
-        { address="percona-xtradb-cluster-2"    , port=3306 , hostgroup=2000 },
+        { address="percona-xtradb-cluster-1"    , port=3306 , hostgroup=3000 },
+        { address="percona-xtradb-cluster-2"    , port=3306 , hostgroup=3000 },
         { address="percona-group-replication-1" , port=3306 , hostgroup=10000, max_connections=200 },
-        { address="percona-group-replication-2" , port=3306 , hostgroup=20000, max_connections=200 },
-        { address="percona-group-replication-3" , port=3306 , hostgroup=20000, max_connections=200 },
+        { address="percona-group-replication-2" , port=3306 , hostgroup=30000, max_connections=200 },
+        { address="percona-group-replication-3" , port=3306 , hostgroup=30000, max_connections=200 },
       )
 
       mysql_users:
