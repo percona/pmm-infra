@@ -49,3 +49,9 @@ variable "user_data" {
   default     = ""
   description = "User data to provide when launching the instance"
 }
+
+variable "cpu_credits_mode" {
+  type        = string
+  default     = "standard"
+  description = "EC2 burstable credits - standard or unlimited"
+}

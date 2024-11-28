@@ -16,6 +16,10 @@ resource "aws_instance" "ec2" {
       "terraform" = "yes",
     }
   }
+  
+  credit_specification {
+    cpu_credits = var.cpu_credits_mode
+  }
 
   tags = {
     "Name" = "${local.environment_name}-${var.server_name}",
