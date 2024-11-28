@@ -70,8 +70,8 @@ write_files:
         # mongodb
         while true; do
           # Get the status of the mongodb check
-          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-rs-${shard_number}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-          if [[ $status == "${name}.mongo-60-rs-${shard_number}.service.consul." ]]; then
+          status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-rs-shard-${shard_number}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.mongo-60-rs-shard-${shard_number}.service.consul." ]]; then
             echo "mongodb check is passing."
             exit 0
           fi
@@ -306,7 +306,7 @@ write_files:
       echo "-- Waiting for all 3 members..."
       
       for (( i=1 ; i<=100 ; i++ )); do
-        num=$(curl -s http://pmm-server:8500/v1/health/checks/mongo-60-rs-${shard_number} | jq -r '[.[]|select(.Status=="passing")]|length')
+        num=$(curl -s http://pmm-server:8500/v1/health/checks/mongo-60-rs-shard-${shard_number} | jq -r '[.[]|select(.Status=="passing")]|length')
         if [ $num -eq 3 ]; then
           echo "-- Looks like all 3 members are online"
           break
