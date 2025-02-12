@@ -49,3 +49,9 @@ variable "user_data" {
   default     = ""
   description = "User data to provide when launching the instance"
 }
+
+variable "ami_id" {
+  type        = string
+  description = "Amazon Machine Image AMI"
+  default     = "ami-04c56dce2c963b327"
+}
