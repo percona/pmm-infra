@@ -7,6 +7,7 @@ preserve_hostname: false
 repo_upgrade: all
 
 packages:
+  - bind-utils
   - docker
   - nmap-ncat
   - jq
@@ -21,32 +22,30 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
-  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-  - yum -y install consul
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - dnf -y install consul
   - systemctl enable consul
   - bash /root/consul-advertise-addr.sh
   - systemctl start consul
   - systemctl enable docker
   - service docker start
-  - usermod -a -G docker ec2-user
+  - usermod -a -G docker rocky
   - chmod +x /tmp/cert.sh
   - bash /tmp/cert.sh
   - rm /tmp/cert.sh
-  - docker run -v /data:/ssl:ro -v /etc/nginx.conf:/etc/nginx/nginx.conf --restart always --net host --name nginx -d nginx:1.21.6
+  - docker run -v /data:/ssl:ro,Z -v /etc/nginx.conf:/etc/nginx/nginx.conf:Z --restart always --net host --name nginx -d docker.io/library/nginx:1.21.6
   - until nc -z localhost 80; do sleep 1; done
   - docker exec nginx apt update
   - docker exec nginx apt install -y certbot python3-certbot-nginx
   - docker exec nginx certbot --nginx --non-interactive --agree-tos --test-cert -m ${email} -d ${domain}
   - echo "${pmm_admin_pass}" > /root/pmm-admin_password
   - chmod 400 /root/pmm-admin_password
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y pmm2-client
-  - yum install -y pmm2-client
+  - dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm3-client
+  - dnf install -y pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_pass}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
-  - service process-exporter start
+  - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
@@ -177,7 +176,7 @@ write_files:
 
             # Get the status of the PMMreadyz_check_http check
             status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
-        
+
             if [[ $status == "pmmreadyz.service.consul." ]]; then
               echo "PMMreadyz_check_http check is passing."
               exit 0  
@@ -193,7 +192,7 @@ write_files:
   - path: /root/.ssh/config
     content: |
       Host *
-          User ec2-user
+          User rocky
   - path: /etc/nginx.conf
     content: |
       user  nginx;
@@ -250,12 +249,12 @@ write_files:
 
               location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; }
               location / {
-                  proxy_pass      http://pmm_server;
+                  proxy_pass      https://pmm_server;
               }
           }
 
           upstream pmm_server {
-              server pmm-server.${environment_name}.local:80;
+              server pmm-server.${environment_name}.local:443;
           }
       }
   - path: /tmp/cert.sh

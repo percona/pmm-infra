@@ -12,17 +12,17 @@ bootcmd:
   - mkdir -p /data
 
 runcmd:
-  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-  - yum -y install consul
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - dnf -y install consul
   - systemctl enable consul
   - systemctl start consul
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release enable-only pxc-80 release
   - percona-release enable tools release
-  - yum install -y percona-xtradb-cluster
+  - dnf -y install percona-xtradb-cluster
   - percona-release enable tools pmm2-client
-  - percona-release setup -y pmm2-client
-  - yum install -y pmm2-client
+  - percona-release setup -y pmm3-client
+  - dnf -y install pmm-client
   - systemctl enable mysql
   - systemctl start mysql
   - bash /root/init-mysql.sh
@@ -30,9 +30,7 @@ runcmd:
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - bash /usr/local/bin/waiter.sh mysql
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='pxc-80-cluster' --replication-set='pxc-80-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
-  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
-  - service process-exporter start
+  - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 

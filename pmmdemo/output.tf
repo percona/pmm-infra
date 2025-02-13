@@ -2,28 +2,28 @@ output "public_ip" {
   value = module.bastion.public_ip
 }
 
-output "rds_postgresql_13_password" {
-  value     = random_password.rds_postgresql_13_password.result
-  sensitive = true
-}
-
-output "rds_mysql_80_password" {
-  value     = random_password.rds_mysql_80_password.result
-  sensitive = true
-}
-
-output "rds_aurora_mysql_57_password" {
-  value     = random_password.rds_aurora_mysql_57_password.result
-  sensitive = true
-}
+# output "rds_postgresql_16_password" {
+#   value     = random_password.rds_postgresql_16_password.result
+#   sensitive = true
+# }
+# 
+# output "rds_mysql_80_password" {
+#   value     = random_password.rds_mysql_80_password.result
+#   sensitive = true
+# }
 
 output "percona_server_80_password" {
   value     = random_password.mysql80_sysbench_password.result
   sensitive = true
 }
 
-output "percona_server_81_password" {
-  value     = random_password.mysql81_sysbench_password.result
+output "percona_server_84_password" {
+  value     = random_password.mysql84_sysbench_password.result
+  sensitive = true
+}
+
+output "percona_server_84_group_replication_password" {
+  value     = random_password.percona_server_84_group_replication_sysbench_password.result
   sensitive = true
 }
 
@@ -42,13 +42,13 @@ output "pmm_admin_pass" {
   sensitive = true
 }
 
-output "postgresql_13_pmm_password" {
-  value     = random_password.postgresql_13_pmm_password.result
+output "postgresql_16_pmm_password" {
+  value     = random_password.postgresql_16_pmm_password.result
   sensitive = true
 }
 
-output "postgresql_13_sysbench_password" {
-  value     = random_password.postgresql_13_sysbench_password.result
+output "postgresql_16_sysbench_password" {
+  value     = random_password.postgresql_16_sysbench_password.result
   sensitive = true
 }
 

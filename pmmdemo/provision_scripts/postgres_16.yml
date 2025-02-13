@@ -15,34 +15,32 @@ mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
-  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-  - yum -y install consul
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+  - dnf -y install consul
   - systemctl enable consul
   - systemctl start consul
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y pmm2-client
-  - yum -y install pmm2-client
+  - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm3-client
+  - dnf -y install pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - percona-release setup -y ppg-13
-  - yum -y install percona-postgresql13-server percona-pg-stat-monitor13
+  - percona-release setup -y ppg-16
+  - dnf -y install percona-postgresql16-server percona-pg-stat-monitor16
   - chown postgres:postgres /data
-  - sed -i 's/\/var\/lib\/pgsql\/13\/data\//\/data/g' /usr/lib/systemd/system/postgresql-13.service
+  - sed -i 's/\/var\/lib\/pgsql\/16\/data\//\/data/g' /usr/lib/systemd/system/postgresql-16.service
   - systemctl daemon-reload
-  - /usr/pgsql-13/bin/postgresql-13-setup initdb
+  - /usr/pgsql-16/bin/postgresql-16-setup initdb
   - echo 'host    all             all             10.0.2.0/24             password' >> /data/pg_hba.conf
   - echo "listen_addresses = '*'" >> /data/postgresql.conf
   - echo "shared_preload_libraries = 'pg_stat_monitor'" >> /data/postgresql.conf
   - echo "pg_stat_monitor.pgsm_query_max_len = 2048" >> /data/postgresql.conf
   - echo "pg_stat_monitor.pgsm_enable_query_plan = 1" >> /data/postgresql.conf
-  - systemctl start postgresql-13
+  - systemctl start postgresql-16
   - chmod +x /tmp/init-postgres.sh
   - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
   - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --query-source="pgstatmonitor" --environment="prod" --service-name=${name}-postgresql --cluster="postgresql-cluster" --replication-set="${environment_name}"
-  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
+  - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
-  - service process-exporter start
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
 write_files:

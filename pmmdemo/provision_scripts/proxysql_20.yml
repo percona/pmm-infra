@@ -7,28 +7,27 @@ preserve_hostname: false
 repo_upgrade: all
 
 packages:
+  - bind-utils
   - nmap-ncat
   - jq
   - curl
 
 runcmd:
   - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
-  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-  - yum -y install consul
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - dnf -y install consul
   - systemctl enable consul
   - systemctl start consul
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y pmm2-client
-  - yum -y install pmm2-client
+  - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm3-client
+  - dnf -y install pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
-  - service process-exporter start
+  - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y ps-80
-  - yum install -y proxysql2 percona-server-client
+  - dnf -y install proxysql2 percona-server-client
   - systemctl start proxysql
   - systemctl enable proxysql
   - bash /usr/local/bin/waiter.sh proxysql
@@ -283,25 +282,22 @@ write_files:
       (
         { address="percona-server-80-0"         , port=3306 , hostgroup=10, max_connections=200 },
         { address="percona-server-80-1"         , port=3306 , hostgroup=20, max_replication_lag = 30 },
-        { address="percona-server-81-0"         , port=3306 , hostgroup=30, max_connections=200 },
-        { address="percona-server-81-1"         , port=3306 , hostgroup=40, max_replication_lag = 30 },
-        { address="oracle-mysql-83-0"           , port=3306 , hostgroup=50, max_replication_lag = 30 },
-        { address="oracle-mysql-83-1"           , port=3306 , hostgroup=60, max_connections=200 },
+        { address="percona-server-84-0"         , port=3306 , hostgroup=30, max_connections=200 },
+        { address="percona-server-84-1"         , port=3306 , hostgroup=40, max_replication_lag = 30 },
         { address="percona-xtradb-cluster-0"    , port=3306 , hostgroup=1000 },
         { address="percona-xtradb-cluster-1"    , port=3306 , hostgroup=3000 },
         { address="percona-xtradb-cluster-2"    , port=3306 , hostgroup=3000 },
-        { address="percona-group-replication-1" , port=3306 , hostgroup=10000, max_connections=200 },
-        { address="percona-group-replication-2" , port=3306 , hostgroup=30000, max_connections=200 },
-        { address="percona-group-replication-3" , port=3306 , hostgroup=30000, max_connections=200 },
+        { address="percona-server_84_group-replication-1" , port=3306 , hostgroup=10000, max_connections=200 },
+        { address="percona-server_84_group-replication-2" , port=3306 , hostgroup=20000, max_connections=200 },
+        { address="percona-server_84_group-replication-3" , port=3306 , hostgroup=20000, max_connections=200 },
       )
 
       mysql_users:
       (
-        { username = "sysbench-proxysql-percona-gr" , password = "${percona_group_replication_81_password}" , default_hostgroup = 10000 , active = 1 },
+        { username = "sysbench-proxysql-percona-gr" , password = "${percona_server_84_group_replication_password}" , default_hostgroup = 10000 , active = 1 },
         { username = "sysbench-proxysql-ps" , password = "${percona_server_80_password}" , default_hostgroup = 10 , active = 1 },
-        { username = "sysbench-proxysql-ps81" , password = "${percona_server_81_password}" , default_hostgroup = 30 , active = 1 },
+        { username = "sysbench-proxysql-ps84" , password = "${percona_server_84_password}" , default_hostgroup = 30 , active = 1 },
         { username = "sysbench-proxysql-pxc" , password = "${percona_xtradb_cluster_80_password}" , default_hostgroup = 1000 , active = 1 },
-        { username = "sysbench-prx-oracle-mysql-83" , password = "${oracle_mysql_83_password}" , default_hostgroup = 50 , active = 1 },
       )
 
       mysql_query_rules:
@@ -310,8 +306,6 @@ write_files:
         { rule_id =  20, destination_hostgroup = 20,    username = "sysbench-proxysql-ps",          match_digest = "^SELECT", active = 1, apply = 1 },
         { rule_id =  30, destination_hostgroup = 30,    username = "sysbench-proxysql-ps81",        match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
         { rule_id =  40, destination_hostgroup = 40,    username = "sysbench-proxysql-ps81",        match_digest = "^SELECT", active = 1, apply = 1 },
-        { rule_id =  50, destination_hostgroup = 50,    username = "sysbench-prx-oracle-mysql-83",  match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
-        { rule_id =  60, destination_hostgroup = 60,    username = "sysbench-prx-oracle-mysql-83",  match_digest = "^SELECT", active = 1, apply = 1 },
         { rule_id =  70, destination_hostgroup = 10000, username = "sysbench-proxysql-percona-gr",  match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },
         { rule_id =  80, destination_hostgroup = 20000, username = "sysbench-proxysql-percona-gr",  match_digest = "^SELECT", active = 1, apply = 1 },
         { rule_id =  90, destination_hostgroup = 1000,  username = "sysbench-proxysql-pxc",         match_digest = "^SELECT.*FOR UPDATE", active = 1, apply = 1 },

@@ -7,26 +7,25 @@ preserve_hostname: false
 repo_upgrade: all
 
 packages:
+  - bind-utils
   - curl
   - jq
 
 runcmd:
-  - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-  - yum -y install consul
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  - dnf -y install consul
   - systemctl enable consul
   - systemctl start consul
-  - yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y pmm2-client
-  - yum -y install pmm2-client
+  - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y pmm3-client
+  - dnf -y install pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - wget --quiet https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter_0.7.10_linux_386.rpm
-  - yum -y install process-exporter_0.7.10_linux_386.rpm
-  - service process-exporter start
+  - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-  - amazon-linux-extras install epel
-  - yum -y install valkey
+  - percona-release enable valkey experimental
+  - dnf -y install valkey
   - bash /tmp/valkey-init.sh
   - systemctl enable valkey && systemctl restart valkey
   - bash /tmp/build-memtier-benchmark.sh
@@ -49,7 +48,7 @@ write_files:
       #!/bin/bash
       # Script to install Valkey benchmark tool
       cd /tmp
-      yum -y install autoconf automake make gcc-c++ pcre-devel zlib-devel libmemcached-devel libevent-devel openssl-devel
+      dnf -y install autoconf automake make gcc-c++ pcre-devel zlib-devel libmemcached-devel libevent-devel openssl-devel
       wget https://github.com/RedisLabs/memtier_benchmark/archive/refs/tags/2.1.0.tar.gz
       tar -xvzf 2.1.0.tar.gz
       cd /tmp/memtier_benchmark-2.1.0/
@@ -139,9 +138,9 @@ write_files:
       #!/bin/bash
       # Script to install Valkey exporter
       cd /tmp
-      wget https://github.com/oliver006/redis_exporter/releases/download/v1.58.0/redis_exporter-v1.58.0.linux-amd64.tar.gz
-      tar zxvf redis_exporter-v1.58.0.linux-amd64.tar.gz 
-      cd redis_exporter-v1.58.0.linux-amd64/
+      wget https://github.com/oliver006/redis_exporter/releases/download/v1.67.0/redis_exporter-v1.67.0.linux-amd64.tar.gz
+      tar zxvf redis_exporter-v1.67.0.linux-amd64.tar.gz
+      cd redis_exporter-v1.67.0.linux-amd64/
       screen -S valkey-exporter -d -m ./redis_exporter
 
   - path: /usr/local/bin/waiter.sh

@@ -5,7 +5,6 @@ resource "aws_instance" "ec2" {
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = var.security_groups
   user_data                   = var.user_data
-
   key_name = data.aws_key_pair.pmm-demo.key_name
 
   root_block_device {
@@ -21,10 +20,10 @@ resource "aws_instance" "ec2" {
     "Name" = "${local.environment_name}-${var.server_name}",
   }
 
-    lifecycle {
-      // We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
-      ignore_changes = [ami]
-    }
+  lifecycle {
+	// We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
+	ignore_changes = [ami]
+  }
 
 }
 
