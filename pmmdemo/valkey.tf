@@ -25,8 +25,8 @@ module "valkey" {
 
 resource "random_password" "valkey_primary_password" {
   length      = 16
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 0
-  min_upper   = 1
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }

@@ -8,16 +8,11 @@ repo_upgrade: all
 
 packages:
   - bind-utils
-  - nmap-ncat
-  - jq
-  - curl
 
 runcmd:
-  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - dnf -y install consul
-  - systemctl enable consul
-  - systemctl start consul
+  - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -28,8 +23,8 @@ runcmd:
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y ps-80
   - dnf -y install proxysql2 percona-server-client
-  - systemctl start proxysql
   - systemctl enable proxysql
+  - systemctl start proxysql
   - bash /usr/local/bin/waiter.sh proxysql
   - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster "${name}" "127.0.0.1:6032"
 
@@ -280,16 +275,16 @@ write_files:
 
       mysql_servers =
       (
-        { address="percona-server-80-0"         , port=3306 , hostgroup=10, max_connections=200 },
-        { address="percona-server-80-1"         , port=3306 , hostgroup=20, max_replication_lag = 30 },
-        { address="percona-server-84-0"         , port=3306 , hostgroup=30, max_connections=200 },
-        { address="percona-server-84-1"         , port=3306 , hostgroup=40, max_replication_lag = 30 },
-        { address="percona-xtradb-cluster-0"    , port=3306 , hostgroup=1000 },
-        { address="percona-xtradb-cluster-1"    , port=3306 , hostgroup=3000 },
-        { address="percona-xtradb-cluster-2"    , port=3306 , hostgroup=3000 },
-        { address="percona-server_84_group-replication-1" , port=3306 , hostgroup=10000, max_connections=200 },
-        { address="percona-server_84_group-replication-2" , port=3306 , hostgroup=20000, max_connections=200 },
-        { address="percona-server_84_group-replication-3" , port=3306 , hostgroup=20000, max_connections=200 },
+        { address="percona-server-80-0", port=3306, hostgroup=10, max_connections=200 },
+        { address="percona-server-80-1", port=3306, hostgroup=20, max_replication_lag = 30 },
+        { address="percona-server-84-0", port=3306, hostgroup=30, max_connections=200 },
+        { address="percona-server-84-1", port=3306, hostgroup=40, max_replication_lag = 30 },
+        { address="percona-xtradb-cluster-0", port=3306, hostgroup=1000 },
+        { address="percona-xtradb-cluster-1", port=3306, hostgroup=3000 },
+        { address="percona-xtradb-cluster-2", port=3306, hostgroup=3000 },
+        { address="percona-server-84_group-replication-1", port=3306, hostgroup=10000, max_connections=200 },
+        { address="percona-server-84_group-replication-2", port=3306, hostgroup=20000, max_connections=200 },
+        { address="percona-server-84_group-replication-3", port=3306, hostgroup=20000, max_connections=200 },
       )
 
       mysql_users:

@@ -18,8 +18,9 @@ resource "aws_db_instance" "rds_mysql_80" {
 }
 
 resource "random_password" "rds_mysql_80_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }

@@ -1,5 +1,5 @@
 locals {
-  rds_postgresql_16_name = "rds-postgresql-13"
+  rds_postgresql_16_name = "rds-postgresql-16"
 }
 
 resource "aws_db_instance" "rds_postgresql_16" {
@@ -8,7 +8,7 @@ resource "aws_db_instance" "rds_postgresql_16" {
   count                = var.DBAAS > 0 ? 1 : 0
   db_subnet_group_name = "${local.environment_name}-${local.rds_postgresql_16_name}-db-subnet"
   engine               = "postgres"
-  engine_version       = "13.10"
+  engine_version       = "16.10"
   identifier           = local.rds_postgresql_16_name
   instance_class       = "db.m5.large"
   password             = random_password.rds_postgresql_16_password.result
@@ -17,8 +17,9 @@ resource "aws_db_instance" "rds_postgresql_16" {
 }
 
 resource "random_password" "rds_postgresql_16_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }

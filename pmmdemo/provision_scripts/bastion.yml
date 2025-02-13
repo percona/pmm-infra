@@ -9,8 +9,6 @@ repo_upgrade: all
 packages:
   - bind-utils
   - docker
-  - nmap-ncat
-  - jq
   - curl
 
 bootcmd:
@@ -27,9 +25,6 @@ runcmd:
   - systemctl enable consul
   - bash /root/consul-advertise-addr.sh
   - systemctl start consul
-  - systemctl enable docker
-  - service docker start
-  - usermod -a -G docker rocky
   - chmod +x /tmp/cert.sh
   - bash /tmp/cert.sh
   - rm /tmp/cert.sh
@@ -189,10 +184,6 @@ write_files:
           sleep 1
         done
       fi
-  - path: /root/.ssh/config
-    content: |
-      Host *
-          User rocky
   - path: /etc/nginx.conf
     content: |
       user  nginx;

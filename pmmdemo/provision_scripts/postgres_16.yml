@@ -6,6 +6,9 @@ prefer_fqdn_over_hostname: true
 preserve_hostname: false
 repo_upgrade: all
 
+packages:
+  - bind-utils
+
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
@@ -17,15 +20,14 @@ mounts:
 runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
   - dnf -y install consul
-  - systemctl enable consul
-  - systemctl start consul
+  - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - percona-release setup -y ppg-16
-  - dnf -y install percona-postgresql16-server percona-pg-stat-monitor16
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-postgresql16-server percona-pg-stat-monitor16
   - chown postgres:postgres /data
   - sed -i 's/\/var\/lib\/pgsql\/16\/data\//\/data/g' /usr/lib/systemd/system/postgresql-16.service
   - systemctl daemon-reload
@@ -36,7 +38,6 @@ runcmd:
   - echo "pg_stat_monitor.pgsm_query_max_len = 2048" >> /data/postgresql.conf
   - echo "pg_stat_monitor.pgsm_enable_query_plan = 1" >> /data/postgresql.conf
   - systemctl start postgresql-16
-  - chmod +x /tmp/init-postgres.sh
   - runuser -l postgres -c 'bash /tmp/init-postgres.sh'
   - pmm-admin add postgresql --username=pmm --password='${postgres_pmm_password}' --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' --server-insecure-tls --query-source="pgstatmonitor" --environment="prod" --service-name=${name}-postgresql --cluster="postgresql-cluster" --replication-set="${environment_name}"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
@@ -133,6 +134,6 @@ write_files:
       psql -c "CREATE ROLE pmm WITH SUPERUSER LOGIN CONNECTION LIMIT 10 ENCRYPTED PASSWORD '${postgres_pmm_password}'"
       psql -c "CREATE ROLE sysbench WITH LOGIN CONNECTION LIMIT 100 ENCRYPTED PASSWORD '${postgres_sysbench_password}'"
       psql -c "CREATE DATABASE sbtest"
-      psql -c "GRANT ALL PRIVILEGES ON sbtest TO sysbench"
+      psql -c "GRANT ALL PRIVILEGES ON DATABASE sbtest TO sysbench"
       psql -c "CREATE EXTENSION pg_stat_monitor"
       psql -c "select pg_reload_conf()"

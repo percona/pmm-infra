@@ -16,8 +16,9 @@ resource "aws_rds_cluster" "rds_aurora_mysql_57" {
 }
 
 resource "random_password" "rds_aurora_mysql_57_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }

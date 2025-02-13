@@ -2,7 +2,6 @@ locals {
   postgresql_16_name = "postgresql-16"
 }
 
-
 module "postgresql_16" {
   source        = "./modules/ec2"
   server_name   = local.postgresql_16_name
@@ -29,17 +28,19 @@ module "postgresql_16" {
 }
 
 resource "random_password" "postgresql_16_pmm_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 resource "random_password" "postgresql_16_sysbench_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 module "postgresql_16_disk" {

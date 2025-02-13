@@ -44,11 +44,11 @@ module "pmm_server_disk" {
 }
 
 resource "random_password" "pmm_admin_pass" {
-  length      = 14
+  length      = 16
   min_lower   = 2
   min_numeric = 2
-  min_special = 0
-  min_upper   = 8
+  min_upper   = 4
+  special     = false
 }
 
 data "aws_iam_user" "rds_user" {

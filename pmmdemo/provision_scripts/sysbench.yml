@@ -8,25 +8,19 @@ repo_upgrade: all
 
 packages:
   - bind-utils
-  - nmap-ncat
-  - jq
   - curl
 
 runcmd:
-  - timeout 60 bash -c 'while [ -f /var/run/yum.pid ]; do echo "wait for yum to get unlocked..."; sleep 5; done'
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - dnf -y install consul
-  - systemctl enable consul
-  - systemctl start consul
+  - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release enable-only ps-80
+  - percona-release setup -y ps-80
   - dnf -y install percona-server-client
-  - percona-release enable pmm3-client
+  - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
-  - percona-release enable sysbench
-  - dnf -y install sysbench
-  - percona-release enable mysql-shell
-  - dnf -y install percona-mysql-shell
+  - curl -o sysbench-1.0.20-8.el9.x86_64.rpm https://repo.percona.com/sysbench/yum/experimental/9/RPMS/x86_64/sysbench-1.0.20-8.el9.x86_64.rpm
+  - dnf -y install --disablerepo=ps-80-release-x86_64 sysbench-1.0.20-8.el9.x86_64.rpm
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
   - systemctl enable sysbench.ps80
@@ -39,21 +33,20 @@ runcmd:
   - systemctl enable sysbench.proxysql_pgr84
   - systemctl enable sysbench.haproxy.pxc80
   - systemctl enable sysbench.haproxy.pgr84
-  - systemctl enable sysbench.postgres16
-  - systemctl start sysbench.ps80
-  - systemctl start sysbench.ps84
-  - systemctl start sysbench.pxc80
-  - systemctl start sysbench.pgr84
+  - systemctl enable sysbench.postgresql16
+#   - systemctl start sysbench.ps80
+#   - systemctl start sysbench.ps84
+#   - systemctl start sysbench.pxc80
+#   - systemctl start sysbench.pgr84
   - systemctl start sysbench.proxysql_ps80
   - systemctl start sysbench.proxysql_ps84
   - systemctl start sysbench.proxysql_pxc80
   - systemctl start sysbench.proxysql_pgr84
-  - systemctl start sysbench.haproxy.pxc80
-  - systemctl start sysbench.haproxy.pgr84
-  - systemctl start sysbench.postgres16
+#   - systemctl start sysbench.haproxy.pxc80
+#   - systemctl start sysbench.haproxy.pgr84
+  - systemctl start sysbench.postgresql16
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - systemctl list-units sysbench.*.service | sed -E '1d;/^LOAD/,$d;s/ .*//g' > sysbench.services.txt
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
@@ -66,12 +59,6 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
-  - path: /root/.mysqlsh/options.json
-    permissions: "0644"
-    content: |
-      {
-        "history.autoSave": "true"
-      }
   - path: /root/.my.cnf
     content: |
       [client]
@@ -438,7 +425,7 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.postgres16.service
+  - path: /usr/lib/systemd/system/sysbench.postgresql16.service
     content: |
       [Unit]
       Description=Sysbench for Percona Server for PostgreSQL 16
@@ -448,7 +435,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh postgres16.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh postgresql16.cnf
 
       [Install]
       WantedBy=multi-user.target

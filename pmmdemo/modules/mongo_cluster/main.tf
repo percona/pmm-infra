@@ -126,32 +126,36 @@ module "mongo_60_mongos" {
 }
 
 resource "random_password" "mongodb_60_pmm_user_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 resource "random_password" "mongodb_60_pmm_admin_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 resource "random_password" "mongodb_ycsb_password" {
-  length  = 30
-  special = false
-  upper   = true
-  numeric = true
+  length      = 16
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 // TODO it's better use x.509 cert auth
 resource "random_password" "mongodb_60_keyfile" {
-  length  = 1000
-  special = false
-  upper   = true
-  numeric = true
+  length      = 256
+  min_lower   = 2
+  min_numeric = 2
+  min_upper   = 4
+  special     = false
 }
 
 output "mongodb_60_pmm_user_password" {
