@@ -195,6 +195,7 @@ write_files:
         done
       fi
   - path: /root/.my.cnf
+    permissions: "0600"
     content: |
       [client]
       user=root

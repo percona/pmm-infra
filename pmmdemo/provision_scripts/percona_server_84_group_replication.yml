@@ -195,6 +195,7 @@ write_files:
         done
       fi
   - path: /root/.my.cnf
+    permissions: "0600"
     content: |
       [client]
       user=root
@@ -206,7 +207,7 @@ write_files:
 
       # Host specific replication configuration
       #
-      report_host = ${name}
+      report_host = ${fqdn}
       report_port = 3306
       server_id   = ${index}
 
