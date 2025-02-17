@@ -4,10 +4,12 @@ hostname: ${name}
 manage_etc_hosts: true
 prefer_fqdn_over_hostname: true
 preserve_hostname: false
-repo_upgrade: all
+package_upgrade: true
+package_update: true
 
 packages:
   - bind-utils
+  - curl
   - docker
 
 bootcmd:
@@ -31,7 +33,7 @@ runcmd:
   - docker create -v /srv --name pmm-data docker.io/percona/pmm-server:3 /bin/true
   - docker network create pmm-net
   - docker run -d -p 443:8443 -v pmm-data:/srv:Z --name pmm-server --network pmm-net --restart always docker.io/percona/pmm-server:3
-  - sleep 20s
+  - sleep 10s
   - docker exec pmm-server change-admin-password ${pmm_admin_pass}
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
@@ -43,10 +45,9 @@ runcmd:
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_pass}@${pmm_server_endpoint}' ${fqdn} generic "${name}-host"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
-  - dnf -y install process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-  - bash /tmp/dashboard-importer.sh
+#  - bash /tmp/dashboard-importer.sh
 #  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
 write_files:
@@ -55,10 +56,8 @@ write_files:
     content: |
       #!/bin/bash
       echo "Downloading scripts"
-      wget https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh -O /tmp/import-dashboard-grafana-cloud.sh
-      wget https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py -O /tmp/cleanup-dash.py
-      file /tmp/import-dashboard-grafana-cloud.sh
-      file /tmp/cleanup-dash.py
+      curl -o /tmp/import-dashboard-grafana-cloud.sh https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh
+      curl -o /tmp/cleanup-dash.py https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py
       chmod a+x /tmp/import-dashboard-grafana-cloud.sh
       chmod a+x /tmp/cleanup-dash.py
       sed -i 's/:admin/:${pmm_admin_pass}/' /tmp/import-dashboard-grafana-cloud.sh

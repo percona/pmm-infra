@@ -4,10 +4,12 @@ hostname: ${name}
 manage_etc_hosts: true
 prefer_fqdn_over_hostname: true
 preserve_hostname: false
-repo_upgrade: all
+package_upgrade: true
+package_update: true
 
 packages:
   - bind-utils
+  - curl
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done

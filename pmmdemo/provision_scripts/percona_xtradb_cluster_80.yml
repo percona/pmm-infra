@@ -4,7 +4,8 @@ hostname: ${name}
 manage_etc_hosts: true
 prefer_fqdn_over_hostname: true
 preserve_hostname: false
-repo_upgrade: all
+package_upgrade: true
+package_update: true
 
 packages:
   - bind-utils
@@ -23,7 +24,7 @@ runcmd:
   - dnf -y install consul
   - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-  - percona-release setup -y ps-80
+  - percona-release setup -y pxc-80
   - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-xtradb-cluster
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -31,9 +32,9 @@ runcmd:
   - chown mysql:mysql /data/
   - semanage fcontext -a -t mysqld_db_t "/data(/.*)?" && restorecon -Rv /data
   - for port in 4444 4567 4568; do semanage port -a -t mysqld_port_t -p tcp $port; done
-  - systemctl enable mysqld.service
-  - systemctl start mysqld.service
-  - systemctl status mysqld.service
+  - systemctl enable mysql.service
+  - systemctl start mysql.service
+  - systemctl status mysql.service
   - bash /root/init-mysql.sh
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}

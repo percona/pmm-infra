@@ -4,7 +4,8 @@ hostname: ${name}
 manage_etc_hosts: true
 prefer_fqdn_over_hostname: true
 preserve_hostname: false
-repo_upgrade: all
+package_upgrade: true
+package_update: true
 
 packages:
   - bind-utils
@@ -23,16 +24,16 @@ runcmd:
   - dnf -y install --disablerepo=ps-80-release-x86_64 sysbench-1.0.20-8.el9.x86_64.rpm
   - mkdir -p /etc/sysbench
   - chmod +x /etc/sysbench/exec_sysbench.sh
-  - systemctl enable sysbench.ps80
-  - systemctl enable sysbench.ps84
-  - systemctl enable sysbench.pxc80
-  - systemctl enable sysbench.pgr84
+#   - systemctl enable sysbench.ps80
+#   - systemctl enable sysbench.ps84
+#   - systemctl enable sysbench.pxc80
+#   - systemctl enable sysbench.pgr84
   - systemctl enable sysbench.proxysql_ps80
   - systemctl enable sysbench.proxysql_ps84
   - systemctl enable sysbench.proxysql_pxc80
   - systemctl enable sysbench.proxysql_pgr84
-  - systemctl enable sysbench.haproxy.pxc80
-  - systemctl enable sysbench.haproxy.pgr84
+#   - systemctl enable sysbench.haproxy.pxc80
+#   - systemctl enable sysbench.haproxy.pgr84
   - systemctl enable sysbench.postgresql16
 #   - systemctl start sysbench.ps80
 #   - systemctl start sysbench.ps84

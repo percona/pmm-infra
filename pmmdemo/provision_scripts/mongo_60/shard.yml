@@ -1,9 +1,16 @@
 #cloud-config
-preserve_hostname: false
-hostname: ${name}
 fqdn: ${fqdn}
+hostname: ${name}
 manage_etc_hosts: true
-repo_upgrade: all
+prefer_fqdn_over_hostname: true
+preserve_hostname: false
+package_upgrade: true
+package_update: true
+
+packages:
+  - bind-utils
+  - curl
+  - jq
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -13,17 +20,10 @@ bootcmd:
 mounts:
   - ["/dev/nvme1n1", "/data", "xfs", "defaults,nofail,noatime", "0", "2"]
 
-packages:
-  - bind-utils
-  - curl
-  - jq
-
 runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - dnf -y install consul
-  - usermod -d /opt/consul consul
-  - systemctl enable consul
-  - systemctl start consul
+  - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client

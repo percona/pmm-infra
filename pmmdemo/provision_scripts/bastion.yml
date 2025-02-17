@@ -4,12 +4,14 @@ hostname: ${name}
 manage_etc_hosts: true
 prefer_fqdn_over_hostname: true
 preserve_hostname: false
-repo_upgrade: all
+package_upgrade: true
+package_update: true
 
 packages:
   - bind-utils
-  - docker
   - curl
+  - docker
+  - nmap-ncat
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -79,26 +81,36 @@ write_files:
       {
         "service": {
           "address": "${fqdn}",
-          "id": "PMMreadyz",
-          "name": "PMMreadyz",
+          "id": "pmmreadyz",
+          "name": "pmmreadyz",
           "port": 443,
           "tags": ["${name}"],
           "checks": [
             {
-            "HTTP": "https://admin:${pmm_admin_pass}@pmm-server.${environment_name}.local/v1/readyz",
-            "ID": "PMMreadyz_check_http",
-            "Interval": "1s",
-            "Method": "GET",
-            "Name": "Check for PMM readyz using HTTP",
-            "Notes": "Check for PMM readyz using HTTP. Client registrations can begin after this service is available.",
-            "ServiceID": "pmmreadyz_check_http",
-            "Success_before_passing": 30,
-            "Timeout": "1s",
-            "TLSSkipVerify": true
+              "http": "https://pmm-server.${environment_name}.local/v1/server/readyz",
+              "interval": "1s",
+              "name": "pmm_readyz_check",
+              "id": "pmm_readyz_check",
+              "notes": "Get PMM readyz using unauthenticated API endpoint",
+              "success_before_passing": 30,
+              "timeout": "1s",
+              "tls_skip_verify": true,
+              "status": "critical"
+            },
+            {
+              "http": "https://admin:${pmm_admin_pass}@pmm-server.${environment_name}.local/v1/server/version",
+              "interval": "1s",
+              "name": "pmm_version_check",
+              "id": "pmm_version_check",
+              "notes": "Get PMM server version using authenticated API endpoint",
+              "success_before_passing": 30,
+              "timeout": "1s",
+              "tls_skip_verify": true,
+              "status": "critical"
             }
           ]
         }
-      }  
+      }
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
