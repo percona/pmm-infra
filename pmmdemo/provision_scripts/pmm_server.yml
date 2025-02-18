@@ -51,18 +51,6 @@ runcmd:
 #  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
 write_files:
-  - path: /tmp/dashboard-importer.sh
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-      echo "Downloading scripts"
-      curl -o /tmp/import-dashboard-grafana-cloud.sh https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh
-      curl -o /tmp/cleanup-dash.py https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py
-      chmod a+x /tmp/import-dashboard-grafana-cloud.sh
-      chmod a+x /tmp/cleanup-dash.py
-      sed -i 's/:admin/:${pmm_admin_pass}/' /tmp/import-dashboard-grafana-cloud.sh
-      sed -i 's/172\.17\.0\.2/${fqdn}/' /tmp/import-dashboard-grafana-cloud.sh
-      sed -i 's/13266 12630 12470/13266 12630 12470 14239 14636 19676 6033/' /tmp/import-dashboard-grafana-cloud.sh
   - path: /etc/resolv.conf
     permissions: "0644"
     content: |
@@ -70,12 +58,6 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
-  - path: /root/add-rds-to-pmm.sh
-    permissions: "0700"
-    content: |
-      #!/bin/bash
-      echo "placeholder"
-      exit 0
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -91,6 +73,24 @@ write_files:
       ui_config{
         enabled = true
       }
+  - path: /tmp/dashboard-importer.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      echo "Downloading scripts"
+      curl -o /tmp/import-dashboard-grafana-cloud.sh https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh
+      curl -o /tmp/cleanup-dash.py https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py
+      chmod a+x /tmp/import-dashboard-grafana-cloud.sh
+      chmod a+x /tmp/cleanup-dash.py
+      sed -i 's/:admin/:${pmm_admin_pass}/' /tmp/import-dashboard-grafana-cloud.sh
+      sed -i 's/172\.17\.0\.2/${fqdn}/' /tmp/import-dashboard-grafana-cloud.sh
+      sed -i 's/13266 12630 12470/13266 12630 12470 14239 14636 19676 6033/' /tmp/import-dashboard-grafana-cloud.sh
+  - path: /root/add-rds-to-pmm.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      echo "placeholder"
+      exit 0
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |

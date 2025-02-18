@@ -72,7 +72,7 @@ output "mongodb_60_pmm_user_password" {
   sensitive = true
 }
 
-output "mongodb_60_pmm_admin_password" {
-  value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_admin_password
+output "mongodb_60_percona_admin_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_60_percona_admin_password
   sensitive = true
 }

@@ -200,15 +200,11 @@ write_files:
     content: |
       user  nginx;
       worker_processes  auto;
-
       error_log  /var/log/nginx/error.log notice;
       pid        /var/run/nginx.pid;
-
-
       events {
           worker_connections  1024;
       }
-
       http {
           map $http_upgrade $connection_upgrade {
               default upgrade;
@@ -216,21 +212,15 @@ write_files:
           }
           include       /etc/nginx/mime.types;
           default_type  application/octet-stream;
-
           access_log  /var/log/nginx/access.log combined;
-
           sendfile        on;
-
           keepalive_timeout  65;
-
           gzip  on;
 
           # redirect all to https
           server {
               listen 80 default_server;
-
               server_name _;
-
               return 301 https://$host$request_uri;
           }
 
@@ -238,24 +228,20 @@ write_files:
           server {
               listen          443 ssl http2 default_server;
               server_name     ${domain};
-
               proxy_http_version 1.1;
               proxy_set_header Connection $connection_upgrade;
               proxy_set_header Upgrade $http_upgrade;
               proxy_set_header Host $http_host;
-
               ssl_certificate /ssl/cert/certificate.crt;
               ssl_certificate_key /ssl/cert/certificate.key;
               ssl_trusted_certificate /ssl/cert/ca-certs.pem;
               ssl_dhparam /ssl/cert/dhparam.pem;
               ssl_protocols TLSv1.2 TLSv1.3;
-
               location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; }
               location / {
                   proxy_pass      https://pmm_server;
               }
           }
-
           upstream pmm_server {
               server pmm-server.${environment_name}.local:443;
           }

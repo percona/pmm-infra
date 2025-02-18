@@ -60,10 +60,6 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
-  - path: /root/.my.cnf
-    content: |
-      [client]
-      user=root
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -78,6 +74,10 @@ write_files:
       ui_config{
         enabled = true
       }
+  - path: /root/.my.cnf
+    content: |
+      [client]
+      user=root
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |

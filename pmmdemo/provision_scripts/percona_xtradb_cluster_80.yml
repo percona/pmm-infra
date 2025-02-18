@@ -52,6 +52,19 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+  - path: /etc/consul.d/consul.hcl
+    permissions: "0644"
+    content: |
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      data_dir = "/opt/consul"
+      enable_local_script_checks = true
+      node_name="${name}"
+      retry_join = ["pmm-server", "sysbench", "bastion"]
+      server = false
+      ui_config{
+        enabled = true
+      }
   - path: /usr/local/bin/consul-check-mysql.sh
     permissions: "0755"
     content: |
@@ -73,19 +86,6 @@ write_files:
           sleep 1
         fi
       done
-  - path: /etc/consul.d/consul.hcl
-    permissions: "0644"
-    content: |
-      bind_addr = "0.0.0.0"
-      client_addr = "0.0.0.0"
-      data_dir = "/opt/consul"
-      enable_local_script_checks = true
-      node_name="${name}"
-      retry_join = ["pmm-server", "sysbench", "bastion"]
-      server = false
-      ui_config{
-        enabled = true
-      }
   - path: /etc/consul.d/percona-xtradb-cluster-service.json
     permissions: "0644"
     content: |
