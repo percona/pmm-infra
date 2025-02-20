@@ -12,6 +12,7 @@ module "mongo_60_rs_0" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-rs-0-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-rs-0-${count.index}.${var.route53_name}",
+    local_domain                  = "${local.environment_name}.local"
     environment_name              = "${local.environment_name}",
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "shard-0",
@@ -47,6 +48,7 @@ module "mongo_60_rs_1" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-rs-1-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-rs-1-${count.index}.${var.route53_name}",
+    local_domain                  = "${local.environment_name}.local"
     environment_name              = "${local.environment_name}"
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "shard-1",
@@ -81,6 +83,7 @@ module "mongo_60_cfg" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-cfg-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-cfg-${count.index}.${var.route53_name}",
+    local_domain                  = "${local.environment_name}.local"
     environment_name              = "${local.environment_name}"
     pmm_server_endpoint           = var.pmm_server_endpoint,
     replica_set_name              = "cfg",
@@ -114,6 +117,7 @@ module "mongo_60_mongos" {
     pmm_password                  = var.pmm_password,
     name                          = "${local.mongo_cluster_name}-mongos-${count.index}",
     fqdn                          = "${local.mongo_cluster_name}-mongos-${count.index}.${var.route53_name}",
+    local_domain                  = "${local.environment_name}.local"
     environment_name              = "${local.environment_name}",
     pmm_server_endpoint           = var.pmm_server_endpoint,
     route53_name                  = var.route53_name,

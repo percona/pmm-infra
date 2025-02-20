@@ -33,13 +33,14 @@ runcmd:
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y psmdb-60
-  - dnf -y install percona-server-mongodb
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-server-mongodb
   - chown mongod:mongod /data/ /etc/mongo-key
   - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
-  - bash /tmp/mongodb-init-rs.sh
   - bash /usr/local/bin/waiter.sh mongodb
+  - bash /tmp/mongodb-init-rs.sh
+  - bash /usr/local/bin/waiter.sh mongo-rs
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
@@ -71,12 +72,10 @@ write_files:
             "name": "mongo-60-${replica_set_name}",
             "port": 27019,
             "tags": ["${name}"],
-            "checks": [
-              {
-                "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
-                "interval": "10s"
-              }
-            ]
+            "checks": [{
+              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
+              "interval": "10s"
+            }]
           },
           {
             "address": "${fqdn}",
@@ -148,6 +147,19 @@ write_files:
           fi
           # If the check is not passing, wait for a short interval and try again
           echo "mongodb check is not passing. Will retry in 3 seconds..."
+          sleep 3
+        done
+      elif [[ $service == "mongo-rs" ]]; then
+        # wait for all 3 members of this mongo replica set
+        while true; do
+          # Get the count of members in this replica set
+          cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-rs-${replica_set_name}.service.consul SRV | wc -l)
+          if [[ $cnt -eq 3 ]]; then
+            echo "3 shards online"
+            exit 0
+          fi
+          # If the check is not passing, wait for a short interval and try again
+          echo "Only $${cnt} shards online, expecting 3. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
@@ -267,19 +279,24 @@ write_files:
             resource: { db: '', collection: '' },
             actions: [
               'collStats',
-              'dbHash',
               'dbStats',
+              'indexStats',
+              'dbHash',
               'find',
               'listCollections',
               'listIndexes'
             ]
           },
           {
+            resource: { db: '', collection: 'system.version' },
+            actions: [ 'find' ]
+          },
+          {
             resource: { db: '', collection: 'system.profile' },
             actions: [ 'collStats', 'dbStats', 'indexStats' ]
           }],
           roles:[]
-      })
+      });
       db.getSiblingDB("admin").createUser({
         user: "pmm",
         pwd: "${mongodb_60_pmm_user_password}",
@@ -288,7 +305,7 @@ write_files:
             { role: "clusterMonitor", db: "admin" },
             { role: "read", db: "local" }
         ]
-      })
+      });
 
   - path: /tmp/mongodb-init-rs.sh
     permissions: "0700"
@@ -301,30 +318,7 @@ write_files:
       echo "-- MongoDB RS"
       echo "--- $${myhostname}"
       echo "--- This is member id $${memberid}"
-      
-      # Wait for mongods
-      echo "-- Waiting for all 3 members..."
-      
-      for (( i=1 ; i<=100 ; i++ )); do
-        let s=0
-        for j in 0 1 2; do
-          h="mongo-60-cfg-$${j}"
-          mongosh --port 27019 --host $${h} --eval 'db.runCommand("ping").ok' -quiet 2>&1 >/dev/null
-          if [ $? -eq 0 ]; then
-            echo "-- Mongod $${h} appears alive"
-            ((s++))
-          fi
-        done
-        
-        if [ $s -eq 3 ]; then
-          echo "-- Looks like all 3 members are online"
-          break
-        fi
-        
-        echo "-- Only $${s} members responding to ping; retry $${i}/100"
-        sleep 2
-      done
-      
+            
       # We pick cfg-0 to be primary. Run the init only on the primary
       if [ "$${memberid}" == "0" ]; then
         echo "-- We are shard 0; run init"
@@ -334,21 +328,7 @@ write_files:
       fi
       
       # Wait for replicaset to have 3 members
-      # Get the replicaset status. Loop through all members adding up their 'health' value (1 or 0).
-      # If all 3 servers are online, health should = 3. If it doesn't, sleep and try again
-
-      for (( i=1 ; i<=100 ; i++ )); do
-        health=$(mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; var s=0; m.forEach(function(a){ s+=a.health; }); print(s);")
-        if [ $? -eq 0 ]; then
-          if [ $health -eq 3 ]; then
-            echo "-- Found 3 healthy members of replicaset"
-            sleep 2
-            break
-          fi
-        fi
-        echo "-- Waiting on replicaset members, retry $${i}/100"
-        sleep 2
-      done
+      /usr/local/bin/waiter.sh mongo-rs
       
       # Print report to cloud log
       echo "-- Cfg ReplicaSet Members:"

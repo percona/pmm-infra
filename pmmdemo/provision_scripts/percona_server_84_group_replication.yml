@@ -73,43 +73,58 @@ write_files:
       # Set MySQL server credentials
       MYSQL_USER="consul-health-check"
       MYSQL_PASSWORD="${mysql_root_password}"
-      MYSQL_SOCKET="/var/lib/mysql/mysql.sock"
-      while true ; do
-        # Attempt to connect using MySQL Shell with a 2-second timeout
-        mysql --socket="$MYSQL_SOCKET" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 -e "SELECT 1"
-        # Check the exit status of mysqlsh to determine connection success
-        if [[ $? -eq 0 ]]; then
-          echo "Successfully connected to MySQL service."
+      if [[ "$$1" == "primary" ]]; then
+        res=$(mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" -BNe "SELECT MEMBER_HOST FROM performance_schema.replication_group_members WHERE MEMBER_ROLE=\"PRIMARY\"")
+        if [[ "$${res}" =~ "${name}" ]]; then
+          echo "we are primary"
           exit 0
         else
-          echo -n "Connection attempt to MySQL service failed. Sleeping 1 second... "
-          date
-          sleep 1
+          exit 1
         fi
-      done
+      else
+        while true ; do
+          # Attempt to connect using MySQL Shell with a 2-second timeout
+          mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 -e "SELECT 1"
+          # Check the exit status of mysqlsh to determine connection success
+          if [[ $? -eq 0 ]]; then
+            echo "Successfully connected to MySQL service."
+            exit 0
+          else
+            echo -n "Connection attempt to MySQL service failed. Sleeping 1 second... "
+            date
+            sleep 1
+          fi
+        done
+      fi
   - path: /etc/consul.d/percona-server-84-group-replication-service.json
     permissions: "0644"
     content: |
       {
-        "service": {
+        "services": [{
           "address": "${fqdn}",
           "id": "percona-server-84-group-replication",
           "name": "percona-server-84-group-replication",
           "port": 3306,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "ID": "percona-server-84-group-replication_check_script",
-            "Interval": "3s",
-            "Name": "Check for MySQL running on ${name}",
-            "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
-            "ServiceID": "percona-server-84-group-replication_check_script",
-            "Success_before_passing": 3,
-            "Timeout": "3s",
+          "checks": [{
+            "interval": "2s",
+            "success_before_passing": 3,
+            "timeout": "2s",
             "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh" ]
-            }
-          ]
-        }
+          }]
+        },
+        {
+          "address": "${fqdn}",
+          "id": "percona-server-84-group-replication-primary",
+          "name": "percona-server-84-group-replication-primary",
+          "tags": ["${name}"],
+          "checks": [{
+            "interval": "2s",
+            "success_before_passing": 3,
+            "timeout": "2s",
+            "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh", "primary" ]
+          }]
+        }]
       }
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
@@ -147,7 +162,6 @@ write_files:
         while true; do
           # Get the status of the process-exporter_check_http check
           status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-
           if [[ $status == "${name}.process-exporter.service.consul." ]]; then
             echo "process-exporter check is passing."
             exit 0
@@ -162,7 +176,6 @@ write_files:
         while true; do
           # Get the status of the mysql_check_http check
           status=$(dig @127.0.0.1 -p 8600 ${name}.percona-server-84-group-replication.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-
           if [[ $status == "${name}.percona-server-84-group-replication.service.consul." ]]; then
             echo "mysql check is passing."
             exit 0
@@ -171,6 +184,18 @@ write_files:
           # If the check is not passing, wait for a short interval and try again
           echo "mysql check is not passing. Will retry in 3 seconds..."
           sleep 3
+        done
+      elif [[ $service == "gr-primary" ]]; then
+        # group replication primary
+        while true; do
+          status=$(dig +short @127.0.0.1 -p 8600 percona-server-84-group-replication-primary.service.consul SRV | awk '{print $1}')
+          if [[ $status =~ "${name}" ]]; then
+            echo "gr-primary check is passing"
+            exit 0
+          else
+            echo "gr-primary check is not passing"
+          fi
+          sleep 1
         done
       elif [[ $service == "readyz" ]] ; then
         # PMM readyz
@@ -279,7 +304,7 @@ write_files:
       provision_users() {
         INITIAL_ROOT_PASSWORD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
         if [ -n "$INITIAL_ROOT_PASSWORD" ]; then
-          mysql --connect-expired-password -uroot -p$INITIAL_ROOT_PASSWORD -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}'; FLUSH PRIVILEGES;"
+          mysql --connect-expired-password -uroot -p$INITIAL_ROOT_PASSWORD -Bse "ALTER USER root@localhost IDENTIFIED BY '${mysql_root_password}';"
           if [ $? -ne 0 ]; then
             echo "Error: Failed to change root password"
           fi
@@ -287,22 +312,23 @@ write_files:
         else
           echo "Error: Initial root password not found in /data/mysqld.log"
         fi      
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'localhost' IDENTIFIED BY '${mysql_replica_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'localhost'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_direct_gr.* TO 'sysbench-direct-percona-gr'@'%'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-proxysql-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_proxysql_gr.* TO 'sysbench-proxysql-percona-gr'@'%'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-haproxy-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}'; FLUSH PRIVILEGES;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_haproxy_gr.* TO 'sysbench-haproxy-percona-gr'@'%'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2;";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT ON performance_schema.replication_group_members TO 'consul-health-check'@'localhost';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'localhost' IDENTIFIED BY '${mysql_replica_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'localhost';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON *.* TO proxysql@'%';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_direct_gr.* TO 'sysbench-direct-percona-gr'@'%';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-proxysql-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_proxysql_gr.* TO 'sysbench-proxysql-percona-gr'@'%';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-haproxy-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_haproxy_gr.* TO 'sysbench-haproxy-percona-gr'@'%';";
       }
 
       provision_tables() {
@@ -321,8 +347,8 @@ write_files:
           # Start GR in bootstrap mode
           mysql --defaults-file=/root/.my.cnf -Bse "SET GLOBAL group_replication_bootstrap_group=ON;START GROUP_REPLICATION;SET GLOBAL group_replication_bootstrap_group=OFF;"
       else
-          # Start GR on secondary nodes
-          # TODO: Detect when primary node is up and running and start replication
+          # Start GR on secondary nodes; wait for PRIMARY
+          /usr/local/bin/waiter.sh gr-primary
           provision_users
           mysql --defaults-file=/root/.my.cnf -Bse "RESET BINARY LOGS AND GTIDS"
           # Configure DR channel

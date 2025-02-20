@@ -25,18 +25,16 @@ runcmd:
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y psmdb-60
-  - dnf -y install percona-server-mongodb
-  - mkdir -p /var/run/mongo/
-  - chown mongod:mongod /etc/mongo-key /var/run/mongo/
-  - chmod 600 /etc/mongo-key
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-server-mongodb
+  - mkdir -p /var/log/mongos /var/run/mongos
+  - chown mongod:mongod /etc/mongo-key /var/log/mongos /var/run/mongos && chmod 600 /etc/mongo-key
+  - sed -i 's/enforcing/permissive/g' /etc/selinux/config && /sbin/setenforce 0
   - systemctl enable mongos
   - systemctl start mongos
-  - sleep 5s
+  - bash /usr/local/bin/waiter.sh mongos
   - mongosh --port 27019 /tmp/init.js
-  - sleep 15s
   - mongosh --port 27019 -u perconaadmin -p '${mongodb_60_percona_admin_password}' /tmp/users.js
-  - bash /usr/local/bin/waiter.sh mongodb
-  - pmm-admin add mongodb --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
+  - pmm-admin add mongodb --port=27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
   - path: /etc/resolv.conf
@@ -120,17 +118,17 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "mongodb" ]]; then
-        # mongodb
+      elif [[ $service == "mongos" ]]; then
+        # mongos
         while true; do
           # Get the status of the mongodb check
           status=$(dig @127.0.0.1 -p 8600 ${name}.mongos.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
           if [[ $status == "${name}.mongos.service.consul." ]]; then
-            echo "mongodb check is passing."
+            echo "mongos check is passing."
             exit 0
           fi
           # If the check is not passing, wait for a short interval and try again
-          echo "mongodb check is not passing. Will retry in 3 seconds..."
+          echo "mongos check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
@@ -170,14 +168,18 @@ write_files:
       systemLog:
         destination: file
         logAppend: true
-        path: /var/log/mongo/mongos.log
+        path: /var/log/mongos/mongos.log
 
       security:
         keyFile: /etc/mongo-key
 
       processManagement:
-        fork: true
-        pidFilePath: /var/run/mongo/mongos.pid
+        pidFilePath: /var/run/mongos/mongos.pid
+
+      operationProfiling:
+        mode: all
+        slowOpThresholdMs: 200
+        rateLimit: 100
 
   - path: /etc/mongo-key
     content: |
@@ -206,9 +208,9 @@ write_files:
       [Service]
       User=mongod
       Group=mongod
-      Type=forking
+      Type=simple
       ExecStart=/bin/mongos --config /etc/mongos.conf
-      PIDFile=/var/run/mongo/mongos.pid
+      PIDFile=/var/run/mongos/mongos.pid
       LimitFSIZE=infinity
       LimitCPU=infinity
       LimitAS=infinity
@@ -229,19 +231,24 @@ write_files:
             resource: { db: '', collection: '' },
             actions: [
               'collStats',
-              'dbHash',
               'dbStats',
+              'indexStats',
+              'dbHash',
               'find',
               'listCollections',
               'listIndexes'
             ]
           },
           {
+            resource: { db: '', collection: 'system.version' },
+            actions: [ 'find' ]
+          },
+          {
             resource: { db: '', collection: 'system.profile' },
             actions: [ 'collStats', 'dbStats', 'indexStats' ]
           }],
           roles:[]
-      })
+      });
       db.getSiblingDB("admin").createUser({
         user: "pmm",
         pwd: "${mongodb_60_pmm_user_password}",
@@ -250,7 +257,7 @@ write_files:
             { role: "clusterMonitor", db: "admin" },
             { role: "read", db: "local" }
         ]
-      })
+      });
       db.getSiblingDB("admin").createUser({
         user: "ycsb",
         pwd: "${mongodb_ycsb_password}",
@@ -259,4 +266,4 @@ write_files:
             { role: "clusterManager", db: "admin" },
             { role: "enableSharding", db: "ycsb" }
         ]
-      })
+      });

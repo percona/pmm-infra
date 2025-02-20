@@ -16,7 +16,8 @@ module "haproxy" {
     environment_name        = local.environment_name
     fqdn                    = "${local.haproxy_name}.${aws_route53_zone.demo_local.name}"
     local_domain            = "${local.environment_name}.local"
-    mysql_sysbench_password = random_password.percona_xtradb_cluster_80_sysbench_password.result
+    pxc_80_password         = random_password.percona_xtradb_cluster_80_sysbench_password.result
+    ps_84_gr_password       = random_password.percona_server_84_group_replication_sysbench_password.result
     name                    = local.haproxy_name
     pmm_admin_password      = random_password.pmm_admin_pass.result
     pmm_server_endpoint     = local.pmm_server_endpoint

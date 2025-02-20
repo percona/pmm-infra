@@ -304,6 +304,7 @@ write_files:
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON sbtest_haproxy.* TO 'sysbench-haproxy-pxc'@'%'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}'; FLUSH PRIVILEGES;";
         mysql --defaults-file=/root/.my.cnf -Bse "GRANT ALL PRIVILEGES ON *.* TO proxysql@'%'; FLUSH PRIVILEGES;";
+        mysql --defaults-file=/root/.my.cnf -Bse "CREATE USER 'haproxy_check'@'%'; GRANT USAGE ON *.* TO 'haproxy_check'@'%';";
       }
 
       if [[ "${name}" == "percona-xtradb-cluster-0" ]]; then

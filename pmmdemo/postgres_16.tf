@@ -15,6 +15,7 @@ module "postgresql_16" {
   user_data = templatefile("provision_scripts/postgres_16.yml", {
     name                       = local.postgresql_16_name,
     fqdn                       = "${local.postgresql_16_name}.${aws_route53_zone.demo_local.name}",
+    local_domain               = "${local.environment_name}.local"
     pmm_password               = random_password.pmm_admin_pass.result,
     pmm_server_endpoint        = "pmm-server.${aws_route53_zone.demo_local.name}:443"
     postgres_pmm_password      = random_password.postgresql_16_pmm_password.result,

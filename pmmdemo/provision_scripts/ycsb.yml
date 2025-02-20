@@ -10,13 +10,13 @@ package_update: true
 packages:
   - bind-utils
   - curl
-  - jq
+  - unzip
+  - python3-pip
 
 runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
   - dnf -y install consul
-  - systemctl enable consul
-  - systemctl start consul
+  - systemctl enable consul && systemctl start consul
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -25,15 +25,15 @@ runcmd:
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-  - percona-release setup -y psmdb-60
-  - dnf -y install python2 java-1.8.0-openjdk percona-server-mongodb
-  - mkdir -p /data
-  - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
-  - tar xfz ycsb-0.17.0.tar.gz && rm ycsb-0.17.0.tar.gz
-  - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
-  - /bin/bash /etc/ycsb/initial_load.sh
-  - systemctl enable ycsb.mongodb60
-  - systemctl start ycsb.mongodb60
+#   - percona-release setup -y psmdb-60
+#   - PERCONA_TELEMETRY_DISABLE=1 dnf -y install java-1.8.0-openjdk percona-server-mongodb
+#   - mkdir -p /data
+#   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
+#   - tar xfz ycsb-0.17.0.tar.gz && rm ycsb-0.17.0.tar.gz
+#   - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
+#   - /bin/bash /etc/ycsb/initial_load.sh
+#   - systemctl enable ycsb.mongodb60
+#   - systemctl start ycsb.mongodb60
 
 write_files:
   - path: /etc/resolv.conf

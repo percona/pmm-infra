@@ -22,7 +22,12 @@ output "percona_server_84_password" {
   sensitive = true
 }
 
-output "percona_server_84_group_replication_password" {
+output "percona_server_84_group_replication_root_password" {
+  value     = random_password.percona_server_84_group_replication_root_password.result
+  sensitive = true
+}
+
+output "percona_server_84_group_replication_sysbench_password" {
   value     = random_password.percona_server_84_group_replication_sysbench_password.result
   sensitive = true
 }

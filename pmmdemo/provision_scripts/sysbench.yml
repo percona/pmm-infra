@@ -292,7 +292,7 @@ write_files:
       mysql-host=haproxy
       mysql-port=33061
       mysql-user=sysbench-haproxy-percona-gr
-      mysql-password=$(percona_server_84_group_replication_password)
+      mysql-password=${percona_server_84_group_replication_password}
       events=0
       rand-type=pareto
       rate=0
@@ -306,7 +306,7 @@ write_files:
       mysql-host=haproxy
       mysql-port=3306
       mysql-user=sysbench-haproxy-pxc
-      mysql-password=BPwe4foqoGP9zTHSNUYbcAouSg4QfO
+      mysql-password=${percona_xtradb_cluster_80_password}
       events=0
       rand-type=pareto
       rate=0

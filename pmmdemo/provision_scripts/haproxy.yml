@@ -18,14 +18,15 @@ runcmd:
   - systemctl enable consul
   - bash /root/consul-advertise-addr.sh
   - systemctl start consul
-  - systemctl enable --now docker
-  - usermod -a -G docker ec2-user
-  - docker run --net host --restart=unless-stopped -d --name haproxy -v /etc/haproxy:/usr/local/etc/haproxy:ro haproxy:2.6
+  - sed -i 's/enforcing/permissive/g' /etc/selinux/config && /sbin/setenforce 0
   - dnf -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  - percona-release setup -y ps-80
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-server-client
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
+  - docker run --net host --restart=unless-stopped -d --name haproxy -v /etc/haproxy:/usr/local/etc/haproxy:ro docker.io/library/haproxy:latest
   - bash /usr/local/bin/waiter.sh haproxy-exporter
   - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics --environment="prod" --cluster="haproxy" --replication-set="haproxy"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
@@ -109,6 +110,30 @@ write_files:
           ]
         }
       }
+  - path: /usr/local/bin/mysql-check.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      VIP_PORT=$2
+      MYSQL_HOST=$3
+      MYSQL_PORT=$4
+      if [[ $VIP_PORT -eq 3306 ]]; then
+        # Testing Percona XtraDB Cluster
+        mysqlquery="/bin/mysql -h $MYSQL_HOST -P $MYSQL_PORT -u sysbench-haproxy-pxc -p${pxc_80_password} -BNe"
+        size=$(2>/dev/null $mysqlquery "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_size'" | /bin/cut -f2)
+        if [[ -z "$${size}" ]]; then let size=0; fi
+        echo "$${MYSQL_HOST} (PXC) has $${size}/3 members."
+      elif [[ $VIP_PORT -eq 33061 ]]; then
+        # Testing Percona Server 8.4 Group Replication
+        mysqlquery="/bin/mysql -h $MYSQL_HOST -P $MYSQL_PORT -u sysbench-haproxy-percona-gr -p${ps_84_gr_password} -BNe"
+        size=$(2>/dev/null $mysqlquery "SELECT COUNT(*) FROM performance_schema.replication_group_members WHERE MEMBER_STATE=\"ONLINE\"")
+        if [[ -z "$${size}" ]]; then let size=0; fi
+        echo "$${MYSQL_HOST} (GR) has $${size}/3 members."
+      fi
+      if [[ $size -eq 3 ]]; then exit 0; fi
+      # Anything else, consider this backend down
+      exit 1
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
@@ -173,10 +198,11 @@ write_files:
     content: |
       global
         daemon
-        log 127.0.0.1   local0
-        log 127.0.0.1   local1 notice
+        log stdout format raw local0 notice
         maxconn 4096
         stats socket /var/lib/haproxy/stats
+        external-check
+        insecure-fork-wanted
 
       defaults
         log     global
@@ -196,20 +222,24 @@ write_files:
         balance roundrobin
         bind 0.0.0.0:3306
         mode tcp
-        option mysql-check user haproxy_check
-        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 rise 3 fall 3
-        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 rise 3 fall 3
-        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 rise 3 fall 3
+        option external-check
+        external-check command /usr/local/bin/mysql-check.sh
+        default-server inter 2s downinter 5s rise 3 fall 3
+        server percona-xtradb-cluster-0 percona-xtradb-cluster-0:3306 check
+        server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 check
+        server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 check
 
       listen percona-group-replication-cluster
         balance roundrobin
         bind 0.0.0.0:33061
         mode tcp
-        option mysql-check user haproxy_check
-        server percona-group-replication-1 percona-group-replication-1:3306 rise 3 fall 3
-        server percona-group-replication-2 percona-group-replication-2:3306 rise 3 fall 3
-        server percona-group-replication-3 percona-group-replication-3:3306 rise 3 fall 3
-        
+        option external-check
+        external-check command /usr/local/bin/mysql-check.sh
+        default-server inter 2s downinter 5s rise 3 fall 3
+        server percona-server-84-group-replication-1 percona-server-84-group-replication-1:3306 check
+        server percona-server-84-group-replication-2 percona-server-84-group-replication-2:3306 check
+        server percona-server-84-group-replication-3 percona-server-84-group-replication-3:3306 check
+
       frontend stats
         bind *:8404
         http-request use-service prometheus-exporter if { path /metrics }
