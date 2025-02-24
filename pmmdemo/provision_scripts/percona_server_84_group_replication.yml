@@ -102,7 +102,6 @@ write_files:
       {
         "services": [{
           "address": "${fqdn}",
-          "id": "percona-server-84-group-replication",
           "name": "percona-server-84-group-replication",
           "port": 3306,
           "tags": ["${name}"],
@@ -115,7 +114,6 @@ write_files:
         },
         {
           "address": "${fqdn}",
-          "id": "percona-server-84-group-replication-primary",
           "name": "percona-server-84-group-replication-primary",
           "tags": ["${name}"],
           "checks": [{
@@ -299,7 +297,8 @@ write_files:
   - path: /root/init-mysql.sh
     content: |
       #!/bin/bash
-
+      mysqlquery="mysql --defaults-file=/root/.my.cnf -Bse"
+      nologbin="SET SQL_LOG_BIN=0;"
       # This need not be run on the replicas because replication will propagate them everywhere
       provision_users() {
         INITIAL_ROOT_PASSWORD=$(grep "root@localhost:" /var/log/mysqld.log | tail -n1 | rev | cut -d' ' -f1 | rev)
@@ -312,29 +311,29 @@ write_files:
         else
           echo "Error: Initial root password not found in /data/mysqld.log"
         fi      
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2;";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT USAGE ON *.* TO 'consul-health-check'@'localhost';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT SELECT ON performance_schema.replication_group_members TO 'consul-health-check'@'localhost';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER replica@'localhost' IDENTIFIED BY '${mysql_replica_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'localhost';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON *.* TO proxysql@'%';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_direct_gr.* TO 'sysbench-direct-percona-gr'@'%';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-proxysql-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_proxysql_gr.* TO 'sysbench-proxysql-percona-gr'@'%';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;CREATE USER 'sysbench-haproxy-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        mysql --defaults-file=/root/.my.cnf -Bse "SET SQL_LOG_BIN=0;GRANT ALL PRIVILEGES ON sbtest_haproxy_gr.* TO 'sysbench-haproxy-percona-gr'@'%';";
+        "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100;";
+        $mysqlquery "$nologbin GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost';";
+        $mysqlquery "$nologbin CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2;";
+        $mysqlquery "$nologbin GRANT USAGE ON *.* TO 'consul-health-check'@'localhost';";
+        $mysqlquery "$nologbin GRANT SELECT ON performance_schema.replication_group_members TO 'consul-health-check'@'localhost';";
+        $mysqlquery "$nologbin CREATE USER replica@'%' IDENTIFIED BY '${mysql_replica_password}';";
+        $mysqlquery "$nologbin GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'%';";
+        $mysqlquery "$nologbin CREATE USER replica@'localhost' IDENTIFIED BY '${mysql_replica_password}';";
+        $mysqlquery "$nologbin GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM, REPLICATION CLIENT ON *.* TO replica@'localhost';";
+        $mysqlquery "$nologbin CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON *.* TO proxysql@'%';";
+        $mysqlquery "$nologbin CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_direct_gr.* TO 'sysbench-direct-percona-gr'@'%';";
+        $mysqlquery "$nologbin CREATE USER 'sysbench-proxysql-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_proxysql_gr.* TO 'sysbench-proxysql-percona-gr'@'%';";
+        $mysqlquery "$nologbin CREATE USER 'sysbench-haproxy-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_haproxy_gr.* TO 'sysbench-haproxy-percona-gr'@'%';";
       }
 
       provision_tables() {
-        mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_direct_gr;"
-        mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_proxysql_gr;"
-        mysql --defaults-file=/root/.my.cnf -Bse "CREATE DATABASE IF NOT EXISTS sbtest_haproxy_gr;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_direct_gr;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_proxysql_gr;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_haproxy_gr;"
       }
 
       if [[ "${name}" == "percona-server-84-group-replication-1" ]]; then
