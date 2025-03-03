@@ -39,7 +39,7 @@ runcmd:
   - bash /usr/local/bin/waiter.sh readyz
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - bash /usr/local/bin/waiter.sh mysql
-  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='percona-server-84-group-replication-cluster' --replication-set='percona-server-84-group-replication-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
+  - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='percona-server-84-gr' --replication-set='percona-server-84-gr' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
@@ -96,13 +96,13 @@ write_files:
           fi
         done
       fi
-  - path: /etc/consul.d/percona-server-84-group-replication-service.json
+  - path: /etc/consul.d/percona-server-84-gr-service.json
     permissions: "0644"
     content: |
       {
         "services": [{
           "address": "${fqdn}",
-          "name": "percona-server-84-group-replication",
+          "name": "percona-server-84-gr",
           "port": 3306,
           "tags": ["${name}"],
           "checks": [{
@@ -114,7 +114,7 @@ write_files:
         },
         {
           "address": "${fqdn}",
-          "name": "percona-server-84-group-replication-primary",
+          "name": "percona-server-84-gr-primary",
           "tags": ["${name}"],
           "checks": [{
             "interval": "2s",
@@ -173,8 +173,8 @@ write_files:
         # mysql
         while true; do
           # Get the status of the mysql_check_http check
-          status=$(dig @127.0.0.1 -p 8600 ${name}.percona-server-84-group-replication.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-          if [[ $status == "${name}.percona-server-84-group-replication.service.consul." ]]; then
+          status=$(dig @127.0.0.1 -p 8600 ${name}.percona-server-84-gr.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+          if [[ $status == "${name}.percona-server-84-gr.service.consul." ]]; then
             echo "mysql check is passing."
             exit 0
           fi
@@ -186,8 +186,8 @@ write_files:
       elif [[ $service == "gr-primary" ]]; then
         # group replication primary
         while true; do
-          status=$(dig +short @127.0.0.1 -p 8600 percona-server-84-group-replication-primary.service.consul SRV | awk '{print $1}')
-          if [[ $status =~ "${name}" ]]; then
+          status=$(dig +short @127.0.0.1 -p 8600 percona-server-84-gr-primary.service.consul SRV)
+          if [[ $status =~ "${environment_name}.local" ]]; then
             echo "gr-primary check is passing"
             exit 0
           else
@@ -285,7 +285,7 @@ write_files:
       plugin_load_add='group_replication.so'
       loose-group_replication_bootstrap_group=off
       loose-group_replication_group_name="${percona_group_replication_uuid}"
-      loose-group_replication_group_seeds="percona-server-84-group-replication-1:33061,percona-server-84-group-replication-2:33061,percona-server-84-group-replication-3:33061"
+      loose-group_replication_group_seeds="percona-server-84-gr-1:33061,percona-server-84-gr-2:33061,percona-server-84-gr-3:33061"
       loose-group_replication_local_address="${name}:33061"
       loose-group_replication_recovery_get_public_key=ON 
       loose-group_replication_paxos_single_leader=ON
@@ -311,7 +311,7 @@ write_files:
         else
           echo "Error: Initial root password not found in /data/mysqld.log"
         fi      
-        "SET SQL_LOG_BIN=0;CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100;";
+        $mysqlquery "$nologbin CREATE USER 'pmm-admin'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 100;";
         $mysqlquery "$nologbin GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO 'pmm-admin'@'localhost';";
         $mysqlquery "$nologbin CREATE USER 'consul-health-check'@'localhost' IDENTIFIED BY '${mysql_root_password}' WITH MAX_USER_CONNECTIONS 2;";
         $mysqlquery "$nologbin GRANT USAGE ON *.* TO 'consul-health-check'@'localhost';";
@@ -336,7 +336,7 @@ write_files:
         $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_haproxy_gr;"
       }
 
-      if [[ "${name}" == "percona-server-84-group-replication-1" ]]; then
+      if [[ "${name}" == "percona-server-84-gr-1" ]]; then
           # Start GR on primary node
           # If we are running on the primary node (i.e., index == 1), start the GR instance in bootstrap mode.
           provision_users

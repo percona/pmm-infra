@@ -114,12 +114,10 @@ write_files:
         while true; do
           # Get the status of the process-exporter_check_http check
           status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-
           if [[ $status == "${name}.process-exporter.service.consul." ]]; then
             echo "process-exporter check is passing."
             exit 0
           fi
-
           # If the check is not passing, wait for a short interval and try again
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
@@ -153,7 +151,9 @@ write_files:
             echo "Seems to be a problem with the endpoint. Sleeping so we don't spam the annotations!";
             sleep 60;
           fi
-      }  
+      }
+      srv=$(echo $${SYSBENCH_CFG} | cut -d_ -f2 | cut -d. -f1)
+      hosts=$(dig +short @127.0.0.1 -p 8600 $srv.service.consul SRV | awk -F. '{print $1}' | awk '{print $4}')
       OLTP_AVAILABLE=(oltp_delete.lua oltp_insert.lua oltp_point_select.lua oltp_read_only.lua oltp_read_write.lua oltp_update_index.lua oltp_update_non_index.lua oltp_write_only.lua)
       OLTP_PATH='/usr/share/sysbench'
       for (( ; ; )); do
@@ -161,7 +161,9 @@ write_files:
           RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
           RND_EXEC_TIME="$(( $${RANDOM} % 14400 + 14400 ))";    # 4 hours and up to 8 hours
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
-          pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}";
+          for h in $hosts; do
+            pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --node-name $h --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}"
+          done
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
@@ -171,55 +173,57 @@ write_files:
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
       done;
-  - path: /etc/sysbench/pgr84.cnf
-    content: |
-      mysql-db=sbtest_direct_gr
-      mysql-host=percona-server-84-group-replication-1
-      mysql-port=3306
-      mysql-user=sysbench-direct-percona-gr
-      mysql-password=${percona_server_84_group_replication_password}
-      rate=0
-      report-interval=10
-      table-size=1000000
-      tables=20
-      verbosity=0
-  - path: /etc/sysbench/ps80.cnf
-    content: |
-      mysql-db=sbtest_direct
-      mysql-host=percona-server-80-0
-      mysql-port=3306
-      mysql-user=sysbench-direct-ps
-      mysql-password=${mysql80_sysbench_password}
-      rate=0
-      report-interval=10
-      table-size=1000000
-      tables=20
-      verbosity=0
-  - path: /etc/sysbench/ps84.cnf
-    content: |
-      mysql-db=sbtest_direct
-      mysql-host=percona-server-84-0
-      mysql-port=3306
-      mysql-user=sysbench-direct-ps84
-      mysql-password=${mysql84_sysbench_password}
-      rate=0
-      report-interval=10
-      table-size=1000000
-      tables=20
-      verbosity=0
-  - path: /etc/sysbench/pxc80.cnf
-    content: |
-      mysql-db=sbtest_direct
-      mysql-host=percona-xtradb-cluster-1
-      mysql-port=3306
-      mysql-user=sysbench-direct-pxc
-      mysql-password=${percona_xtradb_cluster_80_password}
-      rand-type=pareto
-      rate=0
-      report-interval=10
-      table_size=1000000
-      tables=20
-  - path: /etc/sysbench/postgresql16.cnf
+
+#   - path: /etc/sysbench/pgr84.cnf
+#     content: |
+#       mysql-db=sbtest_direct_gr
+#       mysql-host=percona-server-84-gr-1
+#       mysql-port=3306
+#       mysql-user=sysbench-direct-percona-gr
+#       mysql-password=${percona_server_84_gr_password}
+#       rate=0
+#       report-interval=10
+#       table-size=1000000
+#       tables=20
+#       verbosity=0
+#   - path: /etc/sysbench/ps80.cnf
+#     content: |
+#       mysql-db=sbtest_direct
+#       mysql-host=percona-server-80-0
+#       mysql-port=3306
+#       mysql-user=sysbench-direct-ps
+#       mysql-password=${mysql80_sysbench_password}
+#       rate=0
+#       report-interval=10
+#       table-size=1000000
+#       tables=20
+#       verbosity=0
+#   - path: /etc/sysbench/ps84.cnf
+#     content: |
+#       mysql-db=sbtest_direct
+#       mysql-host=percona-server-84-0
+#       mysql-port=3306
+#       mysql-user=sysbench-direct-ps84
+#       mysql-password=${mysql84_sysbench_password}
+#       rate=0
+#       report-interval=10
+#       table-size=1000000
+#       tables=20
+#       verbosity=0
+#   - path: /etc/sysbench/pxc80.cnf
+#     content: |
+#       mysql-db=sbtest_direct
+#       mysql-host=percona-xtradb-cluster-1
+#       mysql-port=3306
+#       mysql-user=sysbench-direct-pxc
+#       mysql-password=${percona_xtradb_cluster_80_password}
+#       rand-type=pareto
+#       rate=0
+#       report-interval=10
+#       table_size=1000000
+#       tables=20
+
+  - path: /etc/sysbench/postgresql-16.cnf
     content: |
       db-driver=pgsql
       pgsql-host=postgresql-16
@@ -230,13 +234,14 @@ write_files:
       rate=0
       report-interval=10
       verbosity=0
-  - path: /etc/sysbench/proxysql_pgr84.cnf
+
+  - path: /etc/sysbench/proxysql_percona-server-84-gr.cnf
     content: |
       mysql-db=sbtest_proxysql_gr
       mysql-host=proxysql
       mysql-port=3306
       mysql-user="sysbench-proxysql-percona-gr"
-      mysql-password=${percona_server_84_group_replication_password}
+      mysql-password=${percona_server_84_gr_password}
       events=0
       rand-type=pareto
       rate=0
@@ -244,7 +249,8 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-  - path: /etc/sysbench/proxysql_ps80.cnf
+
+  - path: /etc/sysbench/proxysql_percona-server-80.cnf
     content: |
       mysql-db=sbtest_proxysql
       mysql-host=proxysql
@@ -258,7 +264,8 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-  - path: /etc/sysbench/proxysql_ps84.cnf
+
+  - path: /etc/sysbench/proxysql_percona-server-84.cnf
     content: |
       mysql-db=sbtest_proxysql
       mysql-host=proxysql
@@ -272,7 +279,8 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-  - path: /etc/sysbench/proxysql_pxc80.cnf
+
+  - path: /etc/sysbench/proxysql_percona-xtradb-cluster.cnf
     content: |
       mysql-db=sbtest_proxysql
       mysql-host=proxysql
@@ -286,90 +294,94 @@ write_files:
       table_size=1000000
       time=0
       threads=5
-  - path: /etc/sysbench/haproxy_pgr84.cnf
-    content: |
-      mysql-db=sbtest_haproxy_gr
-      mysql-host=haproxy
-      mysql-port=33061
-      mysql-user=sysbench-haproxy-percona-gr
-      mysql-password=${percona_server_84_group_replication_password}
-      events=0
-      rand-type=pareto
-      rate=0
-      report-interval=10
-      table_size=1000000
-      time=0
-      threads=5
-  - path: /etc/sysbench/haproxy_pxc80.cnf
-    content: |
-      mysql-db=sbtest_haproxy
-      mysql-host=haproxy
-      mysql-port=3306
-      mysql-user=sysbench-haproxy-pxc
-      mysql-password=${percona_xtradb_cluster_80_password}
-      events=0
-      rand-type=pareto
-      rate=0
-      report-interval=10
-      table_size=1000000
-      time=0
-      threads=5
-  - path: /usr/lib/systemd/system/sysbench.pgr84.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona Server 8.4 Group Replication
-      After=network.target
 
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh pgr84.cnf
+#   - path: /etc/sysbench/haproxy_pgr84.cnf
+#     content: |
+#       mysql-db=sbtest_haproxy_gr
+#       mysql-host=haproxy
+#       mysql-port=33061
+#       mysql-user=sysbench-haproxy-percona-gr
+#       mysql-password=${percona_server_84_gr_password}
+#       events=0
+#       rand-type=pareto
+#       rate=0
+#       report-interval=10
+#       table_size=1000000
+#       time=0
+#       threads=5
+# 
+#   - path: /etc/sysbench/haproxy_pxc80.cnf
+#     content: |
+#       mysql-db=sbtest_haproxy
+#       mysql-host=haproxy
+#       mysql-port=3306
+#       mysql-user=sysbench-haproxy-pxc
+#       mysql-password=${percona_xtradb_cluster_80_password}
+#       events=0
+#       rand-type=pareto
+#       rate=0
+#       report-interval=10
+#       table_size=1000000
+#       time=0
+#       threads=5
 
-      [Install]
-      WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.ps80.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona Server 8
-      After=network.target
+#   - path: /usr/lib/systemd/system/sysbench.pgr84.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona Server 8.4 Group Replication
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh pgr84.cnf
+# 
+#       [Install]
+#       WantedBy=multi-user.target
+#   - path: /usr/lib/systemd/system/sysbench.ps80.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona Server 8
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-80.cnf
+# 
+#       [Install]
+#       WantedBy=multi-user.target
+#   - path: /usr/lib/systemd/system/sysbench.ps84.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona Server 8.4
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh percona-server-84.cnf 
+# 
+#       [Install]
+#       WantedBy=multi-user.target
+#   - path: /usr/lib/systemd/system/sysbench.pxc80.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona XtraDB Cluster 8.0
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh pxc80.cnf
+# 
+#       [Install]
+#       WantedBy=multi-user.target
 
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh ps80.cnf
-
-      [Install]
-      WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.ps84.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona Server 8.4
-      After=network.target
-
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh ps84.cnf
-
-      [Install]
-      WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.pxc80.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona XtraDB Cluster 8.0
-      After=network.target
-
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh pxc80.cnf
-
-      [Install]
-      WantedBy=multi-user.target
   - path: /usr/lib/systemd/system/sysbench.proxysql_pgr84.service
     content: |
       [Unit]
@@ -380,7 +392,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pgr84.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_percona-server-84-gr.cnf
 
       [Install]
       WantedBy=multi-user.target
@@ -394,7 +406,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps80.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_percona-server-80.cnf
 
       [Install]
       WantedBy=multi-user.target
@@ -408,10 +420,11 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_ps84.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_percona-server-84.cnf
 
       [Install]
       WantedBy=multi-user.target
+
   - path: /usr/lib/systemd/system/sysbench.proxysql_pxc80.service
     content: |
       [Unit]
@@ -422,10 +435,11 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_pxc80.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh proxysql_percona-xtradb-cluster.cnf
 
       [Install]
       WantedBy=multi-user.target
+
   - path: /usr/lib/systemd/system/sysbench.postgresql16.service
     content: |
       [Unit]
@@ -440,31 +454,32 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.haproxy.pgr84.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona Server 8.4 Group Replication behind HAProxy
-      After=network.target
 
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pgr84.cnf
-
-      [Install]
-      WantedBy=multi-user.target
-  - path: /usr/lib/systemd/system/sysbench.haproxy.pxc80.service
-    content: |
-      [Unit]
-      Description=Sysbench for Percona XtraDB Cluster 8.0 behind HAProxy
-      After=network.target
-
-      [Service]
-      Type=simple
-      Restart=on-failure
-      RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pxc80.cnf
-
-      [Install]
-      WantedBy=multi-user.target
+#   - path: /usr/lib/systemd/system/sysbench.haproxy.pgr84.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona Server 8.4 Group Replication behind HAProxy
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pgr84.cnf
+# 
+#       [Install]
+#       WantedBy=multi-user.target
+#   - path: /usr/lib/systemd/system/sysbench.haproxy.pxc80.service
+#     content: |
+#       [Unit]
+#       Description=Sysbench for Percona XtraDB Cluster 8.0 behind HAProxy
+#       After=network.target
+# 
+#       [Service]
+#       Type=simple
+#       Restart=on-failure
+#       RestartSec=600
+#       ExecStart=/etc/sysbench/exec_sysbench.sh haproxy_pxc80.cnf
+# 
+#       [Install]
+#       WantedBy=multi-user.target

@@ -153,7 +153,7 @@ write_files:
         # wait for all 3 members of this mongo replica set
         while true; do
           # Get the count of members in this replica set
-          cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-rs-${replica_set_name}.service.consul SRV | wc -l)
+          cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-${replica_set_name}.service.consul SRV | wc -l)
           if [[ $cnt -eq 3 ]]; then
             echo "3 shards online"
             exit 0

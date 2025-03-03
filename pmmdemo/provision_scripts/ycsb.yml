@@ -25,15 +25,12 @@ runcmd:
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
-#   - percona-release setup -y psmdb-60
-#   - PERCONA_TELEMETRY_DISABLE=1 dnf -y install java-1.8.0-openjdk percona-server-mongodb
-#   - mkdir -p /data
-#   - curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
-#   - tar xfz ycsb-0.17.0.tar.gz && rm ycsb-0.17.0.tar.gz
-#   - ln /root/ycsb-0.17.0/bin/ycsb /usr/local/sbin
-#   - /bin/bash /etc/ycsb/initial_load.sh
-#   - systemctl enable ycsb.mongodb60
-#   - systemctl start ycsb.mongodb60
+  - percona-release setup -y psmdb-60
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-mongodb-mongosh git maven
+  - git clone https://github.com/johnlpage/POCDriver /root/POCDriver
+  - cd /root/POCDriver && mvn clean package
+  - /bin/bash /usr/local/bin/wait_all_shards.sh
+  - systemctl enable ycsb.mongodb60 && systemctl start ycsb.mongodb60
 
 write_files:
   - path: /etc/resolv.conf
@@ -62,23 +59,16 @@ write_files:
       {
         "service": {
           "address": "${fqdn}",
-          "id": "process-exporter",
           "name": "process-exporter",
           "port": 9256,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "HTTP": "http://${fqdn}:9256/metrics",
-            "ID": "process-exporter_check_http",
-            "Interval": "3s",
-            "Method": "GET",
-            "Name": "Check for process-exporter using HTTP",
-            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
-            "ServiceID": "process-exporter_check_http",
-            "Success_before_passing": 3,
-            "Timeout": "5s"
-            }
-          ]
+          "checks": [{
+            "http": "http://${fqdn}:9256/metrics",
+            "interval": "3s",
+            "method": "GET",
+            "success_before_passing": 3,
+            "timeout": "5s"
+          }]
         }
       }
   - path: /usr/local/bin/waiter.sh
@@ -102,21 +92,6 @@ write_files:
           echo "process-exporter check is not passing. Will retry in 3 seconds..."
           sleep 3
         done
-      elif [[ $service == "proxysql" ]]; then
-        # proxysql
-        while true; do
-          # Get the status of the Proxysql check
-          status=$(dig @127.0.0.1 -p 8600 proxysql.service.consul SRV | awk '/SRV.*proxysql.${environment_name}.local.$/ {print $1}')
-
-          if [[ $status == "proxysql.service.consul." ]]; then
-            echo "ProxySQL check is passing."
-            exit 0
-          fi
-
-          # If the check is not passing, wait for a short interval and try again
-          echo "ProxySQL check is not passing. Will retry in 3 seconds..."
-          sleep 3
-        done
       elif [[ $service == "readyz" ]] ; then
         # PMM readyz
         while true; do
@@ -128,7 +103,7 @@ write_files:
 
             # Get the status of the PMMreadyz_check_http check
             status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
-        
+
             if [[ $status == "pmmreadyz.service.consul." ]]; then
               echo "PMMreadyz_check_http check is passing."
               exit 0  
@@ -141,55 +116,72 @@ write_files:
           sleep 1
         done
       fi
-  - path: /etc/ycsb/shard.js
+
+  - path: /root/init_shards.js
     content: |
       sh.enableSharding('ycsb');
-      sh.shardCollection('ycsb.usertable', { "_id" : "hashed" }, false, { numInitialChunks : 20 });
+      var c = db.getCollectionNames();
+      c.forEach(function (n) { if (n == 'system.profile') {} else { db[n].drop();} });
+      for (i=0; i<10; i++){ var col="db.pocdriver"+i; sh.shardCollection(col, {fld0: "hashed"}); }
 
-  - path: /etc/ycsb/initial_load.sh
-    permissions: "0744"
+  - path: /usr/local/bin/wait_all_shards.sh
+    permissions: "0755"
     content: |
       #!/bin/bash
-      
+
       # Wait for mongos
       echo "-- Waiting for all 9 mongo servers..."
-      
+
       for (( i=1 ; i<=100 ; i++ )); do
-        s=$(curl -s --get http://pmm-server:8500/v1/catalog/service/mongo | jq 'length')
-        
-        if [ $s -eq 9 ]; then
-          echo "-- Looks like all 9 mongos are online"
+        shardCount=0
+        for j in cfg rs-shard-0 rs-shard-1; do
+          cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-$${j}.service.consul SRV | wc -l)
+          echo "mongo-60-$${j} has $${cnt}/3 members online"
+          if [[ $cnt -eq 3 ]]; then
+            ((shardCount++))
+          fi
+        done
+
+        if [[ $shardCount -eq 3 ]]; then
+          echo "-- Looks like all 3 mongo shards are online"
           break
         fi
-        
-        echo "-- Only $${s} mongos responding to ping; retry $${i}/100"
+
+        echo "-- Only $${shardCount} mongo shards online; retry $${i}/100"
         sleep 2
       done
-      
-      # All 9 mongos online, connect to mongos-0 and configure sharding
-      mongosh --port 27019 --host mongo-60-mongos-0 -u ycsb -p '${mongodb_ycsb_password}' /etc/ycsb/shard.js
-      sleep 2
-      
-      # Prepare the benchmarking dataset
-      /root/ycsb-0.17.0/bin/ycsb load mongodb -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
 
-  - path: /etc/ycsb/exec_ycsb.sh
+  - path: /usr/local/bin/exec_ycsb.sh
     permissions: "0744"
     content: |
-      #!/bin/bash
+#!/bin/bash
 
-      while true; do
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloada -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadb -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadc -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 10s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloade -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
-        /root/ycsb-0.17.0/bin/ycsb run mongodb -s -P /root/ycsb-0.17.0/workloads/workloadf -threads 4 -p recordcount=100000 -p operationcount=1000000 -p mongodb.url="mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/"
-        sleep 5s
-      done
+function runner() {
+  local name=$1
+  local ins=$2
+  local ups=$3
+  local rng=$4
+  local key=$5
+  for i in rs-0-0 rs-0-1 rs-0-2 rs-1-0 rs-1-1 rs-1-2; do
+    pmm-admin annotate --service-name=mongo-60-${i} "${name}"
+  done
+  /bin/java -jar /root/POCDriver/bin/POCDriver.jar \
+    -c mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019 \
+    --duration 3600 \
+    --namespace ycsb.pocdriver \
+    --nosharding \
+    --arrays 6:12 \
+    --inserts $ins --updates $ups --rangequeries $rng --keyqueries $key \
+    --projectfields 1 --collections 10
+  sleep 20s
+}
+while true; do
+  # drop all collections; reset
+  mongosh mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/ycsb --authenticationDatabase admin /root/init_shards.js
+  runner "insert_only" 1000 0 0 0
+  runner "update_only" 0 1000 0 0
+  runner "read_only" 0 0 100 100
+done
 
   - path: /usr/lib/systemd/system/ycsb.mongodb60.service
     content: |
@@ -201,7 +193,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=10
-      ExecStart=/etc/ycsb/exec_ycsb.sh
+      ExecStart=/usr/local/bin/exec_ycsb.sh
 
       [Install]
       WantedBy=multi-user.target

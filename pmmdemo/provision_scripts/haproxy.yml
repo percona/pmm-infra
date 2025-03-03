@@ -229,16 +229,16 @@ write_files:
         server percona-xtradb-cluster-1 percona-xtradb-cluster-1:3306 check
         server percona-xtradb-cluster-2 percona-xtradb-cluster-2:3306 check
 
-      listen percona-group-replication-cluster
+      listen percona-gr-cluster
         balance roundrobin
         bind 0.0.0.0:33061
         mode tcp
         option external-check
         external-check command /usr/local/bin/mysql-check.sh
         default-server inter 2s downinter 5s rise 3 fall 3
-        server percona-server-84-group-replication-1 percona-server-84-group-replication-1:3306 check
-        server percona-server-84-group-replication-2 percona-server-84-group-replication-2:3306 check
-        server percona-server-84-group-replication-3 percona-server-84-group-replication-3:3306 check
+        server percona-server-84-gr-1 percona-server-84-gr-1:3306 check
+        server percona-server-84-gr-2 percona-server-84-gr-2:3306 check
+        server percona-server-84-gr-3 percona-server-84-gr-3:3306 check
 
       frontend stats
         bind *:8404

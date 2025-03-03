@@ -324,6 +324,9 @@ write_files:
       echo "--- $${myhostname}"
       echo "--- This is member id $${memberid}"
 
+      echo "-- Waiting for mongo to start on all 3 members..."
+      /usr/local/bin/waiter.sh mongo-rs
+
       # We pick rs-[01]-0 to be primary. Run the init only on the primary
       if [ "$${memberid}" == "0" ]; then
         echo "-- We are shard 0; run init"
