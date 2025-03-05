@@ -25,7 +25,7 @@ runcmd:
   - bash /usr/local/bin/waiter.sh process-exporter
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - percona-release setup -y psmdb-60
-  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-server-mongodb
+  - PERCONA_TELEMETRY_DISABLE=1 dnf -y install percona-server-mongodb-mongos percona-mongodb-mongosh
   - mkdir -p /var/log/mongos /var/run/mongos
   - chown mongod:mongod /etc/mongo-key /var/log/mongos /var/run/mongos && chmod 600 /etc/mongo-key
   - sed -i 's/enforcing/permissive/g' /etc/selinux/config && /sbin/setenforce 0

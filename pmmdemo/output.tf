@@ -57,11 +57,6 @@ output "postgresql_16_sysbench_password" {
   sensitive = true
 }
 
-output "mongodb_ycsb_password" {
-  value     = random_password.mongodb_ycsb_password.result
-  sensitive = true
-}
-
 output "proxysql_admin_password" {
   value     = random_password.proxysql_admin.result
   sensitive = true
@@ -72,12 +67,17 @@ output "proxysql_monitor_password" {
   sensitive = true
 }
 
+output "mongodb_60_percona_admin_password" {
+  value     = module.mongo_cluster_pmmdemo.mongodb_60_percona_admin_password
+  sensitive = true
+}
+
 output "mongodb_60_pmm_user_password" {
   value     = module.mongo_cluster_pmmdemo.mongodb_60_pmm_user_password
   sensitive = true
 }
 
-output "mongodb_60_percona_admin_password" {
-  value     = module.mongo_cluster_pmmdemo.mongodb_60_percona_admin_password
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password
   sensitive = true
 }

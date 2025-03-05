@@ -1,3 +1,4 @@
+
 module "mongo_60_rs_0" {
   source        = "../ec2"
   count         = var.count_of_shards
@@ -21,7 +22,7 @@ module "mongo_60_rs_0" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
-    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
+    mongodb_ycsb_password         = var.mongodb_ycsb_password,
   })
 }
 
@@ -57,7 +58,7 @@ module "mongo_60_rs_1" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
-    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
+    mongodb_ycsb_password         = var.mongodb_ycsb_password,
   })
 }
 
@@ -91,7 +92,6 @@ module "mongo_60_cfg" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
-    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
   })
 }
 
@@ -125,7 +125,7 @@ module "mongo_60_mongos" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
-    mongodb_ycsb_password         = random_password.mongodb_ycsb_password.result,
+    mongodb_ycsb_password         = var.mongodb_ycsb_password,
   })
 }
 
