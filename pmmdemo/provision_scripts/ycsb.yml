@@ -120,9 +120,9 @@ write_files:
   - path: /root/init_shards.js
     content: |
       sh.enableSharding('ycsb');
-      var c = db.getCollectionNames();
-      c.forEach(function (n) { if (n == 'system.profile') {} else { db[n].drop();} });
-      for (i=0; i<10; i++){ var col="db.pocdriver"+i; sh.shardCollection(col, {fld0: "hashed"}); }
+      var y = db.getSiblingDB('ycsb')
+      y.getCollectionNames().forEach(function (n) { if (n == 'system.profile') {} else { y.getCollection(n).drop();} });
+      for (i=0; i<10; i++){ var col="ycsb.pocdriver"+i; sh.shardCollection(col, {fld0: "hashed"}); }
 
   - path: /usr/local/bin/wait_all_shards.sh
     permissions: "0755"
@@ -134,19 +134,24 @@ write_files:
 
       for (( i=1 ; i<=100 ; i++ )); do
         shardCount=0
+        primaryCount=0
         for j in cfg rs-shard-0 rs-shard-1; do
           cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-$${j}.service.consul SRV | wc -l)
           echo "mongo-60-$${j} has $${cnt}/3 members online"
           if [[ $cnt -eq 3 ]]; then
             ((shardCount++))
           fi
+          prim=$(dig +short @127.0.0.1 -p 8600 mongo-60-$${j}-primary.service.consul SRV | wc -l)
+          echo "mongo-60-$${j} has $${prim} primary member"
+          if [[ $prim -eq 1 ]]; then
+            ((primaryCount++))
+          fi
         done
-
-        if [[ $shardCount -eq 3 ]]; then
-          echo "-- Looks like all 3 mongo shards are online"
+        if [[ $shardCount -eq 3 ]] && [[ $primaryCount -eq 3 ]]; then
+          echo "-- Looks like all 3 mongo shards are online with primary"
+          sleep 2
           break
         fi
-
         echo "-- Only $${shardCount} mongo shards online; retry $${i}/100"
         sleep 2
       done
@@ -154,34 +159,34 @@ write_files:
   - path: /usr/local/bin/exec_ycsb.sh
     permissions: "0744"
     content: |
-#!/bin/bash
+      #!/bin/bash
 
-function runner() {
-  local name=$1
-  local ins=$2
-  local ups=$3
-  local rng=$4
-  local key=$5
-  for i in rs-0-0 rs-0-1 rs-0-2 rs-1-0 rs-1-1 rs-1-2; do
-    pmm-admin annotate --service-name=mongo-60-${i} "${name}"
-  done
-  /bin/java -jar /root/POCDriver/bin/POCDriver.jar \
-    -c mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019 \
-    --duration 3600 \
-    --namespace ycsb.pocdriver \
-    --nosharding \
-    --arrays 6:12 \
-    --inserts $ins --updates $ups --rangequeries $rng --keyqueries $key \
-    --projectfields 1 --collections 10
-  sleep 20s
-}
-while true; do
-  # drop all collections; reset
-  mongosh mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/ycsb --authenticationDatabase admin /root/init_shards.js
-  runner "insert_only" 1000 0 0 0
-  runner "update_only" 0 1000 0 0
-  runner "read_only" 0 0 100 100
-done
+      function runner() {
+        local name=$1
+        local ins=$2
+        local ups=$3
+        local rng=$4
+        local key=$5
+        for i in rs-0-0 rs-0-1 rs-0-2 rs-1-0 rs-1-1 rs-1-2; do
+          pmm-admin annotate --service-name=mongo-60-$${i} "${name}"
+        done
+        /bin/java -jar /root/POCDriver/bin/POCDriver.jar \
+          -c mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019 \
+          --duration 3600 \
+          --namespace ycsb.pocdriver \
+          --nosharding \
+          --arrays 6:12 \
+          --inserts $ins --updates $ups --rangequeries $rng --keyqueries $key \
+          --projectfields 1 --collections 10
+        sleep 20s
+      }
+      while true; do
+        # drop all collections; reset
+        mongosh mongodb://ycsb:${mongodb_ycsb_password}@mongo-60-mongos-0:27019/ycsb --authenticationDatabase admin /root/init_shards.js
+        runner "insert_only" 1000 0 0 0
+        runner "update_only" 0 1000 0 0
+        runner "read_only" 0 0 100 100
+      done
 
   - path: /usr/lib/systemd/system/ycsb.mongodb60.service
     content: |

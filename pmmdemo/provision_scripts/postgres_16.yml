@@ -144,5 +144,6 @@ write_files:
       psql -c "CREATE ROLE sysbench WITH LOGIN CONNECTION LIMIT 100 ENCRYPTED PASSWORD '${postgres_sysbench_password}'"
       psql -c "CREATE DATABASE sbtest"
       psql -c "GRANT ALL PRIVILEGES ON DATABASE sbtest TO sysbench"
+      psql sbtest -c "GRANT ALL ON SCHEMA public TO sysbench"
       psql -c "CREATE EXTENSION pg_stat_monitor"
       psql -c "select pg_reload_conf()"

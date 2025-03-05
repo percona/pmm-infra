@@ -145,14 +145,6 @@ resource "random_password" "mongodb_60_percona_admin_password" {
   special     = false
 }
 
-resource "random_password" "mongodb_ycsb_password" {
-  length      = 16
-  min_lower   = 2
-  min_numeric = 2
-  min_upper   = 4
-  special     = false
-}
-
 // TODO it's better use x.509 cert auth
 resource "random_password" "mongodb_60_keyfile" {
   length      = 256
@@ -169,10 +161,5 @@ output "mongodb_60_pmm_user_password" {
 
 output "mongodb_60_percona_admin_password" {
   value     = random_password.mongodb_60_percona_admin_password.result
-  sensitive = true
-}
-
-output "mongodb_ycsb_password" {
-  value     = random_password.mongodb_ycsb_password.result
   sensitive = true
 }

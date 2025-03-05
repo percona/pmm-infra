@@ -30,3 +30,8 @@ resource "random_password" "mongodb_ycsb_password" {
   min_upper   = 4
   special     = false
 }
+
+output "mongodb_ycsb_password" {
+  value     = random_password.mongodb_ycsb_password.result
+  sensitive = true
+}

@@ -284,7 +284,7 @@ write_files:
       enforce_gtid_consistency = ON
       plugin_load_add='group_replication.so'
       loose-group_replication_bootstrap_group=off
-      loose-group_replication_group_name="${percona_group_replication_uuid}"
+      loose-group_replication_group_name="${percona_server_gr_uuid}"
       loose-group_replication_group_seeds="percona-server-84-gr-1:33061,percona-server-84-gr-2:33061,percona-server-84-gr-3:33061"
       loose-group_replication_local_address="${name}:33061"
       loose-group_replication_recovery_get_public_key=ON 

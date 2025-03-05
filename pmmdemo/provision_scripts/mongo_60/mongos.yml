@@ -32,8 +32,8 @@ runcmd:
   - systemctl enable mongos
   - systemctl start mongos
   - bash /usr/local/bin/waiter.sh mongos
-  - mongosh --port 27019 /tmp/init.js
-  - mongosh --port 27019 -u perconaadmin -p '${mongodb_60_percona_admin_password}' /tmp/users.js
+  - bash /usr/local/bin/wait_all_shards.sh
+  - mongosh --port 27019 -u perconaadmin -p '${mongodb_60_percona_admin_password}' /tmp/init.js /tmp/users.js
   - pmm-admin add mongodb --port=27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
@@ -64,8 +64,8 @@ write_files:
           "port": 27019,
           "tags": ["${name}", "mongos"],
           "checks": [{
-              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
-              "interval": "3s",
+              "args": ["/usr/local/bin/mongo_alive.sh"],
+              "interval": "5s",
               "success_before_passing": 3
           }]
         }
@@ -147,6 +147,48 @@ write_files:
         done
       fi
 
+  - path: /usr/local/bin/mongo_alive.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      /bin/mongosh --port 27019 --eval "db.runCommand(\"ping\").ok" -quiet
+      if [[ $? -eq 1 ]]; then
+        exit 2
+      fi
+      exit $?
+
+  - path: /usr/local/bin/wait_all_shards.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # Wait for mongos
+      echo "-- Waiting for all 9 mongo servers..."
+
+      for (( i=1 ; i<=100 ; i++ )); do
+        shardCount=0
+        primaryCount=0
+        for j in cfg rs-shard-0 rs-shard-1; do
+          cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-$${j}.service.consul SRV | wc -l)
+          echo "mongo-60-$${j} has $${cnt}/3 members online"
+          if [[ $cnt -eq 3 ]]; then
+            ((shardCount++))
+          fi
+          prim=$(dig +short @127.0.0.1 -p 8600 mongo-60-$${j}-primary.service.consul SRV | wc -l)
+          echo "mongo-60-$${j} has $${prim} primary member"
+          if [[ $prim -eq 1 ]]; then
+            ((primaryCount++))
+          fi
+        done
+        if [[ $shardCount -eq 3 ]] && [[ $primaryCount -eq 3 ]]; then
+          echo "-- Looks like all 3 mongo shards are online with primary"
+          sleep 2
+          break
+        fi
+        echo "-- Only $${shardCount} mongo shards online; retry $${i}/100"
+        sleep 2
+      done
+
   - path: /etc/mongos.conf
     content: |
       sharding:
@@ -175,20 +217,6 @@ write_files:
     content: |
       ${mongodb_60_keyfile}
 
-  - path: /tmp/init.js
-    content: |
-      sh.addShard("shard-0/mongo-60-rs-0-0.${route53_name}:27019,mongo-60-rs-0-1.${route53_name}:27019,mongo-60-rs-0-2.${route53_name}:27019")
-      sh.addShard("shard-1/mongo-60-rs-1-0.${route53_name}:27019,mongo-60-rs-1-1.${route53_name}:27019,mongo-60-rs-1-2.${route53_name}:27019")
-      admin = db.getSiblingDB("admin")
-      admin.createUser({
-        user: "perconaadmin",
-        pwd: "${mongodb_60_percona_admin_password}",
-        roles: [
-            { role: "userAdminAnyDatabase", db: "admin" },
-            { role: "clusterAdmin", db: "admin" }
-        ]
-      })
-
   - path: /usr/lib/systemd/system/mongos.service
     content: |
       [Unit]
@@ -213,41 +241,13 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /tmp/init.js
+    content: |
+      sh.addShard("shard-0/mongo-60-rs-0-0.${route53_name}:27019,mongo-60-rs-0-1.${route53_name}:27019,mongo-60-rs-0-2.${route53_name}:27019")
+      sh.addShard("shard-1/mongo-60-rs-1-0.${route53_name}:27019,mongo-60-rs-1-1.${route53_name}:27019,mongo-60-rs-1-2.${route53_name}:27019")
+
   - path: /tmp/users.js
     content: |
-      db.getSiblingDB("admin").createRole({
-          role: "explainRole",
-          privileges: [{
-            resource: { db: '', collection: '' },
-            actions: [
-              'collStats',
-              'dbStats',
-              'indexStats',
-              'dbHash',
-              'find',
-              'listCollections',
-              'listIndexes'
-            ]
-          },
-          {
-            resource: { db: '', collection: 'system.version' },
-            actions: [ 'find' ]
-          },
-          {
-            resource: { db: '', collection: 'system.profile' },
-            actions: [ 'collStats', 'dbStats', 'indexStats' ]
-          }],
-          roles:[]
-      });
-      db.getSiblingDB("admin").createUser({
-        user: "pmm",
-        pwd: "${mongodb_60_pmm_user_password}",
-        roles: [
-            { role: "explainRole", db: "admin" },
-            { role: "clusterMonitor", db: "admin" },
-            { role: "read", db: "local" }
-        ]
-      });
       db.getSiblingDB("admin").createUser({
         user: "ycsb",
         pwd: "${mongodb_ycsb_password}",

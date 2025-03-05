@@ -68,24 +68,24 @@ write_files:
         "services": [
           {
             "address": "${fqdn}",
-            "id": "mongo-60-${replica_set_name}",            
             "name": "mongo-60-${replica_set_name}",
             "port": 27019,
             "tags": ["${name}"],
             "checks": [{
-              "args": ["mongosh", "--port", "27019", "--eval", "db.runCommand(\"ping\").ok", "-quiet"],
-              "interval": "10s"
+              "args": ["/usr/local/bin/mongo_alive.sh"],
+              "interval": "5s",
+              "success_before_passing": 3
             }]
           },
           {
             "address": "${fqdn}",
-            "id": "mongo-60-${replica_set_name}-primary",
             "name": "mongo-60-${replica_set_name}-primary",
             "port": 27019,
             "tags": ["${name}"],
             "checks": [{
               "args": ["/usr/local/bin/mongo_is_primary.sh"],
-              "interval": "10s"
+              "interval": "5s",
+              "success_before_passing": 3
             }]
           }
         ]
@@ -96,23 +96,15 @@ write_files:
       {
         "service": {
           "address": "${fqdn}",
-          "id": "process-exporter",
           "name": "process-exporter",
           "port": 9256,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "HTTP": "http://${fqdn}:9256/metrics",
-            "ID": "process-exporter_check_http",
-            "Interval": "3s",
-            "Method": "GET",
-            "Name": "Check for process-exporter using HTTP",
-            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
-            "ServiceID": "process-exporter_check_http",
-            "Success_before_passing": 3,
-            "Timeout": "5s"
-            }
-          ]
+          "checks": [{
+            "http": "http://${fqdn}:9256/metrics",
+            "interval": "3s",
+            "timeout": "5s",
+            "success_before_passing": 3
+          }]
         }
       }
   - path: /usr/local/bin/waiter.sh
@@ -155,11 +147,11 @@ write_files:
           # Get the count of members in this replica set
           cnt=$(dig +short @127.0.0.1 -p 8600 mongo-60-${replica_set_name}.service.consul SRV | wc -l)
           if [[ $cnt -eq 3 ]]; then
-            echo "3 shards online"
+            echo "3 members online"
             exit 0
           fi
           # If the check is not passing, wait for a short interval and try again
-          echo "Only $${cnt} shards online, expecting 3. Will retry in 3 seconds..."
+          echo "$${cnt}/3 members online. Will retry in 3 seconds..."
           sleep 3
         done
       elif [[ $service == "readyz" ]] ; then
@@ -187,19 +179,29 @@ write_files:
         done
       fi
 
+  - path: /usr/local/bin/mongo_alive.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      /bin/mongosh --port 27019 --eval "db.hello().isreplicaset && db.runCommand(\"ping\").ok" -quiet
+      if [[ $? -eq 1 ]]; then
+        exit 2
+      fi
+      exit $?
+
   - path: /usr/local/bin/mongo_is_primary.sh
     permissions: "0755"
     content: |
-        #!/bin/bash
-        masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)')
-        primary=$(echo $masterstat | cut -d# -f2 | rev | cut -c2- | rev)
-        ismaster=$(echo $masterstat | cut -d# -f1)
-        echo "$primary is primary"
-        if [[ "$${ismaster:1}" =~ "true" ]]; then
-          exit 0
-        else
-          exit 2
-        fi
+      #!/bin/bash
+      masterstat=$(NO_COLOR=1 /bin/mongosh --port 27019 -u pmm -p ${mongodb_60_pmm_user_password} --quiet --eval 'd=db.isMaster();EJSON.stringify(d.ismaster+"#"+d.primary)')
+      primary=$(echo $masterstat | cut -d# -f2 | rev | cut -c2- | rev)
+      ismaster=$(echo $masterstat | cut -d# -f1)
+      echo "$primary is primary"
+      if [[ "$${ismaster:1}" =~ "true" ]]; then
+        exit 0
+      else
+        exit 2
+      fi
 
   - path: /etc/mongosh.conf
     content: |
@@ -311,29 +313,33 @@ write_files:
     permissions: "0700"
     content: |
       #!/bin/bash
-      
+
       myhostname=$(hostname -f)
       memberid=$(hostname -f | cut -d. -f1 | cut -d'-' -f4)
-      
+
       echo "-- MongoDB RS"
       echo "--- $${myhostname}"
       echo "--- This is member id $${memberid}"
-            
-      # We pick cfg-0 to be primary. Run the init only on the primary
+
+      echo "-- Waiting for mongo to start on all 3 members..."
+      /usr/local/bin/waiter.sh mongo-rs
+
+      # We pick -0 to be primary. Run the init only on the primary
       if [ "$${memberid}" == "0" ]; then
         echo "-- We are shard 0; run init"
         mongosh --port 27019 /tmp/init.js
+        sleep 5
       else
         echo "-- We are NOT shard 0; We will wait"
       fi
-      
+
       # Wait for replicaset to have 3 members
       /usr/local/bin/waiter.sh mongo-rs
-      
+
       # Print report to cloud log
-      echo "-- Cfg ReplicaSet Members:"
+      echo "-- ReplicaSet Members:"
       mongosh --port 27019 -quiet --eval "var m=db.adminCommand({replSetGetStatus:1}).members; m.forEach(function(a){ print(a.stateStr+':'+a.name); });"
-      
+
       # Determine/wait for primary
       for (( i=1 ; i<=100 ; i++ )); do
         primary=$(mongosh --port 27019 --eval 'rs.isMaster().primary' -quiet | cut -d: -f1)
@@ -345,7 +351,7 @@ write_files:
         echo "-- Waiting on a primary, retry $${i}/100"
         sleep 2
       done
-      
+
       # Is this host PRIMARY? If so, create the perconaadmin user and pmm user
       if [ "$${myhostname}" == "$${primary}" ]; then
         echo "-- We are PRIMARY!"
@@ -359,9 +365,10 @@ write_files:
         
         for (( i=1 ; i<=100 ; i++ )); do
           # This will fail until auth replicates, so we keep running the ping with auth until it no longer fails
-          ret=$(mongosh --port 27019 -quiet --eval 'db.runCommand("ping").ok' -u perconaadmin -p "${mongodb_60_percona_admin_password}" 2>&1 >/dev/null)
+          ret=$(mongosh --port 27019 -quiet --eval 'db.runCommand("ping").ok' -u pmm -p "${mongodb_60_pmm_user_password}" 2>&1 >/dev/null)
           if [ $? -eq 0 ]; then
             echo "-- Auth is enabled"
+            sleep 2
             break
           fi
           echo "-- Waiting on auth, retry $${i}/100"

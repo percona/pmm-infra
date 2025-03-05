@@ -24,7 +24,7 @@ data "template_file" "percona_server_84_gr_user_data" {
     mysql_root_password       = random_password.percona_server_84_gr_root_password.result
     mysql_sysbench_password   = random_password.percona_server_84_gr_sysbench_password.result
     name                      = "${local.percona_server_84_gr_name}-${count.index + 1}"
-    percona_gr_uuid           = random_uuid.percona_server_84_gr_uuid.result
+    percona_server_gr_uuid    = random_uuid.percona_server_84_gr_uuid.result
     pmm_password              = random_password.pmm_admin_pass.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
