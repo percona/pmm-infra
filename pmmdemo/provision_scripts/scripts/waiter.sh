@@ -1,7 +1,11 @@
 #!/bin/bash
 # Script to do all the waiting
-service="$1"
-if [[ $service == "process-exporter" ]]; then
+waiter="$1"
+name="$2"
+fqdn="$3"
+environment_name="$4"
+
+if [[ $waiter == "process-exporter" ]]; then
 # process-exporter
 while true; do
     # Get the status of the process-exporter_check_http check
@@ -16,7 +20,7 @@ while true; do
     echo "process-exporter check is not passing. Will retry in 3 seconds..."
     sleep 3
 done
-elif [[ $service == "proxysql" ]]; then
+elif [[ $waiter == "proxysql" ]]; then
 # proxysql
 while true; do
     # Get the status of the Proxysql check
@@ -31,7 +35,7 @@ while true; do
     echo "ProxySQL check is not passing. Will retry in 3 seconds..."
     sleep 3
 done
-elif [[ $service == "readyz" ]] ; then
+elif [[ $waiter == "readyz" ]] ; then
 # PMM readyz
 while true; do
     # Check for DNS :facepalm:

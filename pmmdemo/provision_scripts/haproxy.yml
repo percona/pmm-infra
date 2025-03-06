@@ -24,12 +24,12 @@ runcmd:
   - dnf -y install pmm-client
   - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter.sh -o /usr/local/bin/waiter.sh
   - chmod 0755 /usr/local/bin/waiter.sh
-  - bash /usr/local/bin/waiter.sh readyz
+  - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - bash /usr/local/bin/waiter.sh haproxy-exporter
+  - bash /usr/local/bin/waiter.sh haproxy-exporter ${name} ${fqdn} ${environment_name
   - pmm-admin add haproxy --listen-port=8404 --metrics-path=/metrics --environment="prod" --cluster="haproxy" --replication-set="haproxy"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
-  - bash /usr/local/bin/waiter.sh process-exporter
+  - bash /usr/local/bin/waiter.sh process-exporter ${name} ${fqdn} ${environment_name}
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
 write_files:
