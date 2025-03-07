@@ -37,7 +37,8 @@ runcmd:
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
   - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter.sh -o /usr/local/bin/waiter.sh
-  - chmod 0755 /usr/local/bin/waiter.sh
+  - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
+  - chmod 0755 /usr/local/bin/waiter.sh /usr/local/bin/waiter_mysql.sh
   - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - bash /usr/local/bin/waiter_mysql.sh mysql ${name} ${fqdn} ${environment_name}
@@ -194,6 +195,7 @@ write_files:
       binlog_format=ROW
       binlog_expire_logs_seconds=86400
       binlog_space_limit=10G
+      sync_binlog=500
 
       # Configure slow logs
       #

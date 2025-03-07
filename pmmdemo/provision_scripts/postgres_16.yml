@@ -56,6 +56,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -69,6 +70,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
@@ -86,12 +88,14 @@ write_files:
           }]
         }
       }
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
       # Script to do all the waiting
       # File contents will be downloaded from githubcontent.com
+
   - path: /tmp/init-postgres.sh
     content: |
       #!/bin/bash

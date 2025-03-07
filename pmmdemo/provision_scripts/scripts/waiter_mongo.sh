@@ -9,7 +9,7 @@ if [[ $waiter == "mongodb" ]]; then
   # mongodb
   while true; do
 	# Get the status of the mongodb check
-	status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+	status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
 	if [[ $status == "${name}.mongo-60-${replica_set_name}.service.consul." ]]; then
 	  echo "mongodb check is passing."
 	  exit 0
@@ -35,7 +35,7 @@ elif [[ $service == "mongos" ]]; then
   # mongos
   while true; do
 	# Get the status of the mongodb check
-	status=$(dig @127.0.0.1 -p 8600 ${name}.mongos.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
+	status=$(dig @127.0.0.1 -p 8600 ${name}.mongos.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
 	if [[ $status == "${name}.mongos.service.consul." ]]; then
 	  echo "mongos check is passing."
 	  exit 0

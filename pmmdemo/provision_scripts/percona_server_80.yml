@@ -37,10 +37,11 @@ runcmd:
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
   - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter.sh -o /usr/local/bin/waiter.sh
-  - chmod 0755 /usr/local/bin/waiter.sh
+  - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
+  - chmod 0755 /usr/local/bin/waiter.sh /usr/local/bin/waiter_mysql.sh
   - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
-  - bash /usr/local/bin/waiter.sh mysql
+  - bash /usr/local/bin/waiter_mysql.sh mysql ${name} ${fqdn} ${environment_name}
   - pmm-admin add mysql --metrics-mode=push --username=pmm-admin --password='${mysql_root_password}' --cluster='ps-80-cluster' --replication-set='ps-80-cluster' --environment='prod' --query-source=slowlog --service-name="${name}-mysql"
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter ${name} ${fqdn} ${environment_name}
@@ -54,6 +55,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -67,6 +69,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /usr/local/bin/consul-check-mysql.sh
     permissions: "0755"
     content: |
@@ -88,30 +91,25 @@ write_files:
           sleep 1
         fi
       done
+
   - path: /etc/consul.d/percona-server-80-service.json
     permissions: "0644"
     content: |
       {
         "service": {
           "address": "${fqdn}",
-          "id": "percona-server-80",
           "name": "percona-server-80",
           "port": 3306,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "ID": "percona-server-80_check_script",
-            "Interval": "3s",
-            "Name": "Check for MySQL running on ${name}",
-            "Notes": "Check for MySQL running on ${name}. Monitoring of MySQL metrics are enabled with this service.",
-            "ServiceID": "percona-server-80_check_script",
-            "Success_before_passing": 3,
-            "Timeout": "3s",
+          "checks": [{
+            "interval": "3s",
+            "success_before_passing": 3,
+            "timeout": "3s",
             "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh" ]
-            }
-          ]
+          }]
         }
       }
+
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
@@ -129,12 +127,21 @@ write_files:
           }]
         }
       }
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
       # Script to do all the waiting
       # File contents will be downloaded from githubcontent.com
+
+  - path: /usr/local/bin/waiter_mysql.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Script to do all the waiting
+      # Contents downloaded from githubcontent.com
+
   - path: /root/.my.cnf
     permissions: "0600"
     content: |

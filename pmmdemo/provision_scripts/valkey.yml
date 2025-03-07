@@ -33,7 +33,7 @@ runcmd:
   - systemctl enable valkey && systemctl restart valkey
   - bash /tmp/build-memtier-benchmark.sh
   - bash /tmp/install-valkey-exporter.sh
-  - bash /usr/local/bin/waiter.sh valkey-exporter
+  - bash /usr/local/bin/waiter.sh valkey-exporter ${name} ${fqdn} ${environment_name}
   - pmm-admin add external --group=valkey --listen-port=9121 --environment="prod" --service-name="valkey-valkey" --cluster="valkey-cluster"
 
 write_files:
@@ -44,6 +44,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -58,6 +59,7 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /tmp/valkey-init.sh
     permissions: "0755"
     content: |
@@ -106,23 +108,15 @@ write_files:
       {
         "service": {
           "address": "${fqdn}",
-          "id": "valkey-exporter",
           "name": "valkey-exporter",
           "port": 9121,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "HTTP": "http://${fqdn}:9121/metrics",
-            "ID": "valkey-exporter_check_http",
-            "Interval": "3s",
-            "Method": "GET",
-            "Name": "Check for valkey-exporter using HTTP",
-            "Notes": "Check for valkey-exporter using HTTP. Monitoring of Valkey metrics are enabled with this service.",
-            "ServiceID": "valkey-exporter_check_http",
-            "Success_before_passing": 3,
-            "Timeout": "5s"
-            }
-          ]
+          "checks": [{
+            "http": "http://${fqdn}:9121/metrics",
+            "interval": "3s",
+            "success_before_passing": 3,
+            "timeout": "5s"
+          }]
         }
       }
 
@@ -143,6 +137,7 @@ write_files:
       #!/bin/bash
       # Script to do all the waiting
       # File contents will be downloaded from githubcontent.com
+
   - path: /etc/valkey/memtier-run.sh
     permissions: "0744"
     content: |

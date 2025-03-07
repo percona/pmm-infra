@@ -84,7 +84,7 @@ write_files:
             "timeout": "1s"
           },
           {
-            "args": [ "bash", "/tmp/proxysql-admin-script.sh"],
+            "args": ["/bin/bash", "/tmp/proxysql-admin-script.sh"],
             "interval": "3s",
             "name": "Check for ProxySQL Admin service on 6032 running a script",
             "notes": "Check for ProxySQL Admin service on 6032 running a script. Monitoring of ProxySQL Admin is enabled with this service.",
