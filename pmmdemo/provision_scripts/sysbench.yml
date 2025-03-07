@@ -46,10 +46,12 @@ runcmd:
 #   - systemctl start sysbench.haproxy.pxc80
 #   - systemctl start sysbench.haproxy.pgr84
   - systemctl start sysbench.postgresql16
-  - bash /usr/local/bin/waiter.sh readyz
+  - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter.sh -o /usr/local/bin/waiter.sh
+  - chmod 0755 /usr/local/bin/waiter.sh
+  - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
-  - bash /usr/local/bin/waiter.sh process-exporter
+  - bash /usr/local/bin/waiter.sh process-exporter ${name} ${fqdn} ${environment_name}
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
 
 write_files:
@@ -60,6 +62,7 @@ write_files:
       search ${local_domain} ec2.internal
       options timeout:2 attempts:5
       nameserver 10.0.0.2
+
   - path: /etc/consul.d/consul.hcl
     permissions: "0644"
     content: |
@@ -74,71 +77,37 @@ write_files:
       ui_config{
         enabled = true
       }
+
   - path: /root/.my.cnf
     content: |
       [client]
       user=root
+
   - path: /etc/consul.d/process-exporter-check-http.json
     permissions: "0644"
     content: |
       {
         "service": {
           "address": "${fqdn}",
-          "id": "process-exporter",
           "name": "process-exporter",
           "port": 9256,
           "tags": ["${name}"],
-          "checks": [
-            {
-            "HTTP": "http://${fqdn}:9256/metrics",
-            "ID": "process-exporter_check_http",
-            "Interval": "3s",
-            "Method": "GET",
-            "Name": "Check for process-exporter using HTTP",
-            "Notes": "Check for process-exporter using HTTP. Monitoring of per-process metrics are enabled with this service.",
-            "ServiceID": "process-exporter_check_http",
-            "Success_before_passing": 3,
-            "Timeout": "5s"
-            }
-          ]
+          "checks": [{
+            "http": "http://${fqdn}:9256/metrics",
+            "interval": "3s",
+            "success_before_passing": 3,
+            "timeout": "5s"
+          }]
         }
       }
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
       #!/bin/bash
       # Script to do all the waiting
-      service="$1"
-      if [[ $service == "process-exporter" ]]; then
-        # process-exporter
-        while true; do
-          # Get the status of the process-exporter_check_http check
-          status=$(dig @127.0.0.1 -p 8600 ${name}.process-exporter.service.consul SRV | awk '/SRV.*${fqdn}\.$/ {print $1}')
-          if [[ $status == "${name}.process-exporter.service.consul." ]]; then
-            echo "process-exporter check is passing."
-            exit 0
-          fi
-          # If the check is not passing, wait for a short interval and try again
-          echo "process-exporter check is not passing. Will retry in 3 seconds..."
-          sleep 3
-        done
-      elif [[ $service == "readyz" ]] ; then
-        while true; do
-          dnsstatus=$(dig pmm-server.${environment_name}.local A | awk '/A.*10.*$/ {print $1}')
-          if [[ $dnsstatus == "pmm-server.${environment_name}.local." ]]; then
-            echo "PMMreadyz_check_http DNS check is passing."
-            status=$(dig @127.0.0.1 -p 8600 pmmreadyz.service.consul SRV | awk '/SRV.*bastion.${environment_name}.local.$/ {print $1}')
-            if [[ $status == "pmmreadyz.service.consul." ]]; then
-              echo "PMMreadyz_check_http check is passing."
-              exit 0  
-            fi
-          else
-            echo "PMMreadyz_check_http DNS check is not passing."
-          fi
-          echo "PMMreadyz_check_http check is not passing. Will retry in 1 second..."
-          sleep 1
-        done
-      fi
+      # File contents will be downloaded from githubcontent.com
+
   - path: /etc/sysbench/exec_sysbench.sh
     content: |
       #!/bin/bash
