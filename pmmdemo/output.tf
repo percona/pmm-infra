@@ -78,6 +78,6 @@ output "mongodb_60_pmm_user_password" {
 }
 
 output "mongodb_ycsb_password" {
-  value     = random_password.mongodb_ycsb_password
+  value     = random_password.mongodb_ycsb_password.result
   sensitive = true
 }
