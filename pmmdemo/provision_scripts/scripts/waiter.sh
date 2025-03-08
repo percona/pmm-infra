@@ -20,7 +20,7 @@ if [[ $waiter == "process-exporter" ]]; then
 	  echo "process-exporter check is not passing. Will retry in 3 seconds..."
 	  sleep 3
   done
-elif [[ $waiter == "proxysql" ]] || [[ $waiter == "valkey-exporter" ]]; then
+elif [[ $waiter == "proxysql" ]] || [[ $waiter == "valkey-exporter" ]] || [[ $waiter == "haproxy-exporter" ]]; then
   # Generic
   while true; do
 	  # Get the status of the check
