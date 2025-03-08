@@ -23,6 +23,7 @@ module "mongo_60_rs_0" {
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
     mongodb_ycsb_password         = var.mongodb_ycsb_password,
+    scripts_path                  = var.scripts_path
   })
 }
 
@@ -59,6 +60,7 @@ module "mongo_60_rs_1" {
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
     mongodb_ycsb_password         = var.mongodb_ycsb_password,
+    scripts_path                  = var.scripts_path
   })
 }
 
@@ -92,6 +94,7 @@ module "mongo_60_cfg" {
     mongodb_60_keyfile            = random_password.mongodb_60_keyfile.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
+    scripts_path                  = var.scripts_path
   })
 }
 
@@ -126,6 +129,7 @@ module "mongo_60_mongos" {
     mongodb_60_percona_admin_password = random_password.mongodb_60_percona_admin_password.result,
     mongodb_60_pmm_user_password  = random_password.mongodb_60_pmm_user_password.result,
     mongodb_ycsb_password         = var.mongodb_ycsb_password,
+    scripts_path                  = var.scripts_path
   })
 }
 

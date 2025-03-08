@@ -36,8 +36,8 @@ runcmd:
   - systemctl start mysqld.service
   - systemctl status mysqld.service
   - bash /root/init-mysql.sh
-  - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter.sh -o /usr/local/bin/waiter.sh
-  - curl -s https://raw.githubusercontent.com/percona/pmm-infra/pmmdemo/provision_scripts/scripts/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
+  - curl -s ${scripts_path}/waiter.sh -o /usr/local/bin/waiter.sh
+  - curl -s ${scripts_path}/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
   - chmod 0755 /usr/local/bin/waiter.sh /usr/local/bin/waiter_mysql.sh
   - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
@@ -77,10 +77,9 @@ write_files:
       # Set MySQL server credentials
       MYSQL_USER="consul-health-check"
       MYSQL_PASSWORD="${mysql_root_password}"
-      MYSQL_SOCKET="/var/lib/mysql/mysql.sock"
       while true ; do
         # Attempt to connect using MySQL Shell with a 2-second timeout
-        mysql --socket="$MYSQL_SOCKET" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 -e "SELECT 1"
+        mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 -e "SELECT 1"
         # Check the exit status of mysqlsh to determine connection success
         if [[ $? -eq 0 ]]; then
           echo "Successfully connected to MySQL service."

@@ -19,6 +19,7 @@ module "sysbench" {
     mysql80_sysbench_password             = random_password.mysql80_sysbench_password.result
     mysql84_sysbench_password             = random_password.mysql84_sysbench_password.result
     name                                  = local.sysbench_name
+    scripts_path                          = local.scripts_path
 
     percona_server_84_gr_password         = random_password.percona_server_84_gr_sysbench_password.result
     percona_xtradb_cluster_80_password    = random_password.percona_xtradb_cluster_80_sysbench_password.result

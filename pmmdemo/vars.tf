@@ -1,3 +1,9 @@
+locals {
+  pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
+  environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
+  scripts_path        = "https://raw.githubusercontent.com/percona/pmm-infra/refs/heads/rocky9/pmmdemo/provision_scripts/scripts"
+}
+
 variable "pmm_domain" {
   type        = string
   description = "PMM domain name"
@@ -69,9 +75,4 @@ variable "oauth_signout_redirect_url" {
   type        = string
   description = "Oauth Signout Redirect URL"
   default     = "https://id.percona.com/login/signout?fromURI=https://pmmdemo.dev.percona.net/graph/login"
-}
-
-locals {
-  pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
-  environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
 }

@@ -22,7 +22,8 @@ module "bastion" {
     local_domain        = "${local.environment_name}.local"
     name                = local.bastion_name,
     pmm_admin_pass      = random_password.pmm_admin_pass.result,
-    pmm_server_endpoint = local.pmm_server_endpoint
+    pmm_server_endpoint = local.pmm_server_endpoint,
+    scripts_path        = local.scripts_path
   })
 }
 

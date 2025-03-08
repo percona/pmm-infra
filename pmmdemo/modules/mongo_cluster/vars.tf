@@ -6,6 +6,10 @@ locals {
   provision_script_shard  = "provision_scripts/mongo_60/shard.yml"
 }
 
+variable "scripts_path" {
+  type        = string
+  description = "Github path to waiter scripts"
+}
 
 variable "subnet_id" {
   type        = string

@@ -21,6 +21,7 @@ module "postgresql_16" {
     postgres_pmm_password      = random_password.postgresql_16_pmm_password.result,
     postgres_sysbench_password = random_password.postgresql_16_sysbench_password.result,
     environment_name           = local.environment_name
+    scripts_path               = local.scripts_path
   })
 
   depends_on = [

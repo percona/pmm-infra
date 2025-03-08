@@ -20,6 +20,7 @@ module "valkey" {
     pmm_admin_password      = random_password.pmm_admin_pass.result
     pmm_server_endpoint     = local.pmm_server_endpoint
     valkey_primary_password = random_password.valkey_primary_password.result
+    scripts_path            = local.scripts_path
   })
 }
 

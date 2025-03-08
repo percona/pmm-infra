@@ -49,6 +49,7 @@ data "template_file" "percona_xtradb_cluster_80_user_data" {
     pmm_password              = random_password.pmm_admin_pass.result
     pmm_server_endpoint       = local.pmm_server_endpoint
     proxysql_monitor_password = random_password.proxysql_monitor.result
+    scripts_path              = local.scripts_path
   }
 }
 

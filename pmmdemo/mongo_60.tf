@@ -18,4 +18,5 @@ module "mongo_cluster_pmmdemo" {
   pmm_server_endpoint   = local.pmm_server_endpoint
   pmm_password          = random_password.pmm_admin_pass.result
   mongodb_ycsb_password = random_password.mongodb_ycsb_password.result
+  scripts_path          = local.scripts_path
 }

@@ -25,6 +25,7 @@ module "proxysql" {
     pmm_server_endpoint                = local.pmm_server_endpoint
     proxysql_admin_password            = random_password.proxysql_admin.result
     proxysql_monitor_password          = random_password.proxysql_monitor.result
+    scripts_path                       = local.scripts_path
   })
 
   depends_on = [

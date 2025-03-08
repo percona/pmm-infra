@@ -7,10 +7,11 @@ environment_name="$4"
 
 if [[ $waiter == "mysql" ]]; then
   # mysql
+  srv=$(echo $name | rev | cut -c3- | rev)
   while true; do
     # Get the status of the mysql_check_http check
-    status=$(dig @127.0.0.1 -p 8600 ${name}.percona-server-84-gr.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
-    if [[ $status == "${name}.percona-server-84-gr.service.consul." ]]; then
+    status=$(dig @127.0.0.1 -p 8600 ${srv}.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
+    if [[ $status == "${srv}.service.consul." ]]; then
       echo "mysql check is passing."
       exit 0
     fi

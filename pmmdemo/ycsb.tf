@@ -20,6 +20,7 @@ module "ycsb" {
     name                  = local.ycsb_name
     pmm_admin_password    = random_password.pmm_admin_pass.result
     pmm_server_endpoint   = local.pmm_server_endpoint
+    scripts_path          = local.scripts_path
   })
 }
 
