@@ -15,9 +15,18 @@ if [[ $waiter == "mysql" ]]; then
       echo "mysql check is passing."
       exit 0
     fi
-
-    # If the check is not passing, wait for a short interval and try again
     echo "mysql check is not passing. Will retry in 3 seconds..."
+    sleep 3
+  done
+elif [[ $waiter == "pxc-primary" ]]; then
+  # pxc
+  while true; do
+    count=$(dig +short @127.0.0.1 -p 8600 percona-xtradb-cluster.service.consul SRV | wc -l)
+    if [[ $count -ge 1 ]]; then
+      echo "pxc in primary state"
+      exit 0
+    fi
+    echo "pxc not in primary state. Will retry in 3 seconds..."
     sleep 3
   done
 elif [[ $waiter == "gr-primary" ]]; then
@@ -27,9 +36,8 @@ elif [[ $waiter == "gr-primary" ]]; then
     if [[ $status =~ "${environment_name}.local" ]]; then
       echo "gr-primary check is passing"
       exit 0
-    else
-      echo "gr-primary check is not passing"
     fi
-    sleep 1
+    echo "gr-primary check is not passing. Will retry in 3 seconds..."
+    sleep 3
   done
 fi

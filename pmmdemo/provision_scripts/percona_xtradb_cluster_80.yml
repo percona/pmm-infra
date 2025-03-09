@@ -33,8 +33,6 @@ runcmd:
   - semanage fcontext -a -t mysqld_db_t "/data(/.*)?" && restorecon -Rv /data
   - for port in 4444 4567 4568; do semanage port -a -t mysqld_port_t -p tcp $port; done
   - systemctl enable mysql.service
-  - systemctl start mysql.service
-  - systemctl status mysql.service
   - bash /root/init-mysql.sh
   - curl -s ${scripts_path}/waiter.sh -o /usr/local/bin/waiter.sh
   - curl -s ${scripts_path}/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
@@ -70,27 +68,6 @@ write_files:
         enabled = true
       }
 
-  - path: /usr/local/bin/consul-check-mysql.sh
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-      # Set MySQL server credentials
-      MYSQL_USER="consul-health-check"
-      MYSQL_PASSWORD="${mysql_root_password}"
-      while true ; do
-        # Attempt to connect using MySQL Shell with a 2-second timeout
-        mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" --connect-timeout=2 -e "SELECT 1"
-        # Check the exit status of mysqlsh to determine connection success
-        if [[ $? -eq 0 ]]; then
-          echo "Successfully connected to MySQL service."
-          exit 0
-        else
-          echo -n "Connection attempt to MySQL service failed. Sleeping 1 second... "
-          date
-          sleep 1
-        fi
-      done
-
   - path: /etc/consul.d/percona-xtradb-cluster-service.json
     permissions: "0644"
     content: |
@@ -104,7 +81,7 @@ write_files:
             "interval": "3s",
             "success_before_passing": 3,
             "timeout": "3s",
-            "args": [ "bash", "/usr/local/bin/consul-check-mysql.sh" ]
+            "args": [ "bash", "/usr/local/bin/consul-check-pxc.sh" ]
             }
           ]
         }
@@ -127,6 +104,22 @@ write_files:
           }]
         }
       }
+
+  - path: /usr/local/bin/consul-check-pxc.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Set MySQL server credentials
+      MYSQL_USER="consul-health-check"
+      MYSQL_PASSWORD="${mysql_root_password}"
+      # Attempt to connect using MySQL Shell with a 2-second timeout
+      res=$(2>/dev/null mysql --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" -BNe "SELECT VARIABLE_VALUE FROM performance_schema.global_status WHERE VARIABLE_NAME = 'wsrep_cluster_status'")
+      if [[ "$${res}" =~ "Primary" ]]; then
+        echo "pxc in primary mode"
+        exit 0
+      else
+        exit 2
+      fi
 
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
@@ -276,7 +269,7 @@ write_files:
                   else
                       # Increment + sleep
                       CHECK_COUNT="$(($${CHECK_COUNT:=1} + 1))"
-                      sleep 1
+                      sleep 2
                   fi;
               else
                   # Wait for 2sec until next retry
@@ -285,18 +278,8 @@ write_files:
               fi
           done
       else
+          # Wait for node0 to bootstrap
+          /usr/local/bin/waiter_mysql.sh pxc-primary ${name} {$fqdn} ${environment_name}
+          # start node
           systemctl start mysql
-
-          # Check 300 times (600sec/10min) if Primary is ready (equalize differences in deployment times - Primary can finish pre_provisoining last).
-          for (( i=1 ; i<=300 ; i++ )); do
-              if $(mysql --defaults-file=/root/.my.cnf -h"${fqdn}" -Bse "show global status like 'wsrep_evs_state';" | grep "OPERATIONAL" >/dev/null); then
-                  # Start secondary node and brake the loop
-                  systemctl start mysql
-                  break
-              else
-                  # Wait for 2sec until next retry
-                  echo "retry $${i}/300"
-                  sleep 2
-              fi
-          done
       fi
