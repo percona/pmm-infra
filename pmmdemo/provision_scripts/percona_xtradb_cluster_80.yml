@@ -279,7 +279,7 @@ write_files:
           done
       else
           # Wait for node0 to bootstrap
-          /usr/local/bin/waiter_mysql.sh pxc-primary ${name} {$fqdn} ${environment_name}
+          /usr/local/bin/waiter_mysql.sh pxc-primary ${name} ${fqdn} ${environment_name}
           # start node
           systemctl start mysql
       fi
