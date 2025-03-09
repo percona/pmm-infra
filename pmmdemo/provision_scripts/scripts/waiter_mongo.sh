@@ -8,11 +8,11 @@ replica_set_name="$4"
 if [[ $waiter == "mongodb" ]]; then
   # mongodb
   while true; do
-	# Get the status of the mongodb check
-	status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
-	if [[ $status == "${name}.mongo-60-${replica_set_name}.service.consul." ]]; then
-	  echo "mongodb check is passing."
-	  exit 0
+    # Get the status of the mongodb check
+    status=$(dig @127.0.0.1 -p 8600 ${name}.mongo-60-${replica_set_name}.service.consul SRV | awk "/SRV.*${fqdn}\.$/ {print \$1}")
+    if [[ $status == "${name}.mongo-60-${replica_set_name}.service.consul." ]]; then
+      echo "mongodb check is passing."
+    exit 0
 	fi
 	# If the check is not passing, wait for a short interval and try again
 	echo "mongodb check is not passing. Will retry in 3 seconds..."
@@ -31,7 +31,7 @@ elif [[ $waiter == "mongo-rs" ]]; then
 	echo "$${cnt}/3 members online. Will retry in 3 seconds..."
 	sleep 3
   done
-elif [[ $service == "mongos" ]]; then
+elif [[ $waiter == "mongos" ]]; then
   # mongos
   while true; do
 	# Get the status of the mongodb check

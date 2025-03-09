@@ -41,9 +41,9 @@ runcmd:
   - chmod 600 /etc/mongo-key
   - systemctl enable mongod
   - systemctl start mongod
-  - bash /usr/local/bin/waiter_mongo.sh mongodb ${name} ${fqdn} ${replica_set_name}
+  - bash /usr/local/bin/waiter_mongo.sh mongodb ${name} ${fqdn} rs-${replica_set_name}
   - bash /tmp/mongodb-init-rs.sh
-  - bash /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} ${replica_set_name}
+  - bash /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} rs-${replica_set_name}
   - pmm-admin add mongodb --port 27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-rs-${shard_number}' --environment='prod' --service-name=${name} --enable-all-collectors
 
 write_files:
@@ -275,7 +275,7 @@ write_files:
       echo "--- This is member id $${memberid}"
 
       echo "-- Waiting for mongo to start on all 3 members..."
-      /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} ${replica_set_name}
+      /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} rs-${replica_set_name}
 
       # We pick -0 to be primary. Run the init only on the primary
       if [ "$${memberid}" == "0" ]; then
@@ -287,7 +287,7 @@ write_files:
       fi
 
       # Wait for replicaset to have 3 members
-      /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} ${replica_set_name}
+      /usr/local/bin/waiter_mongo.sh mongo-rs ${name} ${fqdn} rs-${replica_set_name}
 
       # Print report to cloud log
       echo "-- ReplicaSet Members:"

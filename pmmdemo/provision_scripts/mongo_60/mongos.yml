@@ -34,7 +34,7 @@ runcmd:
   - sed -i 's/enforcing/permissive/g' /etc/selinux/config && /sbin/setenforce 0
   - systemctl enable mongos
   - systemctl start mongos
-  - bash /usr/local/bin/waiter_mongo.sh mongos ${name} ${fqdn} ${replica_set_name}
+  - bash /usr/local/bin/waiter_mongo.sh mongos ${name} ${fqdn}
   - bash /usr/local/bin/wait_all_shards.sh
   - mongosh --port 27019 -u perconaadmin -p '${mongodb_60_percona_admin_password}' /tmp/init.js /tmp/users.js
   - pmm-admin add mongodb --port=27019 --username=pmm --password='${mongodb_60_pmm_user_password}' --cluster='mdb60-cluster' --replication-set='mongo-60-cfg' --environment='prod' --service-name=${name} --enable-all-collectors

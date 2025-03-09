@@ -24,7 +24,7 @@ elif [[ $waiter == "proxysql" ]] || [[ $waiter == "valkey-exporter" ]] || [[ $wa
   # Generic
   while true; do
 	  # Get the status of the check
-	  status=$(dig @127.0.0.1 -p 8600 ${waiter}.service.consul SRV | awk "/SRV.*${waiter}.${environment_name}.$/ {print \$1}")
+	  status=$(dig @127.0.0.1 -p 8600 ${waiter}.service.consul SRV | awk "/SRV.*${waiter}.${environment_name}.local.$/ {print \$1}")
 
 	  if [[ $status == "${waiter}.service.consul." ]]; then
 	    echo "${waiter} check is passing."
