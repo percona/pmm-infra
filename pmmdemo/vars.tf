@@ -1,7 +1,7 @@
 locals {
   pmm_server_endpoint = "pmm-server.${aws_route53_zone.demo_local.name}:443"
   environment_name    = terraform.workspace == "default" ? var.project_name : terraform.workspace
-  scripts_path        = "https://raw.githubusercontent.com/percona/pmm-infra/refs/heads/rocky9/pmmdemo/provision_scripts/scripts"
+  scripts_path        = "https://raw.githubusercontent.com/percona/pmm-infra/refs/heads/main/pmmdemo/provision_scripts/scripts"
 }
 
 variable "pmm_domain" {
