@@ -28,7 +28,7 @@ elif [[ $waiter == "mongo-rs" ]]; then
       exit 0
     fi
     # If the check is not passing, wait for a short interval and try again
-    echo "$${cnt}/3 members online. Will retry in 3 seconds..."
+    echo "${cnt}/3 members online. Will retry in 3 seconds..."
     sleep 3
   done
 elif [[ $waiter == "mongos" ]]; then
