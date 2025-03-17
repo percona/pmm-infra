@@ -208,7 +208,6 @@ write_files:
           curl https://letsencrypt.org/certs/isrgrootx1.pem                          > /data/cert/ca-certs.pem
           curl https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem       >> /data/cert/ca-certs.pem
           curl https://letsencrypt.org/certs/letsencryptauthorityx1.pem             >> /data/cert/ca-certs.pem
-          curl https://www.identrust.com/certificates/trustid/root-download-x3.html >> /data/cert/ca-certs.pem
       fi
 
       if [ ! -e /data/cert/certificate.conf ]; then

@@ -216,9 +216,9 @@ write_files:
         { address="percona-xtradb-cluster-0", port=3306, hostgroup=1000 },
         { address="percona-xtradb-cluster-1", port=3306, hostgroup=3000 },
         { address="percona-xtradb-cluster-2", port=3306, hostgroup=3000 },
-        { address="percona-server-84_gr-1", port=3306, hostgroup=10000, max_connections=200 },
-        { address="percona-server-84_gr-2", port=3306, hostgroup=20000, max_connections=200 },
-        { address="percona-server-84_gr-3", port=3306, hostgroup=20000, max_connections=200 },
+        { address="percona-server-84-gr-1", port=3306, hostgroup=10000, max_connections=200 },
+        { address="percona-server-84-gr-2", port=3306, hostgroup=20000, max_connections=200 },
+        { address="percona-server-84-gr-3", port=3306, hostgroup=20000, max_connections=200 },
       )
 
       mysql_users:

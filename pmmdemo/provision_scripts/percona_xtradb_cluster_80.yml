@@ -32,11 +32,11 @@ runcmd:
   - chown mysql:mysql /data/
   - semanage fcontext -a -t mysqld_db_t "/data(/.*)?" && restorecon -Rv /data
   - for port in 4444 4567 4568; do semanage port -a -t mysqld_port_t -p tcp $port; done
-  - systemctl enable mysql.service
-  - bash /root/init-mysql.sh
   - curl -s ${scripts_path}/waiter.sh -o /usr/local/bin/waiter.sh
   - curl -s ${scripts_path}/waiter_mysql.sh -o /usr/local/bin/waiter_mysql.sh
   - chmod 0755 /usr/local/bin/waiter.sh /usr/local/bin/waiter_mysql.sh
+  - systemctl enable mysql.service
+  - bash /root/init-mysql.sh
   - bash /usr/local/bin/waiter.sh readyz ${name} ${fqdn} ${environment_name}
   - pmm-admin config --az="us-east-1f" --region="us-east-1" --metrics-mode=push --force --server-insecure-tls --server-url='https://admin:${pmm_password}@${pmm_server_endpoint}' ${fqdn} generic ${name}
   - bash /usr/local/bin/waiter_mysql.sh mysql ${name} ${fqdn} ${environment_name}

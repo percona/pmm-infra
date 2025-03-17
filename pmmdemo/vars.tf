@@ -74,5 +74,5 @@ variable "oauth_role_attribute_path" {
 variable "oauth_signout_redirect_url" {
   type        = string
   description = "Oauth Signout Redirect URL"
-  default     = "https://id.percona.com/login/signout?fromURI=https://pmmdemo.dev.percona.net/graph/login"
+  default     = "https://id.percona.com/login/signout?fromURI=https://pmmdemo.percona.com/graph/login"
 }

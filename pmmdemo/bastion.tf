@@ -16,7 +16,6 @@ module "bastion" {
   user_data = templatefile("provision_scripts/bastion.yml", {
     domain              = var.pmm_domain,
     email               = var.owner_email,
-    environment_name    = local.environment_name
     environment_name    = local.environment_name,
     fqdn                = "${local.bastion_name}.${aws_route53_zone.demo_local.name}",
     local_domain        = "${local.environment_name}.local"
