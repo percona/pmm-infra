@@ -38,7 +38,6 @@ runcmd:
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
   - bash /root/apply-custom-settings.sh
-  - bash /root/add-rds-to-pmm.sh
   - echo date > /tmp/pmm-server-up
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -49,6 +48,7 @@ runcmd:
   - dnf -y install https://github.com/ncabatoff/process-exporter/releases/download/v0.8.5/process-exporter_0.8.5_linux_amd64.rpm
   - bash /usr/local/bin/waiter.sh process-exporter ${name} ${fqdn} ${environment_name}
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
+  - bash /root/add-rds-to-pmm.sh
 #  - bash /tmp/dashboard-importer.sh
 #  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
@@ -94,7 +94,20 @@ write_files:
     permissions: "0700"
     content: |
       #!/bin/bash
-      echo "placeholder"
+
+      # Discover RDS using PMM
+      curl -k -X POST https://admin:${pmm_admin_pass}@localhost/v1/management/services:discoverRDS >/tmp/discovered_rds
+
+      # Manipulate the JSON to add username, password, and enable query examples
+      jq '{rds: .rds_instances[0]} \
+        | .rds.username = "${rds_mysql_username}" \
+        | .rds.password = "${rds_mysql_password}" \
+        | .rds.disable_query_examples = false' /tmp/discovered_rds \
+        >pmm_rds_mysql.json
+
+      # Add to PMM
+      curl -k -X POST https://admin:${pmm_admin_pass}@localhost/v1/management/services -d@pmm_rds_mysql.json
+
       exit 0
 
   - path: /etc/consul.d/process-exporter-check-http.json

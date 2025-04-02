@@ -19,17 +19,23 @@ variable "security_groups" {
   description = "List of security groups id"
 }
 
-# OPTIONAL
-variable "has_public_ip" {
-  type        = bool
-  default     = "false"
-  description = "(Optional) Associate a public ip address with an instance in a VPC. Boolean value."
-}
-
 variable "instance_type" {
   type        = string
   default     = ""
   description = "(Required) The type of instance to start. Updates to this field will trigger a stop/start of the EC2 instance."
+}
+
+# OPTIONAL
+variable "iam_role_name" {
+  type = string
+  default = ""
+  description = "(Optional) IAM role to attach to EC2 instance"
+}
+
+variable "has_public_ip" {
+  type        = bool
+  default     = "false"
+  description = "(Optional) Associate a public ip address with an instance in a VPC. Boolean value."
 }
 
 variable "root_disk_type" {

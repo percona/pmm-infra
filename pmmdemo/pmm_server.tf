@@ -3,12 +3,12 @@ locals {
 }
 
 module "pmm_server" {
-  source        = "./modules/ec2"
-  server_name   = local.pmm_server_name
-  instance_type = "m5a.xlarge"
-  subnet_id     = aws_subnet.pmmdemo_private.id
-  route53_id    = aws_route53_zone.demo_local.id
-
+  source          = "./modules/ec2"
+  server_name     = local.pmm_server_name
+  instance_type   = "m5a.xlarge"
+  subnet_id       = aws_subnet.pmmdemo_private.id
+  route53_id      = aws_route53_zone.demo_local.id
+  iam_role_name   = aws_iam_instance_profile.pmmdemo_ec2_rds_profile.name
   security_groups = [
     aws_security_group.default_access.id
   ]
@@ -32,6 +32,8 @@ module "pmm_server" {
       pmm_admin_pass             = random_password.pmm_admin_pass.result
       pmm_server_endpoint        = local.pmm_server_endpoint
       scripts_path               = local.scripts_path
+      rds_mysql_username         = local.rds_mysql_username
+      rds_mysql_password         = random_password.rds_mysql_80_password.result
     }
   )
 }
@@ -55,12 +57,67 @@ data "aws_iam_user" "rds_user" {
   user_name = "pmm-demo-rds-user"
 }
 
-data "aws_iam_policy" "pmmdemo-rds-policy" {
-  name = "pmm-demo-rds-policy"
+# Create the policy allowing RDS, and Cloudwatch access for PMM
+resource "aws_iam_policy" "pmmdemo_rds_policy" {
+  name        = "pmmdemo-rds-policy"
+  description = "Policy to allow PMM to discover, and monitor RDS instances"
+  policy      = <<EOT
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "Stmt1508404837000",
+    "Effect": "Allow",
+    "Action": [
+      "rds:DescribeDBInstances",
+      "cloudwatch:GetMetricStatistics",
+      "cloudwatch:ListMetrics",
+      "rds:DescribeDBClusters"
+    ],
+    "Resource": ["*"]
+  },
+  {
+	"Sid": "Stmt1508410723001",
+	"Effect": "Allow",
+	"Action": [
+	  "logs:DescribeLogStreams",
+	  "logs:GetLogEvents",
+	  "logs:FilterLogEvents"
+	],
+	"Resource": [
+	  "arn:aws:logs:*:*:log-group:RDSOSMetrics:*"
+	]
+  }]
+}
+EOT
 }
 
-data "aws_iam_role" "pmmdemo_dlm_lifecycle" {
-  name = "pmmdemo-dlm-lifecycle"
+# Create a role which will have the above policy attached
+resource "aws_iam_role" "pmmdemo_rds_role" {
+  name               = "pmmdemo-rds-role"
+  description        = "Role used by PMM EC2 to discover RDS"
+  assume_role_policy = jsonencode({
+	"Version": "2012-10-17",
+	"Statement": [{
+	  "Effect": "Allow",
+	  "Principal": {
+		"Service": "ec2.amazonaws.com"
+	  },
+	  "Action": "sts:AssumeRole"
+	}]
+  })
+}
+
+# Attach the PMMDemo RDS policy to the PMMDemo RDS role
+resource "aws_iam_role_policy_attachment" "pmmdemo_rds_role_attachement" {
+  role       = aws_iam_role.pmmdemo_rds_role.name
+  policy_arn = aws_iam_policy.pmmdemo_rds_policy.arn
+}
+
+# Create an EC2 instance profile, and attach the PMMDemo RDS role.
+# This allows the PMMDemo EC2 instance to use the IAM role
+resource "aws_iam_instance_profile" "pmmdemo_ec2_rds_profile" {
+  name = "pmmdemo-ec2-rds-profile"
+  role = aws_iam_role.pmmdemo_rds_role.name
 }
 
 data "aws_secretsmanager_secret" "sso_creds_mgr" {
@@ -76,74 +133,9 @@ resource "aws_iam_access_key" "rds_user_access_key" {
   user = data.aws_iam_user.rds_user.user_name
 }
 
-resource "aws_iam_policy_attachment" "rds_policy" {
-  name       = "rds_policy"
-  users      = [data.aws_iam_user.rds_user.user_name]
-  policy_arn = data.aws_iam_policy.pmmdemo-rds-policy.arn
-}
+# resource "aws_iam_policy_attachment" "rds_policy" {
+#   name       = "rds_policy"
+#   users      = [data.aws_iam_user.rds_user.user_name]
+#   policy_arn = aws_iam_policy.pmmdemo-rds-policy.arn
+# }
 
-resource "aws_iam_role_policy" "pmmdemo_dlm_lifecycle" {
-  name = "pmmdemo-dlm-lifecycle"
-  role = data.aws_iam_role.pmmdemo_dlm_lifecycle.id
-
-  policy = <<EOF
-{
-   "Version": "2012-10-17",
-   "Statement": [
-      {
-         "Effect": "Allow",
-         "Action": [
-            "ec2:CreateSnapshot",
-            "ec2:CreateSnapshots",
-            "ec2:DeleteSnapshot",
-            "ec2:DescribeInstances",
-            "ec2:DescribeVolumes",
-            "ec2:DescribeSnapshots"
-         ],
-         "Resource": "*"
-      },
-      {
-         "Effect": "Allow",
-         "Action": [
-            "ec2:CreateTags"
-         ],
-         "Resource": "arn:aws:ec2:*::snapshot/*"
-      }
-   ]
-}
-EOF
-}
-
-resource "aws_dlm_lifecycle_policy" "pmmdemo" {
-  description        = "PMM Demo DLM lifecycle policy"
-  execution_role_arn = data.aws_iam_role.pmmdemo_dlm_lifecycle.arn
-  state              = "ENABLED"
-
-  policy_details {
-    resource_types = ["VOLUME"]
-
-    schedule {
-      name = "PMM Demo everyday snapshot"
-
-      create_rule {
-        interval      = 24
-        interval_unit = "HOURS"
-        times         = ["23:45"]
-      }
-
-      retain_rule {
-        count = 7
-      }
-
-      tags_to_add = {
-        SnapshotCreator = "DLM"
-      }
-
-      copy_tags = false
-    }
-
-    target_tags = {
-      "Name" = "pmmdemo-${local.pmm_server_name}"
-    }
-  }
-}

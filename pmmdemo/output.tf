@@ -7,10 +7,10 @@ output "public_ip" {
 #   sensitive = true
 # }
 # 
-# output "rds_mysql_80_password" {
-#   value     = random_password.rds_mysql_80_password.result
-#   sensitive = true
-# }
+output "rds_mysql_80_password" {
+  value     = random_password.rds_mysql_80_password.result
+  sensitive = true
+}
 
 output "percona_server_80_password" {
   value     = random_password.mysql80_sysbench_password.result
