@@ -139,6 +139,12 @@ write_files:
       # Script to do all the waiting
       # File contents will be downloaded from githubcontent.com
 
+  - path: /home/rocky/.ssh/config
+    permissions: 0600
+    content: |
+      Host *
+        ForwardAgent=yes
+
   - path: /etc/nginx.conf
     content: |
       user  nginx;

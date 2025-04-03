@@ -11,6 +11,7 @@ packages:
   - bind-utils
   - curl
   - docker
+  - python3-pip
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
@@ -49,6 +50,7 @@ runcmd:
   - bash /usr/local/bin/waiter.sh process-exporter ${name} ${fqdn} ${environment_name}
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - bash /root/add-rds-to-pmm.sh
+  - bash pip3 install ansible
 #  - bash /tmp/dashboard-importer.sh
 #  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
@@ -141,7 +143,7 @@ write_files:
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
 
-  - path: /root/ansible.yml
+  - path: /root/pmm_sso_playbook.yml
     permissions: "0400"
     content: |
       ---
@@ -305,7 +307,7 @@ write_files:
 
       docker run --rm --volumes-from pmm-data -v /root/backup:/backup busybox tar czvf /backup/backup-$(date "+%F").tar /srv
 
-  - path: /root/upgrade-pmm.sh
+  - path: /root/upgrade-pmm-server.sh
     permissions: "0755"
     content: |
       #!/bin/bash -xe
@@ -315,10 +317,52 @@ write_files:
       docker stop pmm-server
       docker rm pmm-server
 
-      docker run -d -p 443:443 -p 80:80 --volumes-from pmm-data --name pmm-server --restart always docker.io/percona/pmm-server:3
+      docker run -d -p 443:8443 -v pmm-data:/srv:Z --name pmm-server --network pmm-net --restart always docker.io/percona/pmm-server:3
       echo "PMM Server has been successfully upgraded to the next version. Don't forget to purge the old image."
 
       bash /root/apply-custom-settings.sh
+
+  - path: /root/upgrade-pmm-agents.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # Get list of agent hosts, output ansible inventory format
+      echo "[all]" >/root/agents_inventory
+      /bin/consul catalog nodes | grep -v Node | awk '{print $1".pmmdemoprod.local"}' >>/root/agents_inventory
+
+      # Run playbook to upgrade pmm-agent on servers
+      export ANSIBLE_HOST_KEY_CHECKING=False
+      /usr/local/bin/ansible-playbook -i agents_inventory upgrade_agents_playbook.yml
+
+  - path: /root/upgrade_agents_playbook.yml
+    permissions: "0644"
+    content: |
+      #
+      # Playbook for upgrade pmm-agent on hosts
+      #
+
+      - hosts: all
+        gather_facts: no
+        become: yes
+        tasks:
+
+        - name: Enable Percona Repo
+          shell: >
+            percona-release enable pmm3-client
+
+        - name: Upgrade PMM Agent
+          dnf:
+            state: latest
+            name: "pmm-client"
+          register: restart_agent
+
+        - name: Restart PMM Agent
+          systemd:
+            name: "pmm-agent"
+            enabled: yes
+            state: "restarted"
+          when: restart_agent.changed
 
   - path: /root/apply-custom-settings.sh
     permissions: "0755"
@@ -326,7 +370,7 @@ write_files:
       #!/bin/bash -xe
 
       echo "Running the ansible script..."
-      docker cp /root/ansible.yml pmm-server:ansible.yml
-      docker exec pmm-server ansible-playbook -v ansible.yml
+      docker cp /root/pmm_sso_playbook.yml pmm-server:pmm_sso_playbook.yml
+      docker exec pmm-server ansible-playbook -v pmm_sso_playbook.yml
       docker exec pmm-server supervisorctl restart grafana
       echo "PMM settings updated."
