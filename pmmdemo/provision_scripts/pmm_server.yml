@@ -10,16 +10,17 @@ package_update: true
 packages:
   - bind-utils
   - curl
-  - docker
+  - podman
+  - podman-docker
   - python3-pip
 
 bootcmd:
   - while [[ ! -b $(readlink -f /dev/nvme1n1) ]]; do echo "waiting for the disk..."; sleep 5; done
   - mkfs.xfs -L data /dev/nvme1n1
-  - mkdir -p /var/lib/docker/
+  - mkdir -p /var/lib/containers/
 
 mounts:
-  - ["/dev/nvme1n1", "/var/lib/docker/", "xfs", "defaults,noatime", "0", "2"]
+  - ["/dev/nvme1n1", "/var/lib/containers/", "xfs", "defaults,noatime", "0", "2"]
 
 runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
