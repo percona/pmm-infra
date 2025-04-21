@@ -114,6 +114,20 @@ write_files:
         }
       }
 
+  - path: /etc/logrotate.d/mongo
+    permissions: 0644
+    content: |
+      /var/log/mongo/*.log {
+        daily
+        missingok
+        rotate 1
+        compress
+        dateext
+        delaycompress
+        copytruncate
+        notifempty
+      }
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
