@@ -266,17 +266,17 @@ write_files:
         $mysqlquery "$nologbin CREATE USER proxysql@'%' IDENTIFIED BY '${proxysql_monitor_password}';";
         $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON *.* TO proxysql@'%';";
         $mysqlquery "$nologbin CREATE USER 'sysbench-direct-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_direct_gr.* TO 'sysbench-direct-percona-gr'@'%';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_direct.* TO 'sysbench-direct-percona-gr'@'%';";
         $mysqlquery "$nologbin CREATE USER 'sysbench-proxysql-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_proxysql_gr.* TO 'sysbench-proxysql-percona-gr'@'%';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_proxysql.* TO 'sysbench-proxysql-percona-gr'@'%';";
         $mysqlquery "$nologbin CREATE USER 'sysbench-haproxy-percona-gr'@'%' IDENTIFIED BY '${mysql_sysbench_password}';";
-        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_haproxy_gr.* TO 'sysbench-haproxy-percona-gr'@'%';";
+        $mysqlquery "$nologbin GRANT ALL PRIVILEGES ON sbtest_haproxy.* TO 'sysbench-haproxy-percona-gr'@'%';";
       }
 
       provision_tables() {
-        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_direct_gr;"
-        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_proxysql_gr;"
-        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_haproxy_gr;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_direct;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_proxysql;"
+        $mysqlquery "CREATE DATABASE IF NOT EXISTS sbtest_haproxy;"
       }
 
       if [[ "${name}" == "percona-server-84-gr-1" ]]; then

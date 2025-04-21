@@ -10,6 +10,7 @@ package_update: true
 packages:
   - bind-utils
   - curl
+  - systemd-journal-remote
 
 runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
@@ -30,6 +31,10 @@ runcmd:
   - systemctl enable proxysql && systemctl start proxysql
   - bash /usr/local/bin/waiter.sh proxysql ${name} ${fqdn} ${environment_name}
   - pmm-admin add proxysql --username=admin --password='${proxysql_admin_password}' --server-insecure-tls --server-url='https://admin:${pmm_admin_password}@${pmm_server_endpoint}' --cluster=proxysql-cluster "${name}" "127.0.0.1:6032"
+
+# VictoriaLogs
+  - /bin/sed -i 's/# URL=/URL=http:\/\/pmm-server.${local_domain}:9428\/insert\/journald/g' /etc/systemd/journal-upload.conf
+  - systemctl enable systemd-journal-upload.service
 
 # TODO replace to admin-stats_credentials user
 

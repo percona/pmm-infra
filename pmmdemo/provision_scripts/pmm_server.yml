@@ -52,8 +52,6 @@ runcmd:
   - pmm-admin add external --group=processes --listen-port=9256 --environment="prod" --service-name="${name}-processes" --cluster="processes-cluster"
   - bash /root/add-rds-to-pmm.sh
   - bash pip3 install ansible
-#  - bash /tmp/dashboard-importer.sh
-#  - bash /tmp/import-dashboard-grafana-cloud.sh && touch /tmp/dashboards_imported
 
 write_files:
   - path: /etc/resolv.conf
@@ -79,19 +77,6 @@ write_files:
       ui_config{
         enabled = true
       }
-
-  - path: /tmp/dashboard-importer.sh
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-      echo "Downloading scripts"
-      curl -o /tmp/import-dashboard-grafana-cloud.sh https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/import-dashboard-grafana-cloud.sh
-      curl -o /tmp/cleanup-dash.py https://raw.githubusercontent.com/Percona-Lab/pmm-dashboards/main/misc/cleanup-dash.py
-      chmod a+x /tmp/import-dashboard-grafana-cloud.sh
-      chmod a+x /tmp/cleanup-dash.py
-      sed -i 's/:admin/:${pmm_admin_pass}/' /tmp/import-dashboard-grafana-cloud.sh
-      sed -i 's/172\.17\.0\.2/${fqdn}/' /tmp/import-dashboard-grafana-cloud.sh
-      sed -i 's/13266 12630 12470/13266 12630 12470 14239 14636 19676 6033/' /tmp/import-dashboard-grafana-cloud.sh
 
   - path: /root/add-rds-to-pmm.sh
     permissions: "0700"
@@ -130,6 +115,7 @@ write_files:
           }]
         }
       }
+
   - path: /usr/local/bin/waiter.sh
     permissions: "0755"
     content: |
@@ -301,27 +287,22 @@ write_files:
                 option: signout_redirect_url
                 value: ${oauth_signout_redirect_url}
 
-  - path: /root/volume-backup.sh
-    permissions: "0755"
-    content: |
-      #!/bin/bash -xe
-
-      docker run --rm --volumes-from pmm-data -v /root/backup:/backup busybox tar czvf /backup/backup-$(date "+%F").tar /srv
-
   - path: /root/upgrade-pmm-server.sh
     permissions: "0755"
     content: |
       #!/bin/bash -xe
 
       docker pull docker.io/percona/pmm-server:3
-
-      docker stop pmm-server
-      docker rm pmm-server
+      docker stop pmm-server && docker rm pmm-server
 
       docker run -d -p 443:8443 -v pmm-data:/srv:Z --name pmm-server --network pmm-net --restart always docker.io/percona/pmm-server:3
       echo "PMM Server has been successfully upgraded to the next version. Don't forget to purge the old image."
 
+      echo "Applying Grafana Settings for PMM Demo..."
       bash /root/apply-custom-settings.sh
+
+      echo "Upgrading PMM Agents..."
+      bash /root/upgrade-pmm-agents.sh
 
   - path: /root/upgrade-pmm-agents.sh
     permissions: "0755"
@@ -345,6 +326,7 @@ write_files:
 
       - hosts: all
         gather_facts: no
+        remote_user: rocky
         become: yes
         tasks:
 

@@ -127,17 +127,17 @@ write_files:
       OLTP_PATH='/usr/share/sysbench'
       for (( ; ; )); do
           RND_OLTP_BENCH="$${OLTP_AVAILABLE[RANDOM%$${#OLTP_AVAILABLE[@]}]}";
-          RND_NUM_THREADS="$(( $${RANDOM} % 17 + 8 ))";   # 8..24
-          RND_EXEC_TIME="$(( $${RANDOM} % 14400 + 14400 ))";    # 4 hours and up to 8 hours
+          RND_NUM_THREADS="$(( $${RANDOM} % 9 + 4 ))";   # Use 4 to 12 threads
+          RND_EXEC_TIME="$(( $${RANDOM} % 10800 + 3600 ))";    # Run from 1 to 4 hours
           echo -e "\nRunning: $${RND_OLTP_BENCH} - $(date "+%Y-%m-%d / %H:%M:%S")\n=======================";
           for h in $hosts; do
             pmm-admin annotate "$${SYSBENCH_CFG} - $${RND_OLTP_BENCH}" --node-name $h --tags "$${SYSBENCH_CFG},$${RND_OLTP_BENCH}"
           done
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
-          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --table-size=4000000 --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" prepare;
           check_failure;
-          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
+          sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --table-size=4000000 --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" run;
           check_failure;
           sysbench --config-file=/etc/sysbench/"$${SYSBENCH_CFG}" --threads="$${RND_NUM_THREADS}" --time="$${RND_EXEC_TIME}" "$${OLTP_PATH}/$${RND_OLTP_BENCH}" cleanup;
           check_failure;
@@ -151,8 +151,7 @@ write_files:
 #       mysql-user=sysbench-direct-percona-gr
 #       mysql-password=${percona_server_84_gr_password}
 #       rate=0
-#       report-interval=10
-#       table-size=1000000
+#       report-interval=30
 #       tables=20
 #       verbosity=0
 #   - path: /etc/sysbench/ps80.cnf
@@ -163,8 +162,7 @@ write_files:
 #       mysql-user=sysbench-direct-ps
 #       mysql-password=${mysql80_sysbench_password}
 #       rate=0
-#       report-interval=10
-#       table-size=1000000
+#       report-interval=30
 #       tables=20
 #       verbosity=0
 #   - path: /etc/sysbench/ps84.cnf
@@ -175,8 +173,7 @@ write_files:
 #       mysql-user=sysbench-direct-ps84
 #       mysql-password=${mysql84_sysbench_password}
 #       rate=0
-#       report-interval=10
-#       table-size=1000000
+#       report-interval=30
 #       tables=20
 #       verbosity=0
 #   - path: /etc/sysbench/pxc80.cnf
@@ -188,25 +185,27 @@ write_files:
 #       mysql-password=${percona_xtradb_cluster_80_password}
 #       rand-type=pareto
 #       rate=0
-#       report-interval=10
-#       table_size=1000000
+#       report-interval=30
 #       tables=20
 
   - path: /etc/sysbench/postgresql-16.cnf
     content: |
       db-driver=pgsql
+      pgsql-db=sbtest
       pgsql-host=postgresql-16
       pgsql-port=5432
       pgsql-user=sysbench
       pgsql-password=${postgres_sysbench_password}
-      psql-db=sbtest
+      events=0
+      rand-type=pareto
       rate=0
-      report-interval=10
-      verbosity=0
+      report-interval=30
+      time=0
+      threads=5
 
   - path: /etc/sysbench/proxysql_percona-server-84-gr.cnf
     content: |
-      mysql-db=sbtest_proxysql_gr
+      mysql-db=sbtest_proxysql
       mysql-host=proxysql
       mysql-port=3306
       mysql-user="sysbench-proxysql-percona-gr"
@@ -214,8 +213,7 @@ write_files:
       events=0
       rand-type=pareto
       rate=0
-      report-interval=10
-      table_size=1000000
+      report-interval=30
       time=0
       threads=5
 
@@ -229,8 +227,7 @@ write_files:
       events=0
       rand-type=pareto
       rate=0
-      report-interval=10
-      table_size=1000000
+      report-interval=30
       time=0
       threads=5
 
@@ -244,8 +241,7 @@ write_files:
       events=0
       rand-type=pareto
       rate=0
-      report-interval=10
-      table_size=1000000
+      report-interval=30
       time=0
       threads=5
 
@@ -259,8 +255,7 @@ write_files:
       events=0
       rand-type=pareto
       rate=0
-      report-interval=10
-      table_size=1000000
+      report-interval=30
       time=0
       threads=5
 
@@ -274,8 +269,7 @@ write_files:
 #       events=0
 #       rand-type=pareto
 #       rate=0
-#       report-interval=10
-#       table_size=1000000
+#       report-interval=30
 #       time=0
 #       threads=5
 # 
@@ -289,8 +283,7 @@ write_files:
 #       events=0
 #       rand-type=pareto
 #       rate=0
-#       report-interval=10
-#       table_size=1000000
+#       report-interval=30
 #       time=0
 #       threads=5
 
@@ -419,7 +412,7 @@ write_files:
       Type=simple
       Restart=on-failure
       RestartSec=600
-      ExecStart=/etc/sysbench/exec_sysbench.sh postgresql16.cnf
+      ExecStart=/etc/sysbench/exec_sysbench.sh postgresql-16.cnf
 
       [Install]
       WantedBy=multi-user.target
