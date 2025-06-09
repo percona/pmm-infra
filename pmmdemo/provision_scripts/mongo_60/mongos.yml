@@ -97,11 +97,10 @@ write_files:
   - path: /etc/logrotate.d/mongo
     permissions: 0644
     content: |
-      /var/log/mongo/*.log {
+      /var/log/mongos/*.log /var/log/mongo/*.log {
         daily
         missingok
-        rotate 1
-        compress
+        rotate 0
         dateext
         delaycompress
         copytruncate

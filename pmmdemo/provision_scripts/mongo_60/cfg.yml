@@ -120,8 +120,7 @@ write_files:
       /var/log/mongo/*.log {
         daily
         missingok
-        rotate 1
-        compress
+        rotate 0
         dateext
         delaycompress
         copytruncate
