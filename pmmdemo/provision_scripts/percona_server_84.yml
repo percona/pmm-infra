@@ -31,7 +31,7 @@ runcmd:
   - echo '!includedir /etc/my.cnf.d/' >> /etc/my.cnf
   - chown mysql:mysql /data/
   - semanage fcontext -a -t mysqld_db_t "/data(/.*)?" && restorecon -Rv /data
-  - if [ "${name}" == "percona-server-84-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; fi
+  - if [ "${name}" == "percona-server-84-1" ]; then mv /tmp/replica-config.cnf /etc/my.cnf.d/; restorecon /etc/my.cnf.d/; fi
   - systemctl enable mysqld.service
   - systemctl start mysqld.service
   - systemctl status mysqld.service
@@ -215,6 +215,7 @@ write_files:
       replica_parallel_workers=6
       replica_preserve_commit_order=1
       sync_binlog=0
+      relay_log_space_limit=10G
 
   - path: /root/init-mysql.sh
     content: |
