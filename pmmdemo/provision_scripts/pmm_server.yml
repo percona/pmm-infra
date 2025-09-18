@@ -130,7 +130,7 @@ write_files:
       my_private_ip=$(ip a sh eth0 | awk '/inet / {print $2}' | awk -F '/' '{print $1}')
       echo "advertise_addr = \"$my_private_ip\"" >> /etc/consul.d/consul.hcl
 
-  - path: /root/pmm_sso_playbook.yml
+  - path: /root/playbooks/pmm_sso_playbook.yml
     permissions: "0400"
     content: |
       ---
@@ -139,6 +139,20 @@ write_files:
         become: no
         gather_facts: yes
         tasks:
+          - name: Add posthog stats
+            ansible.builtin.blockinfile:
+              path: /usr/share/grafana/public/views/index.html
+              insertbefore: "</head>"
+              marker: "<!-- {mark} ANSIBLE -->"
+              block: |
+                <script>
+                  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+                  posthog.init('phc_Vn0gwOhJP57oTdX4Y7xqkJ4dB40j2Ti2KPVaG3s59a9', {
+                    api_host: '<https://eu.i.posthog.com>',
+                    persistence:'sessionStorage'
+                  })
+                </script>
+
           - name: Set Google Analytics ID
             ini_file:
               dest: /etc/grafana/grafana.ini
@@ -301,9 +315,6 @@ write_files:
       echo "Applying Grafana Settings for PMM Demo..."
       bash /root/apply-custom-settings.sh
 
-      echo "Upgrading PMM Agents..."
-      bash /root/upgrade-pmm-agents.sh
-
   - path: /root/upgrade-pmm-agents.sh
     permissions: "0755"
     content: |
@@ -317,7 +328,7 @@ write_files:
       export ANSIBLE_HOST_KEY_CHECKING=False
       /usr/local/bin/ansible-playbook -i agents_inventory upgrade_agents_playbook.yml
 
-  - path: /root/upgrade_agents_playbook.yml
+  - path: /root/playbooks/upgrade_agents.yml
     permissions: "0644"
     content: |
       #
@@ -355,5 +366,6 @@ write_files:
       echo "Running the ansible script..."
       docker cp /root/pmm_sso_playbook.yml pmm-server:pmm_sso_playbook.yml
       docker exec pmm-server ansible-playbook -v pmm_sso_playbook.yml
+      sleep 10
       docker exec pmm-server supervisorctl restart grafana
       echo "PMM settings updated."
