@@ -55,14 +55,14 @@ spec:
         ref: chart-source
       - repoURL: https://github.com/percona/pmm-infra.git
         targetRevision: gitops
-        path: '{{valuesFile}}'
+        path: apps/databases/instances/{{name}}
         ref: values-source
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'
       helm:
         valueFiles:
-          - $values-source/{{valuesFile | basename}}
+          - $values-source/values.yaml
       syncPolicy:
         automated:
           prune: true
