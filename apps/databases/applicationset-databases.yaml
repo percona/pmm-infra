@@ -12,7 +12,59 @@ spec:
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
-        valuesFile: apps/databases/instances/ps-80-replication/values.yaml
+        helm:
+          values: |
+            secrets:
+              users:
+                root: "ROOT_PASSWORD"
+                xtrabackup: "XTRABACKUP_PASSWORD"
+                monitor: "MONITOR_PASSWORD"
+                clustercheck: "CLUSTERCHECK_PASSWORD"
+                proxyadmin: "PROXYADMIN_PASSWORD"
+                pmmserver: "PMMSERVER_PASSWORD"
+                sysbench: "SYSBENCH_PASSWORD"
+                replica: "REPLICA_PASSWORD"
+                proxysql: "PROXYSQL_PASSWORD"
+                pmm-admin: "PMM_ADMIN_PASSWORD"
+                consul-health-check: "CONSUL_HEALTH_CHECK_PASSWORD"
+                sysbench-direct-ps: "SYSBENCH_DIRECT_PS_PASSWORD"
+                sysbench-proxysql-ps: "SYSBENCH_PROXYSQL_PS_PASSWORD"
+
+            mysql:
+              image:
+                repository: percona/percona-server
+                tag: "8.0"
+              size: 2 # Explicitly set size to 2 for source-replica
+              clusterType: asynchronous # Explicitly set replication type
+              resources:
+                requests:
+                  memory: "1Gi"
+                  cpu: "500m"
+                limits:
+                  memory: "2Gi"
+                  cpu: "1"
+              volumeSpec:
+                persistentVolumeClaim:
+                  resources:
+                    requests:
+                      storage: "10Gi" # Match desired storage
+
+            pmm:
+              enabled: true
+              serverHost: 'pmm-server'
+              serverUser: 'admin'
+
+            proxy:
+              haproxy:
+                enabled: false # Explicitly disable HAProxy
+              router:
+                enabled: false # Explicitly disable Router
+
+            backup:
+              enabled: false # Explicitly disable backup to avoid conflicts
+              tasks: []
+              storages: {}
+              volumeMounts: []
       - name: ps-84-replication
         namespace: "percona-server-mysql-84"
         chart: ps-db
@@ -38,14 +90,19 @@ spec:
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 2.8.0
         valuesFile: apps/databases/instances/pg-16-cluster/values.yaml
+  hydrator:
+    type: exec
+    command:
+      name: sh
+      args:
+        - ./hydrator-script.sh
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
       name: '{{name}}'
       namespace: argocd
-      labels:
-        commonLabels: "true" # Placeholder for commonLabels from kustomization.yaml
+      labels: '{{.commonLabels}}'
     spec:
       project: default
       sources:
@@ -53,16 +110,9 @@ spec:
         targetRevision: '{{targetRevision}}'
         chart: '{{chart}}'
         ref: chart-source
-      - repoURL: https://github.com/percona/pmm-infra.git
-        targetRevision: gitops
-        path: apps/databases/instances/{{name}}
-        ref: values-source
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'
-      helm:
-        valueFiles:
-          - $values-source/values.yaml
       syncPolicy:
         automated:
           prune: true
