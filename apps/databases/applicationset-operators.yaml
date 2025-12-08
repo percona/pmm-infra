@@ -26,8 +26,6 @@ spec:
     metadata:
       name: '{{name}}'
       namespace: argocd
-      labels:
-        commonLabels: "true" # Placeholder for commonLabels from kustomization.yaml
     spec:
       project: default
       source:

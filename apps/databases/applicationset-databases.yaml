@@ -102,7 +102,6 @@ spec:
     metadata:
       name: '{{name}}'
       namespace: argocd
-      labels: '{{.commonLabels}}'
     spec:
       project: default
       sources:
