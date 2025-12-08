@@ -3,10 +3,3 @@ kind: Kustomization
 resources:
   - applicationset-operators.yaml
   - applicationset-databases.yaml
-  - instances/pg-16-cluster
-  - instances/ps-80-replication
-  - instances/ps-84-gr-cluster
-  - instances/ps-84-replication
-  - instances/psmdb-60-cluster
-  - instances/pxc-80-cluster
-  - instances/valkey
