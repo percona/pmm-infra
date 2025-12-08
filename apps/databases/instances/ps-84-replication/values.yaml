@@ -18,27 +18,39 @@ mysql:
   image:
     repository: percona/percona-server
     tag: "8.4"
-  instances:
-    - name: "ps-84-0"
-    - name: "ps-84-1"
-  size: 2
+  size: 2 # Explicitly set size to 2 for source-replica
+  clusterType: asynchronous # Explicitly set replication type
   resources:
     requests:
-      memory: "1G"
+      memory: "1Gi"
       cpu: "500m"
     limits:
-      memory: "2G"
+      memory: "2Gi"
       cpu: "1"
   volumeSpec:
-    persistentVolumeClaim:
+    pvc:
       resources:
         requests:
-          storage: "10Gi"
+          storage: "10Gi" # Corrected path to match chart: volumeSpec.pvc
 
 pmm:
   enabled: true
   serverHost: 'pmm-server'
   serverUser: 'admin'
+  # resource requests for pmm client (optional but good practice)
+  resources:
+    requests:
+      memory: 150M
+      cpu: 300m
 
-proxysql:
-  enabled: false
+proxy:
+  haproxy:
+    enabled: false # Explicitly disable HAProxy
+    size: 0 # Ensure no HAProxy pods are created if disabled
+  router:
+    enabled: false # Explicitly disable Router if not needed
+
+backup:
+  enabled: false # Explicitly disable backup
+  storages: {} # Ensure this is an empty object if disabled
+  schedule: [] # Ensure tasks is an empty array if disabled
