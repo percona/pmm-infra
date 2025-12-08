@@ -51,6 +51,7 @@ pmm:
   serverUser: 'admin'
 
 backup:
+  enabled: false
   tasks: []
   storages: {}
   volumeMounts: []
