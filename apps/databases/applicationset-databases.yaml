@@ -7,8 +7,8 @@ spec:
   generators:
   - list:
       elements:
-      - name: ps-80-replication
-        namespace: "percona-server-mysql-80"
+      - name: ps-84-replication
+        namespace: "percona-server-mysql-84"
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
@@ -27,15 +27,15 @@ spec:
                 proxysql: "PROXYSQL_PASSWORD"
                 pmm-admin: "PMM_ADMIN_PASSWORD"
                 consul-health-check: "CONSUL_HEALTH_CHECK_PASSWORD"
-                sysbench-direct-ps: "SYSBENCH_DIRECT_PS_PASSWORD"
-                sysbench-proxysql-ps: "SYSBENCH_PROXYSQL_PS_PASSWORD"
+                sysbench-direct-ps84: "SYSBENCH_DIRECT_PS84_PASSWORD"
+                sysbench-proxysql-ps84: "SYSBENCH_PROXYSQL_PS84_PASSWORD"
 
             mysql:
               image:
                 repository: percona/percona-server
-                tag: "8.0"
-              size: 2 # Explicitly set size to 2 for source-replica
-              clusterType: asynchronous # Explicitly set replication type
+                tag: "8.4"
+              size: 2
+              clusterType: asynchronous
               resources:
                 requests:
                   memory: "1Gi"
@@ -47,7 +47,7 @@ spec:
                 persistentVolumeClaim:
                   resources:
                     requests:
-                      storage: "10Gi" # Match desired storage
+                      storage: "10Gi"
 
             pmm:
               enabled: true
@@ -56,46 +56,9 @@ spec:
 
             proxy:
               haproxy:
-                enabled: false # Explicitly disable HAProxy
+                enabled: false
               router:
-                enabled: false # Explicitly disable Router
-
-            backup:
-              enabled: false # Explicitly disable backup to avoid conflicts
-              tasks: []
-              storages: {}
-              volumeMounts: []
-      - name: ps-84-replication
-        namespace: "percona-server-mysql-84"
-        chart: ps-db
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 1.0.0
-        valuesFile: apps/databases/instances/ps-84-replication/values.yaml
-      - name: pxc-80-cluster
-        namespace: "percona-xtradb-cluster-80"
-        chart: ps-db
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 1.0.0
-        valuesFile: apps/databases/instances/pxc-80-cluster/values.yaml
-      - name: ps-84-gr-cluster
-        namespace: "percona-server-mysql-84-gr"
-        chart: ps-db
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 1.0.0
-        valuesFile: apps/databases/instances/ps-84-gr-cluster/values.yaml
-
-      - name: pg-16-cluster
-        namespace: "percona-postgresql-16"
-        chart: pg-db
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 2.8.0
-        valuesFile: apps/databases/instances/pg-16-cluster/values.yaml
-  hydrator:
-    type: exec
-    command:
-      name: sh
-      args:
-        - ./hydrator-script.sh
+                enabled: false
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
@@ -104,11 +67,13 @@ spec:
       namespace: argocd
     spec:
       project: default
-      sources:
-      - repoURL: '{{repoURL}}'
-        targetRevision: '{{targetRevision}}'
+      source:
+        repoURL: '{{repoURL}}'
         chart: '{{chart}}'
-        ref: chart-source
+        targetRevision: '{{targetRevision}}'
+        helm:
+          releaseName: '{{name}}'
+          values: '{{helm.values}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'
