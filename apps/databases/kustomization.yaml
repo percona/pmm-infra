@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - applicationset-operators.yaml
   - applicationset-databases.yaml
+  - applicationset-raw.yaml

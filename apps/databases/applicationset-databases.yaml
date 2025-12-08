@@ -43,11 +43,6 @@ spec:
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 2.8.0
         valuesFile: "values.yaml"
-      - name: valkey
-        namespace: "valkey"
-        repoURL: https://github.com/percona/pmm-infra.git
-        targetRevision: HEAD
-        path: "apps/databases/instances/valkey"
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
