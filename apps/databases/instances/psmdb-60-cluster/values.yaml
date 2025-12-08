@@ -49,9 +49,3 @@ pmm:
   enabled: true
   serverHost: 'pmm-server'
   serverUser: 'admin'
-
-backup:
-  enabled: false
-  tasks: []
-  storages: {}
-  volumeMounts: []
