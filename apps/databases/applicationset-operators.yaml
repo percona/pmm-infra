@@ -11,6 +11,7 @@ spec:
         chart: ps-operator
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
+        valuesFile: operators/percona-mysql-operator/values.yaml
       - name: percona-mongodb-operator
         chart: psmdb-operator
         repoURL: https://percona.github.io/percona-helm-charts/
