@@ -1,0 +1,46 @@
+secrets:
+  users:
+    root: "ROOT_PASSWORD"
+    xtrabackup: "XTRABACKUP_PASSWORD"
+    monitor: "MONITOR_PASSWORD"
+    clustercheck: "CLUSTERCHECK_PASSWORD"
+    proxyadmin: "PROXYADMIN_PASSWORD"
+    pmmserver: "PMMSERVER_PASSWORD"
+    sysbench: "SYSBENCH_PASSWORD"
+    replica: "REPLICA_PASSWORD"
+    proxysql: "PROXYSQL_PASSWORD"
+    pmm-admin: "PMM_ADMIN_PASSWORD"
+    consul-health-check: "CONSUL_HEALTH_CHECK_PASSWORD"
+    sysbench-direct-percona-gr: "SYSBENCH_DIRECT_PERCONA_GR_PASSWORD"
+    sysbench-proxysql-percona-gr: "SYSBENCH_PROXYSQL_PERCONA_GR_PASSWORD"
+    sysbench-haproxy-percona-gr: "SYSBENCH_HAPROXY_PERCONA_GR_PASSWORD"
+
+mysql:
+  image:
+    repository: percona/percona-server
+    tag: "8.4"
+  instances:
+    - name: "ps-84-gr-1"
+    - name: "ps-84-gr-2"
+    - name: "ps-84-gr-3"
+  size: 3
+  resources:
+    requests:
+      memory: "1G"
+      cpu: "500m"
+    limits:
+      memory: "2G"
+      cpu: "1"
+  volumeSpec:
+    persistentVolumeClaim:
+      resources:
+        requests:
+          storage: "10Gi"
+
+pmm:
+  enabled: true
+  serverHost: 'pmm-server'
+  serverUser: 'admin'
+
+proxysql:
+  enabled: false

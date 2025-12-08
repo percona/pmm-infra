@@ -1,0 +1,79 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: databases
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - name: ps-80-replication
+        namespace: "percona-server-mysql-80"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        valuesFile: "values.yaml"
+      - name: ps-84-replication
+        namespace: "percona-server-mysql-84"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        valuesFile: "values.yaml"
+      - name: pxc-80-cluster
+        namespace: "percona-xtradb-cluster-80"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        valuesFile: "values.yaml"
+      - name: ps-84-gr-cluster
+        namespace: "percona-server-mysql-84-gr"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        valuesFile: "values.yaml"
+      - name: psmdb-60-cluster
+        namespace: "percona-server-mongodb-60"
+        chart: psmdb-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.21.1
+        valuesFile: "values.yaml"
+      - name: pg-16-cluster
+        namespace: "percona-postgresql-16"
+        chart: pg-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 2.8.0
+        valuesFile: "values.yaml"
+      - name: valkey
+        namespace: "valkey"
+        repoURL: https://github.com/percona/pmm-infra.git
+        targetRevision: HEAD
+        path: "apps/databases/instances/valkey"
+  template:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+      labels:
+        commonLabels: "true" # Placeholder for commonLabels from kustomization.yaml
+    spec:
+      project: default
+      source:
+        repoURL: '{{repoURL}}'
+        targetRevision: '{{targetRevision}}'
+        chart: '{{chart}}'
+        helm:
+          releaseName: '{{name}}'
+          valueFiles:
+            - '{{valuesFile}}'
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

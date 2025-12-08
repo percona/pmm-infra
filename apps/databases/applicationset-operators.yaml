@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: percona-operators
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - name: percona-mysql-operator
+        chart: ps-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+      - name: percona-mongodb-operator
+        chart: psmdb-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.21.2
+      - name: percona-postgresql-operator
+        chart: pg-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 2.8.0
+  template:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+      labels:
+        commonLabels: "true" # Placeholder for commonLabels from kustomization.yaml
+    spec:
+      project: default
+      source:
+        repoURL: '{{repoURL}}'
+        chart: '{{chart}}'
+        targetRevision: '{{targetRevision}}'
+        helm:
+          releaseName: '{{name}}'
+          parameters:
+            - name: installCRDs
+              value: "true"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{name}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

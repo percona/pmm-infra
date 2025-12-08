@@ -1,0 +1,26 @@
+secrets:
+  users:
+    pmm: "PMM_PASSWORD"
+    sysbench: "SYSBENCH_PASSWORD"
+
+pg_primary:
+  image:
+    repository: percona/percona-postgresql
+    tag: "16"
+  resources:
+    requests:
+      memory: "1G"
+      cpu: "500m"
+    limits:
+      memory: "2G"
+      cpu: "1"
+  volumeSpec:
+    persistentVolumeClaim:
+      resources:
+        requests:
+          storage: "10Gi"
+
+pmm:
+  enabled: true
+  serverHost: 'pmm-server'
+  serverUser: 'admin'

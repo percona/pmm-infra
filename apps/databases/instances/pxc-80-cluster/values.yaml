@@ -1,0 +1,46 @@
+secrets:
+  users:
+    root: "ROOT_PASSWORD"
+    xtrabackup: "XTRABACKUP_PASSWORD"
+    monitor: "MONITOR_PASSWORD"
+    clustercheck: "CLUSTERCHECK_PASSWORD"
+    proxyadmin: "PROXYADMIN_PASSWORD"
+    pmmserver: "PMMSERVER_PASSWORD"
+    sysbench: "SYSBENCH_PASSWORD"
+    proxysql: "PROXYSQL_PASSWORD"
+    pmm-admin: "PMM_ADMIN_PASSWORD"
+    consul-health-check: "CONSUL_HEALTH_CHECK_PASSWORD"
+    sysbench-direct-pxc: "SYSBENCH_DIRECT_PXC_PASSWORD"
+    sysbench-proxysql-pxc: "SYSBENCH_PROXYSQL_PXC_PASSWORD"
+    sysbench-haproxy-pxc: "SYSBENCH_HAPROXY_PXC_PASSWORD"
+    haproxy_check: "HAPROXY_CHECK_PASSWORD"
+
+mysql:
+  image:
+    repository: percona/percona-xtradb-cluster
+    tag: "8.0"
+  instances:
+    - name: "pxc-80-0"
+    - name: "pxc-80-1"
+    - name: "pxc-80-2"
+  size: 3
+  resources:
+    requests:
+      memory: "1G"
+      cpu: "500m"
+    limits:
+      memory: "2G"
+      cpu: "1"
+  volumeSpec:
+    persistentVolumeClaim:
+      resources:
+        requests:
+          storage: "10Gi"
+
+pmm:
+  enabled: true
+  serverHost: 'pmm-server'
+  serverUser: 'admin'
+
+proxysql:
+  enabled: false
