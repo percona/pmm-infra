@@ -59,6 +59,34 @@ spec:
                 enabled: false
               router:
                 enabled: false
+      - name: pg-16-cluster
+        namespace: "percona-postgresql-16"
+        chart: pg-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 2.8.0
+        helm:
+          values: ""
+      - name: ps-80-replication
+        namespace: "percona-server-mysql-80"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        helm:
+          values: ""
+      - name: ps-84-gr-cluster
+        namespace: "percona-server-mysql-84-gr"
+        chart: ps-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        helm:
+          values: ""
+      - name: pxc-80-cluster
+        namespace: "percona-xtradb-cluster-80"
+        chart: pxc-db
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        helm:
+          values: ""
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
