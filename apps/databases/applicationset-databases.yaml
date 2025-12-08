@@ -31,12 +31,7 @@ spec:
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
         valuesFile: "values.yaml"
-      - name: psmdb-60-cluster
-        namespace: "percona-server-mongodb-60"
-        chart: psmdb-db
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 1.21.1
-        valuesFile: "values.yaml"
+
       - name: pg-16-cluster
         namespace: "percona-postgresql-16"
         chart: pg-db
