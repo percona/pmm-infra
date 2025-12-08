@@ -12,32 +12,32 @@ spec:
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
-        valuesFile: "values.yaml"
+        valuesFile: apps/databases/instances/ps-80-replication/values.yaml
       - name: ps-84-replication
         namespace: "percona-server-mysql-84"
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
-        valuesFile: "values.yaml"
+        valuesFile: apps/databases/instances/ps-84-replication/values.yaml
       - name: pxc-80-cluster
         namespace: "percona-xtradb-cluster-80"
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
-        valuesFile: "values.yaml"
+        valuesFile: apps/databases/instances/pxc-80-cluster/values.yaml
       - name: ps-84-gr-cluster
         namespace: "percona-server-mysql-84-gr"
         chart: ps-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 1.0.0
-        valuesFile: "values.yaml"
+        valuesFile: apps/databases/instances/ps-84-gr-cluster/values.yaml
 
       - name: pg-16-cluster
         namespace: "percona-postgresql-16"
         chart: pg-db
         repoURL: https://percona.github.io/percona-helm-charts/
         targetRevision: 2.8.0
-        valuesFile: "values.yaml"
+        valuesFile: apps/databases/instances/pg-16-cluster/values.yaml
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
@@ -48,18 +48,21 @@ spec:
         commonLabels: "true" # Placeholder for commonLabels from kustomization.yaml
     spec:
       project: default
-      source:
-        repoURL: '{{repoURL}}'
+      sources:
+      - repoURL: '{{repoURL}}'
         targetRevision: '{{targetRevision}}'
         chart: '{{chart}}'
-        helm:
-          releaseName: '{{name}}'
-          valueFiles:
-            - '{{valuesFile}}'
-        path: '{{path}}'
+        ref: chart-source
+      - repoURL: https://github.com/percona/pmm-infra.git
+        targetRevision: gitops
+        path: '{{valuesFile}}'
+        ref: values-source
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'
+      helm:
+        valueFiles:
+          - $values-source/{{valuesFile | basename}}
       syncPolicy:
         automated:
           prune: true
