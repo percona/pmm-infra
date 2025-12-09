@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: percona-operators
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - name: percona-mysql-operator
+        chart: ps-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.0.0
+        helm:
+          values: |
+            watchAllNamespaces: true
+      - name: percona-mongodb-operator
+        chart: psmdb-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 1.21.2
+        helm:
+          values: ""
+      - name: percona-postgresql-operator
+        chart: pg-operator
+        repoURL: https://percona.github.io/percona-helm-charts/
+        targetRevision: 2.8.0
+        helm:
+          values: ""
+  template:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: '{{repoURL}}'
+        chart: '{{chart}}'
+        targetRevision: '{{targetRevision}}'
+        helm:
+          releaseName: '{{name}}'
+          values: '{{helm.values}}'
+          parameters:
+            - name: installCRDs
+              value: "true"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{name}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
