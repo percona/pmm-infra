@@ -6,3 +6,4 @@ resources:
   - operators/mongodb-operator.yaml
   - operators/pxc-operator.yaml
   - clusters-app.yaml
+  - operators/pxc/secret-patch.yaml
