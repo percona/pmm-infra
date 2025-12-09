@@ -40,7 +40,7 @@ spec:
         targetRevision: '{{targetRevision}}'
         helm:
           releaseName: '{{name}}'
-          values: '{{helm.values}}'
+          values: '{{ .helm.values | default "" }}'
           parameters:
             - name: installCRDs
               value: "true"
