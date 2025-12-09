@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://percona.github.io/percona-helm-charts/
-    chart: pg-operator
-    targetRevision: 2.8.0
+    repoURL: https://github.com/percona/percona-helm-charts.git
+    targetRevision: pg-operator-2.8.0
+    path: charts/pg-operator
   destination:
     server: https://kubernetes.default.svc
     namespace: pgo
