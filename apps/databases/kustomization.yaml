@@ -4,6 +4,3 @@ resources:
   - operators/postgresql-operator.yaml
   - operators/mysql-operator.yaml
   - operators/mongodb-operator.yaml
-  - operators/pxc-operator.yaml
-  - clusters-app.yaml
-  - operators/pxc/my-pxc-secrets.yaml
