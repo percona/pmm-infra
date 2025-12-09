@@ -1,22 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: percona-mysql-operator
+  name: mysql
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
-  source:
-    repoURL: https://github.com/percona/percona-helm-charts.git
-    targetRevision: ps-operator-1.0.0
-    path: charts/ps-operator
+  sources:
+    - repoURL: https://github.com/percona/percona-helm-charts.git
+      targetRevision: ps-operator-1.0.0
+      path: charts/ps-operator
+      helm:
+        valueFiles:
+          - percona-mysql-operator/values-minimal.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: percona-mysql-operator
+    namespace: mysql
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - ServerSideApply=true
