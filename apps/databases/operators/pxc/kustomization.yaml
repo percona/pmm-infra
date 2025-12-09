@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/percona/percona-xtradb-cluster-operator/deploy?ref=v1.18.0
+  - https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v1.18.0/deploy/bundle.yaml
 
 patches:
 - path: secret-patch.yaml
