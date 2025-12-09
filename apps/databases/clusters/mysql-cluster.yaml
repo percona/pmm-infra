@@ -1,0 +1,19 @@
+apiVersion: ps.percona.com/v1
+kind: PerconaServerMySQL
+metadata:
+  name: my-mysql-cluster
+  namespace: percona-mysql-operator
+spec:
+  mysql:
+    image: percona/percona-server:8.0
+    replicas: 1
+    resources:
+      requests:
+        memory: 1G
+        cpu: 500m
+    volumeSpec:
+      persistentVolumeClaim:
+        resources:
+          requests:
+            storage: 2Gi
+  secretsName: my-mysql-secrets

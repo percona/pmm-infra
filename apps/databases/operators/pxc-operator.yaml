@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: percona-xtradb-cluster-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/percona/percona-xtradb-cluster-operator.git
+    targetRevision: v1.18.0
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pxc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

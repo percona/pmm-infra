@@ -1,0 +1,21 @@
+apiVersion: psmdb.percona.com/v1
+kind: PerconaServerMongoDB
+metadata:
+  name: my-mongodb-cluster
+  namespace: percona-mongodb-operator
+spec:
+  image: percona/percona-server-mongodb:6.0
+  replsets:
+  - name: rs0
+    size: 1
+    resources:
+      requests:
+        memory: 1G
+        cpu: 500m
+    volumeSpec:
+      persistentVolumeClaim:
+        resources:
+          requests:
+            storage: 2Gi
+  secrets:
+    users: my-mongodb-secrets

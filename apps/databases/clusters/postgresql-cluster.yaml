@@ -1,0 +1,51 @@
+apiVersion: pgv2.percona.com/v2
+kind: PerconaPGCluster
+metadata:
+  name: my-pg-cluster
+  namespace: pgo
+spec:
+  instances:
+  - name: instance1
+    replicas: 1
+    dataVolumeClaimSpec:
+      accessModes:
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 1Gi
+  pgrunner:
+    image: perconalab/percona-postgresql-runner:main
+  proxy:
+    pgBouncer:
+      replicas: 1
+      image: perconalab/percona-postgresql-pgbouncer:main
+  pgaudit:
+    image: perconalab/percona-postgresql-pgaudit:main
+  pgbackrest:
+    image: perconalab/percona-postgresql-pgbackrest:main
+    repos:
+    - name: repo1
+      volume:
+        volumeClaimSpec:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+  postgresVersion: 15
+  image: perconalab/percona-postgresql-operator:main-postgresql-15
+  backup:
+    image: perconalab/percona-postgresql-pgbackrest:main
+    pgbackrest:
+      image: perconalab/percona-postgresql-pgbackrest:main
+      global:
+        repo1-path: /pgbackrest/repo1
+      repos:
+      - name: repo1
+        volume:
+          volumeClaimSpec:
+            accessModes:
+            - "ReadWriteOnce"
+            resources:
+              requests:
+                storage: 1Gi

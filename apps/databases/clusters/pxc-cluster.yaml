@@ -1,0 +1,14 @@
+apiVersion: pxc.percona.com/v1
+kind: PerconaXtraDBCluster
+metadata:
+  name: my-pxc-cluster
+  namespace: pxc
+spec:
+  pxc:
+    size: 1
+    image: percona/percona-xtradb-cluster:8.0
+    resources:
+      requests:
+        memory: 1G
+        cpu: 500m
+  secretsName: my-pxc-secrets
