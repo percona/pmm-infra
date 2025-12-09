@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/percona/pmm-infra.git
     targetRevision: gitops
-    path: pmm-infra/apps/databases/operators/pxc
+    path: pmm-infra/apps/databases/operators/pxc/pxc-operator-bundle-fixed.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: pxc
@@ -20,3 +20,4 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - ServerSideApply=true
