@@ -12,8 +12,8 @@ spec:
       targetRevision: ps-operator-1.0.0
       path: charts/ps-operator
       helm:
-        valueFiles:
-          - mysql-operator/values.yaml
+        values: |
+          watchAllNamespaces: true
   destination:
     server: https://kubernetes.default.svc
     namespace: mysql
