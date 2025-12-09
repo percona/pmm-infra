@@ -6,12 +6,7 @@ metadata:
 spec:
   generators:
   - list:
-      elements:
-      - name: valkey
-        namespace: "valkey"
-        repoURL: https://github.com/percona/pmm-infra.git
-        targetRevision: gitops
-        path: "apps/databases/instances/valkey"
+      elements: []
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
