@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/percona/percona-xtradb-cluster-operator.git
-    targetRevision: v1.18.0
-    path: deploy
+    repoURL: https://github.com/percona/pmm-infra.git
+    targetRevision: gitops
+    path: pmm-infra/apps/databases/operators/pxc
   destination:
     server: https://kubernetes.default.svc
     namespace: pxc
