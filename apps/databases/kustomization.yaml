@@ -2,3 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - operators/mysql-operator.yaml
+  - instances/ps-84-replication/secrets.yaml
+helmCharts:
+  - name: ps-db                                       # The chart name
+    repo: https://percona.github.io/percona-helm-charts/
+    version: 1.0.0                                    # Use the latest stable version compatible with MySQL 8.4
+    releaseName: ps-84-replication                    # The name of the Helm release
+    namespace: mysql                                  # Must match your Secret's namespace
+    valuesFile: instances/ps-84-replication/values.yaml
