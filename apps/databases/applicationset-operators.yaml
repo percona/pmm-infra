@@ -14,18 +14,6 @@ spec:
         helm:
           values: |
             watchAllNamespaces: true
-      - name: percona-mongodb-operator
-        chart: psmdb-operator
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 1.21.2
-        helm:
-          values: ""
-      - name: percona-postgresql-operator
-        chart: pg-operator
-        repoURL: https://percona.github.io/percona-helm-charts/
-        targetRevision: 2.8.0
-        helm:
-          values: ""
   template:
     apiVersion: argoproj.io/v1alpha1
     kind: Application
