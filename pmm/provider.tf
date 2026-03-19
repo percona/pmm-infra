@@ -9,7 +9,7 @@ terraform {
       version = "3.1.2"
     }
   }
-  required_version = "~> 1.2.8"
+  required_version = "~> 1.6.0"
 
   backend "s3" {
     bucket = "percona-terraform"
