@@ -22,6 +22,10 @@ jobs:
       - name: Terraform Format Check
         run: terraform fmt -recursive -check
 
+      - name: Terraform Test
+        run: cd pmmdemo && terraform init -backend=false && terraform test
+
+
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
