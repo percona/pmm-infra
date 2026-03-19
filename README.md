@@ -7,3 +7,6 @@ This repository is an IaC that covers our infrastructure needs for the following
 - run benchmarks to generate load to populate PMM graphs
 
 Please use [Percona's JIRA](https://jira.percona.com/jira/software/c/projects/PMMD/issues) to submit bugs, and feature requests.
+
+<!-- BEGIN_TF_DOCS -->
+<!-- END_TF_DOCS -->

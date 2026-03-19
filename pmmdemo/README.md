@@ -127,3 +127,6 @@ Refer to the [manual] (https://www.mongodb.com/docs/manual/tutorial/force-member
 A few links to the docs of the respective servers we used to monitor:
 
 - https://docs.percona.com/percona-xtradb-cluster/8.0/howtos/centos_howto.html
+
+<!-- BEGIN_TF_DOCS -->
+<!-- END_TF_DOCS -->
