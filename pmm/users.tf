@@ -19,7 +19,14 @@ resource "aws_iam_policy" "pmm_cli" {
     "Statement": [
         {
           "Effect": "Allow",
-          "Action": "*",
+          "Action": [
+            "ec2:Describe*",
+            "rds:Describe*",
+            "cloudwatch:GetMetricStatistics",
+            "cloudwatch:ListMetrics",
+            "logs:DescribeLogStreams",
+            "logs:GetLogEvents"
+          ],
           "Resource": "*"
         }
     ]
