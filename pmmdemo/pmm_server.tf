@@ -57,38 +57,8 @@ data "aws_iam_user" "rds_user" {
   user_name = "pmm-demo-rds-user"
 }
 
-# Create the policy allowing RDS, and Cloudwatch access for PMM
-resource "aws_iam_policy" "pmmdemo_rds_policy" {
-  name        = "pmmdemo-rds-policy"
-  description = "Policy to allow PMM to discover, and monitor RDS instances"
-  policy      = <<EOT
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "Stmt1508404837000",
-    "Effect": "Allow",
-    "Action": [
-      "rds:DescribeDBInstances",
-      "cloudwatch:GetMetricStatistics",
-      "cloudwatch:ListMetrics",
-      "rds:DescribeDBClusters"
-    ],
-    "Resource": ["*"]
-  },
-  {
-	"Sid": "Stmt1508410723001",
-	"Effect": "Allow",
-	"Action": [
-	  "logs:DescribeLogStreams",
-	  "logs:GetLogEvents",
-	  "logs:FilterLogEvents"
-	],
-	"Resource": [
-	  "arn:aws:logs:*:*:log-group:RDSOSMetrics:*"
-	]
-  }]
-}
-EOT
+data "aws_iam_policy" "pmmdemo_rds_policy" {
+  name = "pmm-demo-rds-policy"
 }
 
 # Create a role which will have the above policy attached
@@ -110,7 +80,7 @@ resource "aws_iam_role" "pmmdemo_rds_role" {
 # Attach the PMMDemo RDS policy to the PMMDemo RDS role
 resource "aws_iam_role_policy_attachment" "pmmdemo_rds_role_attachement" {
   role       = aws_iam_role.pmmdemo_rds_role.name
-  policy_arn = aws_iam_policy.pmmdemo_rds_policy.arn
+  policy_arn = data.aws_iam_policy.pmmdemo_rds_policy.arn
 }
 
 # Create an EC2 instance profile, and attach the PMMDemo RDS role.
