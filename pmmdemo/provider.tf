@@ -17,9 +17,10 @@ terraform {
   required_version = "~> 1.6.0"
 
   backend "s3" {
-    bucket = "percona-terraform"
-    key    = "pmmdemo.tfstate"
-    region = "us-east-1"
+    bucket               = "percona-terraform"
+    workspace_key_prefix = "environments"
+    key                  = "pmmdemo/terraform.tfstate"
+    region               = "us-east-1"
   }
 }
 
