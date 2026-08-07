@@ -4,9 +4,13 @@ resource "aws_instance" "ec2" {
   associate_public_ip_address = var.has_public_ip
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = var.security_groups
-  user_data                   = var.user_data
   key_name                    = data.aws_key_pair.pmm-demo.key_name
   iam_instance_profile        = var.iam_role_name
+
+  # EC2 caps user-data at 16 KB decoded. Several of these cloud-init templates
+  # render close to that -- pmm_server.yml exceeds it outright -- so compress.
+  # cloud-init detects the gzip magic bytes and inflates before parsing.
+  user_data_base64 = base64gzip(var.user_data)
 
   # Require IMDSv2 (session-token) for instance metadata. IMDSv1 answers any
   # plain GET, which makes any request-forgery primitive on the host equivalent
@@ -32,8 +36,17 @@ resource "aws_instance" "ec2" {
   }
 
   lifecycle {
-	// We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
-	ignore_changes = [ami]
+    // We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
+    ignore_changes = [ami]
+
+    // Fail at plan time rather than getting an opaque rejection from the EC2
+    // API. 21848 base64 characters is 16 KB once decoded, which is the cap.
+    // base64decode() is not usable for this check because gzip output is not
+    // valid UTF-8.
+    precondition {
+      condition     = length(base64gzip(var.user_data)) <= 21848
+      error_message = "Rendered user-data for ${var.server_name} exceeds the 16 KB EC2 limit even after gzip compression. Move content out of cloud-init: fetch it at boot, or bake it into the AMI."
+    }
   }
 
 }
