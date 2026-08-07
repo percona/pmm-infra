@@ -403,7 +403,7 @@ write_files:
       # encrypted datasource config (/srv/grafana), both on the persistent
       # volume. Tracing is left off so the secret never reaches cloud-init logs.
 
-      set -eu
+      set -euo pipefail
 
       BOOTSTRAP_XML=/etc/clickhouse-server/default-users.d/zz-provision-bootstrap.xml
       ADMIN_PASS=$(cat /root/pmm-admin-password)
