@@ -57,10 +57,6 @@ resource "random_password" "pmm_admin_pass" {
   special     = false
 }
 
-data "aws_iam_user" "rds_user" {
-  user_name = "pmm-demo-rds-user"
-}
-
 # Create the policy allowing RDS, and Cloudwatch access for PMM
 resource "aws_iam_policy" "pmmdemo_rds_policy" {
   name        = "pmmdemo-rds-policy"
@@ -157,10 +153,13 @@ data "aws_secretsmanager_secret_version" "sso_creds" {
   secret_id = data.aws_secretsmanager_secret.sso_creds_mgr.id
 }
 
-resource "aws_iam_access_key" "rds_user_access_key" {
-  count = var.DBAAS > 0 ? 1 : 0
-  user = data.aws_iam_user.rds_user.user_name
-}
+# There is deliberately no aws_iam_access_key here. It used to mint a long-lived
+# key for pmm-demo-rds-user whenever DBAAS was enabled, but nothing ever read the
+# secret -- it was not templated into user-data and not consumed by any other
+# resource, so its only effect was to store a permanent credential in the state
+# file. RDS discovery runs off the pmmdemo-rds-role instance profile instead.
+# If something ever does need static keys, put them in Secrets Manager and read
+# them at boot rather than materialising them into state.
 
 # resource "aws_iam_policy_attachment" "rds_policy" {
 #   name       = "rds_policy"
