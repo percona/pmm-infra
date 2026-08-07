@@ -406,7 +406,8 @@ write_files:
       set -euo pipefail
 
       BOOTSTRAP_XML=/etc/clickhouse-server/default-users.d/zz-provision-bootstrap.xml
-      ADMIN_PASS=$(cat /root/pmm-admin-password)
+      GRAFANA_INI=/etc/supervisord.d/grafana.ini
+      QAN_INI=/etc/supervisord.d/qan-api2.ini
 
       CH_PASS=$(openssl rand -hex 24)
       CH_HASH=$(printf '%s' "$CH_PASS" | sha256sum | awk '{print $1}')
@@ -477,51 +478,66 @@ write_files:
       docker exec -u root pmm-server supervisorctl restart clickhouse
       ch_wait grafana_ro "$CH_PASS"
 
-      # Repoint the datasource. Talk to Grafana directly inside the container
-      # rather than through https://localhost: PMM's own nginx puts an
-      # auth_request gate on /graph/api/datasources (it is the one Grafana
-      # route PMM guards itself), that subrequest does not accept a basic-auth
-      # caller, and nginx answers 500. Grafana on 127.0.0.1:3000 serves the
-      # same API unguarded, and is not reachable off-host.
-      g_api () {
-        docker exec -i pmm-server curl -s -u "admin:$ADMIN_PASS" "$@"
-      }
+      # Point ONLY Grafana at grafana_ro. The datasource is provisioned from
+      # /usr/share/grafana/conf/provisioning/datasources/default.yml, which
+      # reads $${PMM_CLICKHOUSE_USER}/$${PMM_CLICKHOUSE_PASSWORD} from the
+      # environment -- so this is a supported knob, not a file hack. It is also
+      # why the Grafana HTTP API cannot be used: that datasource is provisioned,
+      # so Grafana reports readOnly=true and rejects updates to it.
+      #
+      # Grafana and qan-api2 carry separate supervisord environment blocks.
+      # Only grafana.ini is rewritten; qan-api2 keeps authenticating as default
+      # so QAN ingestion retains INSERT.
+      docker exec -u root pmm-server cp "$GRAFANA_INI" "$GRAFANA_INI.orig"
+      docker exec -u root pmm-server sed -i \
+        -e 's/PMM_CLICKHOUSE_USER="[^"]*",/PMM_CLICKHOUSE_USER="grafana_ro",/' \
+        -e "s|PMM_CLICKHOUSE_PASSWORD=\"[^\"]*\",|PMM_CLICKHOUSE_PASSWORD=\"$CH_PASS\",|" \
+        "$GRAFANA_INI"
 
-      # The UID is assigned by PMM, so look it up.
-      DS_UID=$(g_api http://127.0.0.1:3000/api/datasources \
-        | jq -r '.[] | select(.type == "grafana-clickhouse-datasource") | .uid' | head -1)
-      if [ -z "$DS_UID" ]; then
-        echo "ERROR: no grafana-clickhouse-datasource found" >&2
+      if ! docker exec pmm-server grep -q 'PMM_CLICKHOUSE_USER="grafana_ro",' "$GRAFANA_INI"; then
+        echo "FATAL: grafana.ini was not rewritten" >&2
+        exit 1
+      fi
+      if ! docker exec pmm-server grep -q 'PMM_CLICKHOUSE_USER="default",' "$QAN_INI"; then
+        echo "FATAL: $QAN_INI no longer authenticates as default; QAN ingestion would lose INSERT" >&2
         exit 1
       fi
 
-      umask 077
-      g_api "http://127.0.0.1:3000/api/datasources/uid/$DS_UID" > /root/ds-ch.json
-      jq --arg p "$CH_PASS" \
-        '.jsonData.username = "grafana_ro" | .secureJsonData.password = $p' \
-        /root/ds-ch.json > /root/ds-ch.new.json
-      # -d @- so the body crosses into the container over stdin; the temp file
-      # lives on the host, not in the container filesystem.
-      g_api -X PUT -H 'Content-Type: application/json' -d @- \
-        "http://127.0.0.1:3000/api/datasources/uid/$DS_UID" \
-        < /root/ds-ch.new.json >/dev/null
-      rm -f /root/ds-ch.json /root/ds-ch.new.json
+      # A bare restart does not re-read changed environment= lines.
+      docker exec pmm-server supervisorctl reread
+      docker exec pmm-server supervisorctl update
+      docker exec pmm-server supervisorctl restart grafana
 
       # Fail the build rather than come up believing this worked.
-      if docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
-           --user grafana_ro --password "$CH_PASS" \
-           -q "SELECT count() FROM url('http://169.254.169.254/latest/user-data','LineAsString','line String')" \
-           >/dev/null 2>&1; then
-        echo "FATAL: grafana_ro can still reach url()" >&2
-        exit 1
-      fi
-      if docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
-           --user grafana_ro --password "$CH_PASS" \
-           -q "CREATE TABLE default.zz_provision_check (x String) ENGINE=Memory" \
-           >/dev/null 2>&1; then
-        echo "FATAL: grafana_ro can still run DDL" >&2
+      #
+      # Prove the account authenticates FIRST. Otherwise a broken password makes
+      # every negative check below pass for the wrong reason -- clickhouse-client
+      # exits non-zero on authentication failure exactly as it does on a denied
+      # grant, so "url() was refused" would be indistinguishable from "grafana_ro
+      # cannot log in at all".
+      if ! docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+             --user grafana_ro --password "$CH_PASS" -q "SELECT 1" >/dev/null 2>&1; then
+        echo "FATAL: grafana_ro cannot authenticate; later checks would false-pass" >&2
         exit 1
       fi
 
-      unset CH_PASS BOOT_PASS ADMIN_PASS
-      echo "ClickHouse datasource now authenticates as grafana_ro."
+      # ... then require that the refusal is specifically an access-control one.
+      assert_denied () {
+        local what=$1 sql=$2 out
+        if out=$(docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+                   --user grafana_ro --password "$CH_PASS" -q "$sql" 2>&1); then
+          echo "FATAL: grafana_ro can still $what" >&2
+          exit 1
+        fi
+        case "$out" in
+          *ACCESS_DENIED*|*"Not enough privileges"*) ;;
+          *) echo "FATAL: $what failed, but not on privileges: $out" >&2; exit 1 ;;
+        esac
+      }
+      assert_denied "reach url()" \
+        "SELECT count() FROM url('http://169.254.169.254/latest/user-data','LineAsString','line String')"
+      assert_denied "run DDL" \
+        "CREATE TABLE default.zz_provision_check (x String) ENGINE=Memory"
+
+      unset CH_PASS BOOT_PASS
+      echo "Grafana now authenticates to ClickHouse as grafana_ro (qan-api2 unchanged)."
