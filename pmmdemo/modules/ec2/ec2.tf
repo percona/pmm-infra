@@ -8,6 +8,16 @@ resource "aws_instance" "ec2" {
   key_name                    = data.aws_key_pair.pmm-demo.key_name
   iam_instance_profile        = var.iam_role_name
 
+  # Require IMDSv2 (session-token) for instance metadata. IMDSv1 answers any
+  # plain GET, which makes any request-forgery primitive on the host equivalent
+  # to a read of the instance role credentials and of user-data.
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = var.imds_http_tokens
+    http_put_response_hop_limit = var.imds_hop_limit
+    instance_metadata_tags      = "disabled"
+  }
+
   root_block_device {
     volume_type = var.root_disk_type
     volume_size = var.root_disk_size
