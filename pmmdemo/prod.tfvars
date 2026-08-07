@@ -1,3 +1,3 @@
 pmm_domain = "pmmdemo.prod.percona.net"
-owner_email = "pmmdemo-ec2@percona.com"
+owner_email = "michael.coburn@percona.com"
 DBAAS = 1
