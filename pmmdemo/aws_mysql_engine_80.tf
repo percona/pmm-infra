@@ -1,6 +1,6 @@
 locals {
   rds_mysql_80_name = "rds-mysql-80"
-  rds_mysql_username = "sysbench"
+  rds_mysql_username = "pmmdemo"
 }
 
 resource "aws_db_instance" "rds_mysql_80" {
