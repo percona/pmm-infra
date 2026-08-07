@@ -1,6 +1,10 @@
 .terraform/
 .terraform.lock.hcl
 *.tfvars
+# ...except the shared prod values, which contain no secrets. Keeping them out of
+# the repo means each operator reconstructs them from memory, and a wrong guess
+# destroys resources.
+!pmmdemo/prod.tfvars
 *.tfstate
 .envrc
 *.out
