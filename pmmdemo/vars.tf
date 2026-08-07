@@ -81,4 +81,9 @@ variable "revoke_role_sessions_before" {
   type        = string
   description = "RFC3339 instant (e.g. 2026-08-07T17:30:00Z). When set, every pmmdemo-rds-role session issued before it is denied all actions. Must be a fixed literal, not a computed value."
   default     = ""
+
+  validation {
+    condition     = var.revoke_role_sessions_before == "" || can(regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$", var.revoke_role_sessions_before))
+    error_message = "revoke_role_sessions_before must be empty or an RFC3339 timestamp like 2026-08-07T17:30:00Z."
+  }
 }
