@@ -41,7 +41,8 @@ runcmd:
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
   - bash /root/apply-custom-settings.sh
-  - bash /root/harden-clickhouse-datasource.sh
+  - bash /root/ensure-clickhouse-hardening.sh
+  - systemctl enable --now pmm-clickhouse-hardening.timer
   - echo date > /tmp/pmm-server-up
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -336,6 +337,14 @@ write_files:
       echo "Applying Grafana Settings for PMM Demo..."
       bash /root/apply-custom-settings.sh
 
+      # The rm/run above discarded the container's writable layer, which is
+      # where grafana.ini names the ClickHouse account. Without this the new
+      # container comes up with Grafana authenticating as the ClickHouse
+      # superuser again. Run as a child process so that the -x trace on this
+      # script does not leak the password the hardening script generates.
+      echo "Re-asserting ClickHouse least-privilege hardening..."
+      bash /root/ensure-clickhouse-hardening.sh
+
   - path: /root/upgrade-pmm-agents.sh
     permissions: "0755"
     content: |
@@ -390,6 +399,98 @@ write_files:
       sleep 10
       docker exec pmm-server supervisorctl restart grafana
       echo "PMM settings updated."
+  - path: /root/ensure-clickhouse-hardening.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      # Re-apply the ClickHouse least-privilege hardening if pmm-server has lost it.
+      #
+      # grafana_ro lives in ClickHouse's access store under /srv, which is on the
+      # persistent pmm-data volume, so the account itself survives anything short
+      # of wiping that volume. What does not survive is the pointer to it:
+      # Grafana reads its ClickHouse credentials from /etc/supervisord.d/grafana.ini,
+      # which is in the container's writable layer. Any docker rm + docker run --
+      # a PMM upgrade, or a manual recreate -- resets that file, and Grafana comes
+      # back authenticating as the ClickHouse superuser with no visible symptom.
+      #
+      # The test is a grep rather than a login because the generated password is
+      # deliberately not stored anywhere on the host. grafana.ini still naming
+      # grafana_ro is sufficient proof that the writable layer is intact.
+
+      set -euo pipefail
+
+      GRAFANA_INI=/etc/supervisord.d/grafana.ini
+
+      # Serialise against the timer, cloud-init and the upgrade script, all of
+      # which can call this. Note that invoking harden-clickhouse-datasource.sh
+      # directly bypasses the lock; go through this wrapper instead.
+      exec 9>/var/lock/pmm-clickhouse-hardening.lock
+      if ! flock -n 9; then
+        echo "another hardening run holds the lock; skipping."
+        exit 0
+      fi
+
+      container_running () {
+        [ "$(docker inspect -f '{{.State.Running}}' pmm-server 2>/dev/null || true)" = "true" ]
+      }
+
+      for _ in $(seq 1 60); do
+        container_running && break
+        sleep 5
+      done
+
+      # Not our business to start it, and failing here every hour while the host
+      # is deliberately down would only bury a real failure in noise.
+      if ! container_running; then
+        echo "pmm-server is not running; nothing to do."
+        exit 0
+      fi
+
+      # supervisorctl has to be answering before the hardening script can restart
+      # clickhouse and grafana. version() succeeds regardless of program states.
+      for _ in $(seq 1 60); do
+        docker exec pmm-server supervisorctl version >/dev/null 2>&1 && break
+        sleep 5
+      done
+
+      if docker exec pmm-server grep -q 'PMM_CLICKHOUSE_USER="grafana_ro",' "$GRAFANA_INI"; then
+        echo "Grafana already authenticates to ClickHouse as grafana_ro; nothing to do."
+        exit 0
+      fi
+
+      echo "grafana.ini does not name grafana_ro -- the container layer was reset. Re-hardening."
+      exec bash /root/harden-clickhouse-datasource.sh
+
+  - path: /etc/systemd/system/pmm-clickhouse-hardening.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Ensure Grafana's ClickHouse datasource uses the least-privilege account
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/bin/bash /root/ensure-clickhouse-hardening.sh
+
+  - path: /etc/systemd/system/pmm-clickhouse-hardening.timer
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Re-assert the ClickHouse hardening after a pmm-server container recreate
+
+      # Anyone can recreate the container without going through
+      # upgrade-pmm-server.sh, so do not rely on the callers alone. The check is
+      # two greps when nothing is wrong, which is cheap enough to run hourly and
+      # keeps the window in which Grafana is a ClickHouse superuser bounded.
+      [Timer]
+      OnBootSec=2min
+      OnUnitActiveSec=1h
+      Unit=pmm-clickhouse-hardening.service
+
+      [Install]
+      WantedBy=timers.target
+
   - path: /root/harden-clickhouse-datasource.sh
     permissions: "0700"
     content: |
@@ -488,7 +589,14 @@ write_files:
       # Grafana and qan-api2 carry separate supervisord environment blocks.
       # Only grafana.ini is rewritten; qan-api2 keeps authenticating as default
       # so QAN ingestion retains INSERT.
-      docker exec -u root pmm-server cp "$GRAFANA_INI" "$GRAFANA_INI.orig"
+      #
+      # This script is re-runnable: ALTER USER above rotates grafana_ro's
+      # password on every invocation, and the sed below repoints grafana.ini at
+      # whatever was just generated. Keep the first .orig, though -- on a second
+      # run the live file is already hardened, and copying it over .orig would
+      # destroy the only record of what PMM originally shipped.
+      docker exec pmm-server test -f "$GRAFANA_INI.orig" ||
+        docker exec -u root pmm-server cp "$GRAFANA_INI" "$GRAFANA_INI.orig"
       docker exec -u root pmm-server sed -i \
         -e 's/PMM_CLICKHOUSE_USER="[^"]*",/PMM_CLICKHOUSE_USER="grafana_ro",/' \
         -e "s|PMM_CLICKHOUSE_PASSWORD=\"[^\"]*\",|PMM_CLICKHOUSE_PASSWORD=\"$CH_PASS\",|" \
