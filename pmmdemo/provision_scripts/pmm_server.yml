@@ -10,6 +10,7 @@ package_update: true
 packages:
   - bind-utils
   - curl
+  - jq
   - podman
   - podman-docker
   - python3-pip
@@ -40,6 +41,7 @@ runcmd:
   - "echo '${pmm_admin_pass}' > /root/pmm-admin-password"
   - chmod 400 /root/pmm-admin-password
   - bash /root/apply-custom-settings.sh
+  - bash /root/harden-clickhouse-datasource.sh
   - echo date > /tmp/pmm-server-up
   - percona-release setup -y pmm3-client
   - dnf -y install pmm-client
@@ -388,3 +390,127 @@ write_files:
       sleep 10
       docker exec pmm-server supervisorctl restart grafana
       echo "PMM settings updated."
+  - path: /root/harden-clickhouse-datasource.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      # Create a least-privilege ClickHouse identity for Grafana and point the
+      # ClickHouse datasource at it, replacing the default superuser.
+      #
+      # The password is generated here, on the instance. It is deliberately
+      # absent from Terraform state and from EC2 user-data; it exists only in
+      # ClickHouse's access store (/srv/clickhouse/access) and in Grafana's
+      # encrypted datasource config (/srv/grafana), both on the persistent
+      # volume. Tracing is left off so the secret never reaches cloud-init logs.
+
+      set -eu
+
+      BOOTSTRAP_XML=/etc/clickhouse-server/default-users.d/zz-provision-bootstrap.xml
+      ADMIN_PASS=$(cat /root/pmm-admin-password)
+
+      CH_PASS=$(openssl rand -hex 24)
+      CH_HASH=$(printf '%s' "$CH_PASS" | sha256sum | awk '{print $1}')
+      BOOT_PASS=$(openssl rand -hex 24)
+      BOOT_HASH=$(printf '%s' "$BOOT_PASS" | sha256sum | awk '{print $1}')
+
+      ch_wait () {
+        local user=$1 pass=$2 i
+        for i in $(seq 1 45); do
+          if docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+               --user "$user" --password "$pass" -q "SELECT 1" >/dev/null 2>&1; then
+            return 0
+          fi
+          sleep 2
+        done
+        echo "ERROR: clickhouse did not accept $user within 90s" >&2
+        return 1
+      }
+
+      # PMM sets a password on the ClickHouse default superuser that is not
+      # exposed to us, so install a short-lived admin to run the DDL. The users
+      # config file is default-users.xml, so drop-ins must live in
+      # default-users.d; and a plaintext <password> is rejected outright at
+      # startup because PMM ships allow_plaintext_password=0.
+      docker exec -u root pmm-server mkdir -p /etc/clickhouse-server/default-users.d
+      docker exec -u root -i pmm-server bash -c "cat > $BOOTSTRAP_XML" <<XMLEOF
+      <clickhouse>
+          <users>
+              <provision_admin>
+                  <password_sha256_hex>$BOOT_HASH</password_sha256_hex>
+                  <networks><ip>127.0.0.1</ip><ip>::1</ip></networks>
+                  <profile>default</profile>
+                  <quota>default</quota>
+                  <access_management>1</access_management>
+              </provision_admin>
+          </users>
+      </clickhouse>
+      XMLEOF
+      docker exec -u root pmm-server chown pmm:root "$BOOTSTRAP_XML"
+      docker exec -u root pmm-server supervisorctl restart clickhouse
+      ch_wait provision_admin "$BOOT_PASS"
+
+      # grafana_ro holds SELECT and nothing else. Without the SOURCES family it
+      # cannot call url(), s3(), mongodb(), remote() or file(); readonly=1
+      # additionally prevents it overriding server settings such as
+      # max_http_get_redirects. ALTER runs unconditionally so that re-running
+      # this script rotates the password rather than failing.
+      docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+        --user provision_admin --password "$BOOT_PASS" --multiquery <<SQLEOF
+      CREATE SETTINGS PROFILE IF NOT EXISTS grafana_ro_profile SETTINGS
+          readonly = 1, allow_ddl = 0, max_execution_time = 60;
+
+      CREATE USER IF NOT EXISTS grafana_ro IDENTIFIED WITH sha256_hash BY '$CH_HASH';
+      ALTER USER grafana_ro IDENTIFIED WITH sha256_hash BY '$CH_HASH'
+          SETTINGS PROFILE grafana_ro_profile;
+
+      REVOKE ALL ON *.* FROM grafana_ro;
+      GRANT SELECT ON pmm.*            TO grafana_ro;
+      GRANT SELECT ON default.*        TO grafana_ro;
+      GRANT SELECT ON system.tables    TO grafana_ro;
+      GRANT SELECT ON system.columns   TO grafana_ro;
+      GRANT SELECT ON system.databases TO grafana_ro;
+      GRANT SELECT ON system.one       TO grafana_ro;
+      GRANT SELECT ON system.numbers   TO grafana_ro;
+      SQLEOF
+
+      docker exec -u root pmm-server rm -f "$BOOTSTRAP_XML"
+      docker exec -u root pmm-server supervisorctl restart clickhouse
+      ch_wait grafana_ro "$CH_PASS"
+
+      # Repoint the datasource. The UID is assigned by PMM, so look it up.
+      DS_UID=$(curl -sk -u "admin:$ADMIN_PASS" https://localhost/graph/api/datasources \
+        | jq -r '.[] | select(.type == "grafana-clickhouse-datasource") | .uid' | head -1)
+      if [ -z "$DS_UID" ]; then
+        echo "ERROR: no grafana-clickhouse-datasource found" >&2
+        exit 1
+      fi
+
+      umask 077
+      curl -sk -u "admin:$ADMIN_PASS" \
+        "https://localhost/graph/api/datasources/uid/$DS_UID" > /root/ds-ch.json
+      jq --arg p "$CH_PASS" \
+        '.jsonData.username = "grafana_ro" | .secureJsonData = {password: $p}' \
+        /root/ds-ch.json > /root/ds-ch.new.json
+      curl -sk -u "admin:$ADMIN_PASS" -X PUT -H 'Content-Type: application/json' \
+        -d @/root/ds-ch.new.json \
+        "https://localhost/graph/api/datasources/uid/$DS_UID" >/dev/null
+      rm -f /root/ds-ch.json /root/ds-ch.new.json
+
+      # Fail the build rather than come up believing this worked.
+      if docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+           --user grafana_ro --password "$CH_PASS" \
+           -q "SELECT count() FROM url('http://169.254.169.254/latest/user-data','LineAsString','line String')" \
+           >/dev/null 2>&1; then
+        echo "FATAL: grafana_ro can still reach url()" >&2
+        exit 1
+      fi
+      if docker exec -i pmm-server clickhouse-client --host 127.0.0.1 \
+           --user grafana_ro --password "$CH_PASS" \
+           -q "CREATE TABLE default.zz_provision_check (x String) ENGINE=Memory" \
+           >/dev/null 2>&1; then
+        echo "FATAL: grafana_ro can still run DDL" >&2
+        exit 1
+      fi
+
+      unset CH_PASS BOOT_PASS ADMIN_PASS
+      echo "ClickHouse datasource now authenticates as grafana_ro."
