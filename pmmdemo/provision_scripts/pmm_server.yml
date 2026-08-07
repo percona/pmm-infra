@@ -489,7 +489,7 @@ write_files:
       curl -sk -u "admin:$ADMIN_PASS" \
         "https://localhost/graph/api/datasources/uid/$DS_UID" > /root/ds-ch.json
       jq --arg p "$CH_PASS" \
-        '.jsonData.username = "grafana_ro" | .secureJsonData = {password: $p}' \
+        '.jsonData.username = "grafana_ro" | .secureJsonData.password = $p' \
         /root/ds-ch.json > /root/ds-ch.new.json
       curl -sk -u "admin:$ADMIN_PASS" -X PUT -H 'Content-Type: application/json' \
         -d @/root/ds-ch.new.json \
