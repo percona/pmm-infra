@@ -37,7 +37,12 @@ resource "aws_instance" "ec2" {
 
   lifecycle {
     // We want to have latest AMI on recreating but don't want to recreate if we have new AMI version
-    ignore_changes = [ami]
+    //
+    // instance_type follows the same reasoning: hosts get resized by hand in
+    // response to load, and Terraform should not undo that on an unrelated
+    // apply. Consequence: editing instance_type here has no effect on a running
+    // instance -- resize it directly, or remove it from this list first.
+    ignore_changes = [ami, instance_type]
 
     // Fail at plan time rather than getting an opaque rejection from the EC2
     // API. 21848 base64 characters is 16 KB once decoded, which is the cap.
