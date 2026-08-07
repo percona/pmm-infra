@@ -477,8 +477,18 @@ write_files:
       docker exec -u root pmm-server supervisorctl restart clickhouse
       ch_wait grafana_ro "$CH_PASS"
 
-      # Repoint the datasource. The UID is assigned by PMM, so look it up.
-      DS_UID=$(curl -sk -u "admin:$ADMIN_PASS" https://localhost/graph/api/datasources \
+      # Repoint the datasource. Talk to Grafana directly inside the container
+      # rather than through https://localhost: PMM's own nginx puts an
+      # auth_request gate on /graph/api/datasources (it is the one Grafana
+      # route PMM guards itself), that subrequest does not accept a basic-auth
+      # caller, and nginx answers 500. Grafana on 127.0.0.1:3000 serves the
+      # same API unguarded, and is not reachable off-host.
+      g_api () {
+        docker exec -i pmm-server curl -s -u "admin:$ADMIN_PASS" "$@"
+      }
+
+      # The UID is assigned by PMM, so look it up.
+      DS_UID=$(g_api http://127.0.0.1:3000/api/datasources \
         | jq -r '.[] | select(.type == "grafana-clickhouse-datasource") | .uid' | head -1)
       if [ -z "$DS_UID" ]; then
         echo "ERROR: no grafana-clickhouse-datasource found" >&2
@@ -486,14 +496,15 @@ write_files:
       fi
 
       umask 077
-      curl -sk -u "admin:$ADMIN_PASS" \
-        "https://localhost/graph/api/datasources/uid/$DS_UID" > /root/ds-ch.json
+      g_api "http://127.0.0.1:3000/api/datasources/uid/$DS_UID" > /root/ds-ch.json
       jq --arg p "$CH_PASS" \
         '.jsonData.username = "grafana_ro" | .secureJsonData.password = $p' \
         /root/ds-ch.json > /root/ds-ch.new.json
-      curl -sk -u "admin:$ADMIN_PASS" -X PUT -H 'Content-Type: application/json' \
-        -d @/root/ds-ch.new.json \
-        "https://localhost/graph/api/datasources/uid/$DS_UID" >/dev/null
+      # -d @- so the body crosses into the container over stdin; the temp file
+      # lives on the host, not in the container filesystem.
+      g_api -X PUT -H 'Content-Type: application/json' -d @- \
+        "http://127.0.0.1:3000/api/datasources/uid/$DS_UID" \
+        < /root/ds-ch.new.json >/dev/null
       rm -f /root/ds-ch.json /root/ds-ch.new.json
 
       # Fail the build rather than come up believing this worked.
