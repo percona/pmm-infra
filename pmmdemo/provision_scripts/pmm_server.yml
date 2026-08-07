@@ -167,6 +167,25 @@ write_files:
               option: enabled
               value: "true"
 
+          # Pin the anonymous role explicitly rather than relying on the Grafana
+          # default. Note that a Viewer may still query every registered
+          # datasource via /api/ds/query -- Grafana OSS has no setting that
+          # changes this -- so each datasource must authenticate as a
+          # least-privilege, read-only database identity.
+          - name: Pin anonymous role to Viewer
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: auth.anonymous
+              option: org_role
+              value: "Viewer"
+
+          - name: Prevent viewers from gaining edit rights
+            ini_file:
+              dest: /etc/grafana/grafana.ini
+              section: users
+              option: viewers_can_edit
+              value: "false"
+
           - name: Set domain name
             ini_file:
               dest: /etc/grafana/grafana.ini

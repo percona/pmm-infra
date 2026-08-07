@@ -61,3 +61,25 @@ variable "ami_id" {
   description = "Amazon Machine Image AMI"
   default     = "ami-04c56dce2c963b327"
 }
+
+variable "imds_http_tokens" {
+  type        = string
+  default     = "required"
+  description = "(Optional) IMDS session token requirement. 'required' enforces IMDSv2; 'optional' also permits IMDSv1."
+
+  validation {
+    condition     = contains(["required", "optional"], var.imds_http_tokens)
+    error_message = "imds_http_tokens must be either 'required' or 'optional'."
+  }
+}
+
+variable "imds_hop_limit" {
+  type        = number
+  default     = 1
+  description = "(Optional) IMDS PUT response hop limit. 1 keeps metadata unreachable from bridge-networked containers; raise to 2 only where a container legitimately needs the instance role."
+
+  validation {
+    condition     = var.imds_hop_limit >= 1 && var.imds_hop_limit <= 64
+    error_message = "imds_hop_limit must be between 1 and 64."
+  }
+}

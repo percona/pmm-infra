@@ -2,6 +2,9 @@ locals {
   pmm_server_name = "pmm-server"
 }
 
+# imds_hop_limit is 2 here because pmm-managed performs RDS discovery from
+# inside a bridge-networked container, which costs one extra metadata hop.
+# IMDSv2 is still enforced; every other instance keeps the default limit of 1.
 module "pmm_server" {
   source          = "./modules/ec2"
   server_name     = local.pmm_server_name
@@ -9,6 +12,7 @@ module "pmm_server" {
   subnet_id       = aws_subnet.pmmdemo_private.id
   route53_id      = aws_route53_zone.demo_local.id
   iam_role_name   = aws_iam_instance_profile.pmmdemo_ec2_rds_profile.name
+  imds_hop_limit  = 2
   security_groups = [
     aws_security_group.default_access.id
   ]
@@ -118,6 +122,31 @@ resource "aws_iam_role_policy_attachment" "pmmdemo_rds_role_attachement" {
 resource "aws_iam_instance_profile" "pmmdemo_ec2_rds_profile" {
   name = "pmmdemo-ec2-rds-profile"
   role = aws_iam_role.pmmdemo_rds_role.name
+}
+
+# Denies every action to role sessions issued before the configured instant.
+# Set var.revoke_role_sessions_before to an RFC3339 timestamp to invalidate all
+# outstanding sessions; leave it empty to manage no such policy. The value must
+# be a fixed literal -- deriving it from timestamp() would re-revoke on every
+# apply and repeatedly break the instance until IMDS rotates its credentials.
+resource "aws_iam_role_policy" "pmmdemo_rds_role_revoke_sessions" {
+  count = var.revoke_role_sessions_before == "" ? 0 : 1
+
+  name = "AWSRevokeOlderSessions"
+  role = aws_iam_role.pmmdemo_rds_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "AWSRevokeOlderSessions"
+      Effect   = "Deny"
+      Action   = ["*"]
+      Resource = ["*"]
+      Condition = {
+        DateLessThan = { "aws:TokenIssueTime" = var.revoke_role_sessions_before }
+      }
+    }]
+  })
 }
 
 data "aws_secretsmanager_secret" "sso_creds_mgr" {

@@ -76,3 +76,9 @@ variable "oauth_signout_redirect_url" {
   description = "Oauth Signout Redirect URL"
   default     = "https://id.percona.com/login/signout?fromURI=https://pmmdemo.percona.com/graph/login"
 }
+
+variable "revoke_role_sessions_before" {
+  type        = string
+  description = "RFC3339 instant (e.g. 2026-08-07T17:30:00Z). When set, every pmmdemo-rds-role session issued before it is denied all actions. Must be a fixed literal, not a computed value."
+  default     = ""
+}

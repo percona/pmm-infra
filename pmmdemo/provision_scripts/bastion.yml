@@ -187,6 +187,18 @@ write_files:
               ssl_dhparam /ssl/cert/dhparam.pem;
               ssl_protocols TLSv1.2 TLSv1.3;
               location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; }
+
+              # Raw datasource APIs are not needed by the public demo and are
+              # reachable by anonymous viewers. Deny them at the edge so that a
+              # datasource misconfiguration behind this proxy is not directly
+              # exposed to the internet.
+              location = /graph/api/ds/query      { return 403; }
+              location = /graph/api/tsdb/query    { return 403; }
+              location ^~ /graph/api/datasources  { return 403; }
+              location = /api/ds/query            { return 403; }
+              location = /api/tsdb/query          { return 403; }
+              location ^~ /api/datasources        { return 403; }
+
               location / {
                   proxy_pass      https://pmm_server;
               }
