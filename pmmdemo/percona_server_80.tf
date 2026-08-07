@@ -16,7 +16,8 @@ module "percona_server_80" {
   ]
 
   security_groups = [
-    aws_security_group.default_access.id
+    aws_security_group.default_access.id,
+    aws_security_group.general_egress.id,
   ]
   user_data = element(data.template_file.percona_server_80_user_data.*.rendered, count.index)
 }

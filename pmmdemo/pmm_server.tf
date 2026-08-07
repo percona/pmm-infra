@@ -10,7 +10,8 @@ module "pmm_server" {
   route53_id      = aws_route53_zone.demo_local.id
   iam_role_name   = aws_iam_instance_profile.pmmdemo_ec2_rds_profile.name
   security_groups = [
-    aws_security_group.default_access.id
+    aws_security_group.default_access.id,
+    aws_security_group.pmm_server_egress.id,
   ]
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
