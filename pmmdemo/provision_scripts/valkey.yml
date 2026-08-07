@@ -127,9 +127,9 @@ write_files:
       # Script to install Valkey/Redis exporter
       cd /tmp
       version=$(curl -s https://api.github.com/repos/oliver006/redis_exporter/releases/latest | jq -r '.tag_name')
-      curl -Ls -o redis_exporter-${version}.linux-amd64.tar.gz https://github.com/oliver006/redis_exporter/releases/download/${version}/redis_exporter-${version}.linux-amd64.tar.gz
-      tar zxvf redis_exporter-${version}.linux-amd64.tar.gz
-      mv -f redis_exporter-${version}.linux-amd64/redis_exporter /usr/local/bin/
+      curl -Ls -o redis_exporter-$${version}.linux-amd64.tar.gz https://github.com/oliver006/redis_exporter/releases/download/$${version}/redis_exporter-$${version}.linux-amd64.tar.gz
+      tar zxvf redis_exporter-$${version}.linux-amd64.tar.gz
+      mv -f redis_exporter-$${version}.linux-amd64/redis_exporter /usr/local/bin/
       restorecon -Rv /usr/local/bin/
       systemctl enable valkey-exporter.service
       systemctl start valkey-exporter.service
