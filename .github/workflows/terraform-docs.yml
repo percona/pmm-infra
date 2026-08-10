@@ -1,0 +1,39 @@
+name: Generate Terraform Docs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+
+    - name: Setup and Run Terraform Docs
+      run: |
+        curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.19.0/terraform-docs-v0.19.0-$(uname)-amd64.tar.gz
+        tar -xzf terraform-docs.tar.gz
+        chmod +x terraform-docs
+        sudo mv terraform-docs /usr/local/bin/terraform-docs
+        
+        for dir in . pmm pmmdemo; do
+          if [ -d "$dir" ] && ls $dir/*.tf >/dev/null 2>&1; then
+            if [ ! -f "$dir/README.md" ]; then
+              echo -e "<!-- BEGIN_TF_DOCS -->\n<!-- END_TF_DOCS -->" > "$dir/README.md"
+            fi
+            terraform-docs markdown table --output-file README.md --output-mode inject "$dir"
+          fi
+        done
+        
+        if [[ -n "$(git status --porcelain)" ]]; then
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md pmm/README.md pmmdemo/README.md
+          git commit -m "docs: auto-update terraform docs"
+          git push
+        fi
