@@ -50,7 +50,7 @@ To prepare for a successul launch of pmmdemo infrastructure, please follow the i
 
 ## Execute
 
-1. Run `terraform workspace new XXXXX` to create a new terraform workspace. Please do not use the 'default' workspace. Example: `terraform workspace new mbpmm` Verify using `terraform workspace list`. The workspace name will be used to automatically tag any created resources.
+1. Run `terraform workspace new XXXXX` to create a new terraform workspace. Please do not use the 'default' workspace. Example: `terraform workspace new mbpmm` Verify using `terraform workspace list`. The workspace name will be used to automatically tag any created resources. The S3 backend is configured with `workspace_key_prefix` to safely segregate state files (e.g., `environments/<workspace_name>/pmmdemo/terraform.tfstate`) across different users or environments.
 2. Run `terraform init` to initialize your terraform state and provision terraform modules.
 3. Run `terrfaform validate` to confirm your code or any change thereof are syntactically valid.
 4. Run `terraform apply` to provision the infrastructure defined as code.
