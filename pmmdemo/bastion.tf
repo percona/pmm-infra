@@ -11,6 +11,7 @@ module "bastion" {
   route53_id    = aws_route53_zone.demo_local.id
   security_groups = [
     aws_security_group.default_access.id,
+    aws_security_group.general_egress.id,
     aws_security_group.bastion.id
   ]
   user_data = templatefile("provision_scripts/bastion.yml", {

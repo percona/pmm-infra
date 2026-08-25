@@ -9,7 +9,8 @@ module "mongo_cluster_pmmdemo" {
   route53_id   = aws_route53_zone.demo_local.id
   route53_name = aws_route53_zone.demo_local.name
   security_groups = [
-    aws_security_group.default_access.id
+    aws_security_group.default_access.id,
+    aws_security_group.general_egress.id,
   ]
   instance_type        = "t3a.medium"
   config_instance_type = "t3a.small"

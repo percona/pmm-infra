@@ -14,7 +14,8 @@ module "pmm_server" {
   iam_role_name   = aws_iam_instance_profile.pmmdemo_ec2_rds_profile.name
   imds_hop_limit  = 2
   security_groups = [
-    aws_security_group.default_access.id
+    aws_security_group.default_access.id,
+    aws_security_group.pmm_server_egress.id,
   ]
   user_data = templatefile("provision_scripts/pmm_server.yml",
     {
