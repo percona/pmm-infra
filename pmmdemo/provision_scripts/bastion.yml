@@ -203,15 +203,30 @@ write_files:
               location ^~ /graph/api/datasources  { return 403; }
               location ^~ /api/datasources        { return 403; }
 
+              # The PMM 3.10.0 UI polls POST .../auth-tokens/rotate every 30s
+              # when there is no grafana_session_expiry cookie, and reloads
+              # the embedded Grafana dashboard on every 401. An anonymous
+              # visitor has no session token, so Grafana always answers 401
+              # and the dashboard reloads every 30s. Answer 200 for requests
+              # with no Grafana session and no Authorization header; signed-in
+              # users still reach Grafana's real rotate. Remove once PMM fixes
+              # it.
+              location = /graph/api/user/auth-tokens/rotate {
+                  default_type application/json;
+                  if ($pmm_anonymous) {
+                      return 200 '{}';
+                  }
+                  proxy_pass      https://pmm_server;
+              }
+
               # PMM 3.10.0 answers GET /v1/users/me with a 500 for anonymous
               # visitors who carry any cookie (the injected Google Analytics
               # _ga cookie is enough): pmm-managed forwards the cookie to
-              # Grafana /api/user, gets a 401, and reports it as a 500. The
-              # new UI needs this call and re-renders the whole screen every
-              # ~30s while it fails. Answer it with the anonymous record the
-              # UI already defines, but only for requests with no Grafana
-              # session and no Authorization header, so signed-in users and
-              # API clients still reach pmm-managed. Remove once PMM fixes it.
+              # Grafana /api/user, gets a 401, and reports it as a 500. Answer
+              # it with the anonymous record the UI already defines, but only
+              # for requests with no Grafana session and no Authorization
+              # header, so signed-in users and API clients still reach
+              # pmm-managed. Remove once PMM fixes it.
               location = /v1/users/me {
                   default_type application/json;
                   if ($pmm_anonymous) {
