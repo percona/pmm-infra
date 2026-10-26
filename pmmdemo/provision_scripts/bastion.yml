@@ -159,6 +159,12 @@ write_files:
               default upgrade;
               '' close;
           }
+          # 1 when the request has neither a Grafana session (login_cookie_name
+          # is pmm_session) nor an Authorization header.
+          map "$cookie_pmm_session$http_authorization" $pmm_anonymous {
+              ""      1;
+              default 0;
+          }
           include       /etc/nginx/mime.types;
           default_type  application/octet-stream;
           access_log  /var/log/nginx/access.log combined;
@@ -196,6 +202,38 @@ write_files:
               # least-privilege, read-only database identity.
               location ^~ /graph/api/datasources  { return 403; }
               location ^~ /api/datasources        { return 403; }
+
+              # The PMM 3.10.0 UI polls POST .../auth-tokens/rotate every 30s
+              # when there is no grafana_session_expiry cookie, and reloads
+              # the embedded Grafana dashboard on every 401. An anonymous
+              # visitor has no session token, so Grafana always answers 401
+              # and the dashboard reloads every 30s. Answer 200 for requests
+              # with no Grafana session and no Authorization header; signed-in
+              # users still reach Grafana's real rotate. Remove once PMM fixes
+              # it.
+              location = /graph/api/user/auth-tokens/rotate {
+                  default_type application/json;
+                  if ($pmm_anonymous) {
+                      return 200 '{}';
+                  }
+                  proxy_pass      https://pmm_server;
+              }
+
+              # PMM 3.10.0 answers GET /v1/users/me with a 500 for anonymous
+              # visitors who carry any cookie (the injected Google Analytics
+              # _ga cookie is enough): pmm-managed forwards the cookie to
+              # Grafana /api/user, gets a 401, and reports it as a 500. Answer
+              # it with the anonymous record the UI already defines, but only
+              # for requests with no Grafana session and no Authorization
+              # header, so signed-in users and API clients still reach
+              # pmm-managed. Remove once PMM fixes it.
+              location = /v1/users/me {
+                  default_type application/json;
+                  if ($pmm_anonymous) {
+                      return 200 '{"user_id":0,"product_tour_completed":true,"alerting_tour_completed":true,"snoozed_pmm_version":"","snoozed_at":null,"snooze_count":0}';
+                  }
+                  proxy_pass      https://pmm_server;
+              }
 
               location / {
                   proxy_pass      https://pmm_server;
